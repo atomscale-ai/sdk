@@ -33,7 +33,7 @@ class Client(BaseClient):
         """
         api_key = api_key or os.environ.get("ADS_API_KEY")
         endpoint = os.environ.get("ADS_API_ENDPOINT") or endpoint
-        
+
         if api_key is None:
             raise ValueError("No valid ADS API key supplied")
 
@@ -119,7 +119,7 @@ class Client(BaseClient):
             "processed_file_type",
         ]
         catalogue = DataFrame(data)
-        print(catalogue.columns)
+
         if len(catalogue):
             catalogue = catalogue.drop(columns=columns_to_drop)
 
