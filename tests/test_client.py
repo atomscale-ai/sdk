@@ -38,6 +38,7 @@ def test_generic_search(client: Client):
             "Physical Sample ID",
             "Physical Sample Name",
             "Sample Notes",
+            "Sample Notes Last Updated",
         ]
     )
     assert not len(set(orig_data.keys().values) - column_names)

@@ -105,7 +105,8 @@ class Client(BaseClient):
             "growth_length": "Growth Length",
             "physical_sample_id": "Physical Sample ID",
             "physical_sample_name": "Physical Sample Name",
-            "physical_sample_notes": "Sample Notes",
+            "detail_note_content": "Sample Notes",
+            "detail_note_last_updated": "Sample Notes Last Updated",
             "tags": "Tags",
             "name": "Owner",
         }
@@ -114,15 +115,11 @@ class Client(BaseClient):
             "user_id",
             "synth_source_id",
             "sample_id",
-            "physical_sample_last_updated",
-            "physical_sample_created",
-            "physical_sample_owner_id",
-            "physical_sample_growth_instrument",
-            "physical_sample_target_material",
-            "processed_metadata",
+            "file_metadata",
             "processed_file_type",
         ]
         catalogue = DataFrame(data)
+
         if len(catalogue):
             catalogue = catalogue.drop(columns=columns_to_drop)
 
