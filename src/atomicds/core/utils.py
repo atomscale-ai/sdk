@@ -40,9 +40,7 @@ def boxes_overlap(box1, box2) -> bool:
     xmin2, ymin2, xmax2, ymax2 = box2
 
     # Check for overlap
-    if xmax1 < xmin2 or xmax2 < xmin1 or ymax1 < ymin2 or ymax2 < ymin1:
-        return False
-    return True
+    return not (xmax1 < xmin2 or xmax2 < xmin1 or ymax1 < ymin2 or ymax2 < ymin1):
 
 
 def regions_horizontal_overlapping(
