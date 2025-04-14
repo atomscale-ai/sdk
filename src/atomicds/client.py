@@ -107,6 +107,7 @@ class Client(BaseClient):
             "physical_sample_name": "Physical Sample Name",
             "detail_note_content": "Sample Notes",
             "detail_note_last_updated": "Sample Notes Last Updated",
+            "file_metadata": "File Metadata",
             "tags": "Tags",
             "name": "Owner",
         }
@@ -115,8 +116,8 @@ class Client(BaseClient):
             "user_id",
             "synth_source_id",
             "sample_id",
-            "file_metadata",
             "processed_file_type",
+            "bucket_file_name",
         ]
         catalogue = DataFrame(data)
 
@@ -259,8 +260,8 @@ class Client(BaseClient):
             "frame_number": "Frame Number",
             "cluster_id": "Cluster ID",
             "cluster_std": "Cluster ID Uncertainty",
-            "relative_strain": "Relative Strain",
-            "cumulative_strain": "Cumulative Strain",
+            "referenced_strain": "Strain",
+            "nearest_neighbor_strain": "Cumulative Strain",
             "oscillation_period": "Oscillation Period",
             "spot_count": "Diffraction Spot Count",
             "first_order_intensity": "First Order Intensity",
