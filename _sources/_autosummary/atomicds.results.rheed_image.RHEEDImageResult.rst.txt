@@ -20,7 +20,6 @@ atomicds.results.rheed\_image.RHEEDImageResult
       ~RHEEDImageResult.as_dict
       ~RHEEDImageResult.from_dict
       ~RHEEDImageResult.get_laue_zero_radius
-      ~RHEEDImageResult.get_partial_json
       ~RHEEDImageResult.get_pattern_dataframe
       ~RHEEDImageResult.get_plot
       ~RHEEDImageResult.load

@@ -19,7 +19,6 @@ atomicds.results.rheed\_video.RHEEDVideoResult
       ~RHEEDVideoResult.__init__
       ~RHEEDVideoResult.as_dict
       ~RHEEDVideoResult.from_dict
-      ~RHEEDVideoResult.get_partial_json
       ~RHEEDVideoResult.load
       ~RHEEDVideoResult.save
       ~RHEEDVideoResult.to_json

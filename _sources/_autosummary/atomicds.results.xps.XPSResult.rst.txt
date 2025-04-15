@@ -19,7 +19,6 @@ atomicds.results.xps.XPSResult
       ~XPSResult.__init__
       ~XPSResult.as_dict
       ~XPSResult.from_dict
-      ~XPSResult.get_partial_json
       ~XPSResult.get_plot
       ~XPSResult.load
       ~XPSResult.save

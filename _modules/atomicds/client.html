@@ -5,8 +5,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>atomicds.client &#8212; atomicds 2024 documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
-    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=686e5160" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
     <script src="../../_static/documentation_options.js?v=6fefd858"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
@@ -31,31 +31,31 @@
           <div class="body" role="main">
             
   <h1>Source code for atomicds.client</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Literal</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">BytesIO</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Literal</span>
 
-<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
-<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">concat</span>
-<span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
-<span class="kn">from</span> <span class="nn">pycocotools</span> <span class="kn">import</span> <span class="n">mask</span> <span class="k">as</span> <span class="n">mask_util</span>
-<span class="kn">from</span> <span class="nn">tqdm.auto</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">concat</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pycocotools</span><span class="w"> </span><span class="kn">import</span> <span class="n">mask</span> <span class="k">as</span> <span class="n">mask_util</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm.auto</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
 
-<span class="kn">from</span> <span class="nn">atomicds.core</span> <span class="kn">import</span> <span class="n">BaseClient</span>
-<span class="kn">from</span> <span class="nn">atomicds.results</span> <span class="kn">import</span> <span class="n">RHEEDImageResult</span><span class="p">,</span> <span class="n">RHEEDVideoResult</span><span class="p">,</span> <span class="n">XPSResult</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseClient</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">RHEEDImageResult</span><span class="p">,</span> <span class="n">RHEEDVideoResult</span><span class="p">,</span> <span class="n">XPSResult</span>
 
 
 <div class="viewcode-block" id="Client">
 <a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client">[docs]</a>
-<span class="k">class</span> <span class="nc">Client</span><span class="p">(</span><span class="n">BaseClient</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Client</span><span class="p">(</span><span class="n">BaseClient</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Atomic Data Sciences API client&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="Client.__init__">
 <a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;https://api.atomicdatasciences.com/&quot;</span><span class="p">,</span>
@@ -81,7 +81,7 @@
 
 <div class="viewcode-block" id="Client.search">
 <a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.search">[docs]</a>
-    <span class="k">def</span> <span class="nf">search</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">search</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">keywords</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">include_organization_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -147,6 +147,7 @@
             <span class="s2">&quot;physical_sample_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Physical Sample Name&quot;</span><span class="p">,</span>
             <span class="s2">&quot;detail_note_content&quot;</span><span class="p">:</span> <span class="s2">&quot;Sample Notes&quot;</span><span class="p">,</span>
             <span class="s2">&quot;detail_note_last_updated&quot;</span><span class="p">:</span> <span class="s2">&quot;Sample Notes Last Updated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;file_metadata&quot;</span><span class="p">:</span> <span class="s2">&quot;File Metadata&quot;</span><span class="p">,</span>
             <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="s2">&quot;Tags&quot;</span><span class="p">,</span>
             <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Owner&quot;</span><span class="p">,</span>
         <span class="p">}</span>
@@ -155,8 +156,8 @@
             <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
             <span class="s2">&quot;synth_source_id&quot;</span><span class="p">,</span>
             <span class="s2">&quot;sample_id&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;file_metadata&quot;</span><span class="p">,</span>
             <span class="s2">&quot;processed_file_type&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;bucket_file_name&quot;</span><span class="p">,</span>
         <span class="p">]</span>
         <span class="n">catalogue</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
@@ -168,7 +169,7 @@
 
 <div class="viewcode-block" id="Client.get">
 <a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.get">[docs]</a>
-    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">data_ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">RHEEDVideoResult</span> <span class="o">|</span> <span class="n">RHEEDImageResult</span> <span class="o">|</span> <span class="n">XPSResult</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get analyzed data results</span>
@@ -212,7 +213,7 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multi_thread</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_result_data</span><span class="p">,</span> <span class="n">kwargs_list</span><span class="p">,</span> <span class="n">pbar</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_get_result_data</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_result_data</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">data_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;xps&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">],</span>
@@ -243,7 +244,7 @@
                 <span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data_entries/video_single_frames/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="p">)</span>
 
-            <span class="k">def</span> <span class="nf">__obtain_frame_data</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">metadata_fields</span><span class="p">):</span>
+            <span class="k">def</span><span class="w"> </span><span class="nf">__obtain_frame_data</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">metadata_fields</span><span class="p">):</span>
                 <span class="n">image_params</span> <span class="o">=</span> <span class="p">[]</span>
 
                 <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">frames</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;frames&quot;</span><span class="p">,</span> <span class="p">[]):</span>
@@ -282,7 +283,7 @@
 
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data type must be rheed_video, rheed_image, or xps&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_get_rheed_timeseries_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_rheed_timeseries_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="c1"># Get rheed video timeseries results</span>
         <span class="n">plot_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rheed/timeseries/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">)</span>
 
@@ -303,8 +304,8 @@
             <span class="s2">&quot;frame_number&quot;</span><span class="p">:</span> <span class="s2">&quot;Frame Number&quot;</span><span class="p">,</span>
             <span class="s2">&quot;cluster_id&quot;</span><span class="p">:</span> <span class="s2">&quot;Cluster ID&quot;</span><span class="p">,</span>
             <span class="s2">&quot;cluster_std&quot;</span><span class="p">:</span> <span class="s2">&quot;Cluster ID Uncertainty&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;relative_strain&quot;</span><span class="p">:</span> <span class="s2">&quot;Relative Strain&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;cumulative_strain&quot;</span><span class="p">:</span> <span class="s2">&quot;Cumulative Strain&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;referenced_strain&quot;</span><span class="p">:</span> <span class="s2">&quot;Strain&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;nearest_neighbor_strain&quot;</span><span class="p">:</span> <span class="s2">&quot;Cumulative Strain&quot;</span><span class="p">,</span>
             <span class="s2">&quot;oscillation_period&quot;</span><span class="p">:</span> <span class="s2">&quot;Oscillation Period&quot;</span><span class="p">,</span>
             <span class="s2">&quot;spot_count&quot;</span><span class="p">:</span> <span class="s2">&quot;Diffraction Spot Count&quot;</span><span class="p">,</span>
             <span class="s2">&quot;first_order_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;First Order Intensity&quot;</span><span class="p">,</span>
@@ -316,7 +317,7 @@
 
         <span class="k">return</span> <span class="n">timeseries_data</span><span class="o">.</span><span class="n">set_index</span><span class="p">([</span><span class="s2">&quot;Angle&quot;</span><span class="p">,</span> <span class="s2">&quot;Frame Number&quot;</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="nf">_get_rheed_image_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_rheed_image_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
         <span class="c1"># Get pattern graph data</span>
         <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
@@ -424,7 +425,7 @@
       &#169;2024, Atomic Data Sciences.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.1.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>

@@ -20,7 +20,6 @@ atomicds.results.rheed\_image.RHEEDImageCollection
       ~RHEEDImageCollection.align_fingerprints
       ~RHEEDImageCollection.as_dict
       ~RHEEDImageCollection.from_dict
-      ~RHEEDImageCollection.get_partial_json
       ~RHEEDImageCollection.get_pattern_dataframe
       ~RHEEDImageCollection.load
       ~RHEEDImageCollection.save
