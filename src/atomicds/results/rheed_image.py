@@ -541,7 +541,9 @@ class RHEEDImageCollection(MSONable):
                 rheed_image.get_pattern_dataframe(
                     extra_data=extra_data, symmetrize=False, return_as_features=False
                 )
-                for rheed_image, extra_data in zip(self.rheed_images, extra_iter, strict=False)
+                for rheed_image, extra_data in zip(
+                    self.rheed_images, extra_iter, strict=False
+                )
             ]
             node_df = pd.concat(node_dfs, axis=0).reset_index(drop=True)
 
