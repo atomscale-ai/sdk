@@ -252,7 +252,7 @@ class RHEEDImageResult(MSONable):
         feature_df = feature_df.rename(
             columns={col: (col, "") for col in extra_data_df.columns}
         )
-        feature_df.columns = pd.MultiIndex.from_tuples(feature_df.columns)
+        feature_df.columns = pd.MultiIndex.from_tuples(feature_df.columns)  # type: ignore  # noqa: PGH003
 
         keep_cols = node_feature_cols + list(extra_data.keys())
 
@@ -541,7 +541,9 @@ class RHEEDImageCollection(MSONable):
                 rheed_image.get_pattern_dataframe(
                     extra_data=extra_data, symmetrize=False, return_as_features=False
                 )
-                for rheed_image, extra_data in zip(self.rheed_images, extra_iter)
+                for rheed_image, extra_data in zip(
+                    self.rheed_images, extra_iter, strict=False
+                )
             ]
             node_df = pd.concat(node_dfs, axis=0).reset_index(drop=True)
 
@@ -558,8 +560,8 @@ class RHEEDImageCollection(MSONable):
 
         rheed_images: list[RHEEDImageResult] = []
         splits = [group for _, group in linked_df.groupby("pattern_id")]
-        for split, rheed_image in zip(splits, self.rheed_images):
-            mapping = dict(zip(split["node_id"], split["particle"]))
+        for split, rheed_image in zip(splits, self.rheed_images, strict=False):
+            mapping = dict(zip(split["node_id"], split["particle"], strict=False))
             # don't relabel the specular 0 node.
             if 0 in mapping:
                 mapping.pop(0)
@@ -621,9 +623,9 @@ class RHEEDImageCollection(MSONable):
         # edge_feature_cols = ["weight", "horizontal_weight", "vertical_weight", "horizontal_overlap"]
 
         image_iter = (
-            zip(self.rheed_images, self.extra_data)
+            zip(self.rheed_images, self.extra_data, strict=False)
             if self.extra_data
-            else zip(self.rheed_images, [None] * len(self.rheed_images))
+            else zip(self.rheed_images, [None] * len(self.rheed_images), strict=False)
         )
 
         dfs = [

@@ -25,7 +25,7 @@ def result(client: Client):
 def test_get_dataframe(result: RHEEDVideoResult):
     column_names = set(
         [
-            "Relative Strain",
+            "Strain",
             "Cumulative Strain",
             "Lattice Spacing",
             "Diffraction Spot Count",

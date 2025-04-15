@@ -26,6 +26,7 @@ def test_generic_search(client: Client):
             "Data ID",
             "Upload Datetime",
             "Last Accessed Datetime",
+            "File Metadata",
             "Type",
             "File Name",
             "Status",
