@@ -4,9 +4,10 @@ import itertools
 import os
 import platform
 import sys
+from collections.abc import Callable  # type: ignore[ruleName]
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from importlib.metadata import version
-from typing import Any, Callable  # type: ignore[ruleName]
+from typing import Any
 from urllib.parse import urljoin
 
 from requests import Session
