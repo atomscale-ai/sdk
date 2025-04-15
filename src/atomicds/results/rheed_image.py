@@ -368,7 +368,9 @@ class RHEEDImageResult(MSONable):
                 x,
                 new_df["mask_height"].iloc[0],  # type: ignore  # noqa: PGH003
                 new_df["mask_width"].iloc[0],  # type: ignore  # noqa: PGH003
-            )["counts"]
+            )[
+                "counts"
+            ]
 
             new_df = new_df.groupby("node_id").agg(agg_dict).reset_index(drop=True)
 
