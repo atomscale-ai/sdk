@@ -252,7 +252,7 @@ class RHEEDImageResult(MSONable):
         feature_df = feature_df.rename(
             columns={col: (col, "") for col in extra_data_df.columns}
         )
-        feature_df.columns = pd.MultiIndex.from_tuples(feature_df.columns)
+        feature_df.columns = pd.MultiIndex.from_tuples(feature_df.columns)  # type: ignore  # noqa: PGH003
 
         keep_cols = node_feature_cols + list(extra_data.keys())
 
@@ -368,9 +368,7 @@ class RHEEDImageResult(MSONable):
                 x,
                 new_df["mask_height"].iloc[0],  # type: ignore  # noqa: PGH003
                 new_df["mask_width"].iloc[0],  # type: ignore  # noqa: PGH003
-            )[
-                "counts"
-            ]
+            )["counts"]
 
             new_df = new_df.groupby("node_id").agg(agg_dict).reset_index(drop=True)
 
