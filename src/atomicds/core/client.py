@@ -80,6 +80,45 @@ class BaseClient:
 
         return response.json() if deserialize else response.content
 
+    def _post(
+        self,
+        sub_url: str,
+        params: dict[str, Any] | None = None,
+        body: dict[str, Any] | None = None,
+        deserialize: bool = True,
+        base_override: str | None = None,
+    ) -> list[dict[Any, Any]] | dict[Any, Any] | bytes | None:
+        """Method for issuing a POST request
+
+        Args:
+            sub_url (str): API sub-url to use.
+            params (dict[str, Any] | None): Params to pass in the GET request. Defaults to None.
+            body (dict[str, Any]): Body data to send in the POST request.
+            deserialize (bool): Whether to JSON deserialize the response data or return raw bytes. Defaults to True.
+            base_overrise (str): Base URL to use instead of the default ADS API root URL.
+
+        Raises:
+            ClientError: If the response code returned is not within the range of 200-400.
+
+        Returns:
+            (list[dict] | dict | bytes | None): Deserialized JSON data or raw bytes. Returns None if response is a 404.
+        """
+        base_url = base_override or self.endpoint
+        response = self.session.post(
+            url=urljoin(base_url, sub_url), verify=True, json=body, params=params
+        )
+        if not response.ok:
+            if response.status_code == 404:
+                return None
+
+            raise ClientError(
+                f"Problem sending data to {sub_url} with data {body}. HTTP Error {response.status_code}: {response.text}"
+            )
+        if len(response.content) == 0:
+            return None
+
+        return response.json() if deserialize else response.content
+
     def _multi_thread(
         self,
         func: Callable[..., Any],
@@ -159,9 +198,9 @@ class BaseClient:
         atomicds_info = "atomicds/" + __version__
         python_info = f"Python/{sys.version.split()[0]}"
         platform_info = f"{platform.system()}/{platform.release()}"
-        session.headers[
-            "user-agent"
-        ] = f"{atomicds_info} ({python_info} {platform_info})"
+        session.headers["user-agent"] = (
+            f"{atomicds_info} ({python_info} {platform_info})"
+        )
 
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3
