@@ -19,6 +19,7 @@ atomicds.client.Client
       ~Client.__init__
       ~Client.get
       ~Client.search
+      ~Client.upload
    
    
 
