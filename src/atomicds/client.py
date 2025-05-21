@@ -413,7 +413,7 @@ class Client(BaseClient):
             for part in url_data:
                 part_no = int(part["part"]) - 1
                 offset = part_no * chunk_size
-                length = min(chunk_size, int(entry["file_size"]) - offset)
+                length = min(chunk_size, int(entry["file_size"]) - offset)  # type: ignore  # noqa: PGH003
                 kwargs_list.append(
                     {
                         "method": "PUT",
