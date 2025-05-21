@@ -7,7 +7,7 @@ import sys
 from collections.abc import Callable  # type: ignore[ruleName]
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from importlib.metadata import version
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urljoin
 
 from requests import Session
@@ -80,22 +80,29 @@ class BaseClient:
 
         return response.json() if deserialize else response.content
 
-    def _post(
+    def _post_or_put(
         self,
+        method: Literal["POST", "PUT"],
         sub_url: str,
         params: dict[str, Any] | None = None,
-        body: dict[str, Any] | None = None,
+        body: dict[str, Any] | bytes | None = None,
+        headers: dict[str, str] | None = None,
         deserialize: bool = True,
         base_override: str | None = None,
+        return_headers: bool = False,
     ) -> list[dict[Any, Any]] | dict[Any, Any] | bytes | None:
-        """Method for issuing a POST request
+        """Method for issuing a POST or PUT request
 
         Args:
+            method (Literal["POST", "PUT"]): Method to use
             sub_url (str): API sub-url to use.
             params (dict[str, Any] | None): Params to pass in the GET request. Defaults to None.
-            body (dict[str, Any]): Body data to send in the POST request.
+            body (dict[str, Any] | bytes): Body data to send in the POST request.
+            headers (dict[str, str] | None): Optional headers to include in the request.
             deserialize (bool): Whether to JSON deserialize the response data or return raw bytes. Defaults to True.
             base_overrise (str): Base URL to use instead of the default ADS API root URL.
+            return_headers (bool): Whether to return the headers from the response instead of the content. Defaults
+                to False.
 
         Raises:
             ClientError: If the response code returned is not within the range of 200-400.
@@ -104,8 +111,26 @@ class BaseClient:
             (list[dict] | dict | bytes | None): Deserialized JSON data or raw bytes. Returns None if response is a 404.
         """
         base_url = base_override or self.endpoint
-        response = self.session.post(
-            url=urljoin(base_url, sub_url), verify=True, json=body, params=params
+        method_func = self.session.put if method == "PUT" else self.session.post
+
+        # decide whether to use data= (bytes/streams) or json=
+        if body is None:
+            data_params: dict[str, Any] = {}
+        elif isinstance(body, bytes | bytearray):
+            data_params = {"data": body}
+        elif hasattr(body, "read"):
+            # any file-like / RawIOBase
+            data_params = {"data": body}
+        else:
+            # everything else (dict, list, etc.) goes through JSON
+            data_params = {"json": body}
+
+        response = method_func(
+            url=urljoin(base_url, sub_url),
+            verify=True,
+            params=params,
+            headers=headers or {},
+            **data_params,  # type: ignore # noqa: PGH003
         )
         if not response.ok:
             if response.status_code == 404:
@@ -114,10 +139,13 @@ class BaseClient:
             raise ClientError(
                 f"Problem sending data to {sub_url} with data {body}. HTTP Error {response.status_code}: {response.text}"
             )
-        if len(response.content) == 0:
-            return None
 
-        return response.json() if deserialize else response.content
+        if return_headers:
+            return_data: dict[Any, Any] = response.headers  # type: ignore  # noqa: PGH003
+        else:
+            return_data = response.json() if deserialize else response.content  # type: ignore  #noqa: PGH003
+
+        return return_data
 
     def _multi_thread(
         self,
