@@ -137,7 +137,7 @@ class BaseClient:
                 return None
 
             raise ClientError(
-                f"Problem sending data to {sub_url} with data {body}. HTTP Error {response.status_code}: {response.text}"
+                f"Problem sending data to {sub_url}. HTTP Error {response.status_code}: {response.text}"
             )
 
         if return_headers:
@@ -226,9 +226,9 @@ class BaseClient:
         atomicds_info = "atomicds/" + __version__
         python_info = f"Python/{sys.version.split()[0]}"
         platform_info = f"{platform.system()}/{platform.release()}"
-        session.headers[
-            "user-agent"
-        ] = f"{atomicds_info} ({python_info} {platform_info})"
+        session.headers["user-agent"] = (
+            f"{atomicds_info} ({python_info} {platform_info})"
+        )
 
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3
