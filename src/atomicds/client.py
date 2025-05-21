@@ -4,8 +4,7 @@ import os
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from itertools import cycle
-from typing import BinaryIO, Literal, Any
+from typing import Any, BinaryIO, Literal
 
 import networkx as nx
 from pandas import DataFrame, concat
