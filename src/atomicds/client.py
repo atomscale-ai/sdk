@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from io import BytesIO
-from typing import Literal
+from pathlib import Path
+from typing import Any, BinaryIO, Literal
 
 import networkx as nx
 from pandas import DataFrame, concat
@@ -11,7 +12,7 @@ from PIL import Image
 from pycocotools import mask as mask_util
 from tqdm.auto import tqdm
 
-from atomicds.core import BaseClient
+from atomicds.core import BaseClient, ClientError, _FileSlice
 from atomicds.results import RHEEDImageResult, RHEEDVideoResult, XPSResult
 
 
@@ -70,6 +71,7 @@ class Client(BaseClient):
                 Defaults to (None, None).
             last_accessed_datetime (tuple[datetime | None, datetime | None]): Minimum and maximum values of the last accessed datetime.
                 Defaults to (None, None).
+
         Returns:
             (DataFrame): Pandas DataFrame containing matched entries in the data catalogue.
 
@@ -162,6 +164,8 @@ class Client(BaseClient):
             tqdm(
                 desc="Obtaining data results",
                 total=len(data),
+                mininterval=0,
+                miniters=1,
             )
             if not self.mute_bars
             else None
@@ -282,9 +286,9 @@ class Client(BaseClient):
         graph = (
             nx.node_link_graph(
                 graph_data["fingerprint"],  # type: ignore #noqa: PGH003
-                source="start_id",
-                target="end_id",
-                link="horizontal_distances",
+                source="start_id",  # type: ignore #noqa: PGH003
+                target="end_id",  # type: ignore #noqa: PGH003
+                link="horizontal_distances",  # type: ignore #noqa: PGH003
             )
             if graph_data
             else None
@@ -332,3 +336,139 @@ class Client(BaseClient):
             pattern_graph=graph,
             metadata=metadata,
         )
+
+    def upload(self, files: list[str | BinaryIO]):
+        """Upload files
+
+        Args:
+            files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from `open`.
+        """
+        chunk_size = 40 * 1024 * 1024  # 40 MiB
+        pbar = (
+            tqdm(
+                desc="Checking list of files",
+                total=len(files),
+                mininterval=0,
+                miniters=1,
+            )
+            if not self.mute_bars
+            else None
+        )
+
+        # Check to make sure list is valid and get pre-signed URL nums
+        file_data = []
+        for file in files:
+            if isinstance(file, str):
+                path = Path(file)
+                if not (path.exists() and path.is_file()):
+                    raise ClientError(f"{path} is not a file or does not exist")
+
+                # Calculate number of URLs needed for this file
+                file_size = path.stat().st_size
+                num_urls = -(-file_size // chunk_size)  # Ceiling division
+                file_name = path.name
+
+            else:
+                # Handle BinaryIO objects
+                file.seek(0, 2)  # Seek to the end of the file
+                file_size = file.tell()
+                file.seek(0)  # Seek back to the beginning of the file
+                num_urls = -(-file_size // chunk_size)  # Ceiling division
+                file_name = file.name
+
+            if pbar is not None:
+                pbar.update(1)
+
+            file_data.append(
+                {"num_urls": num_urls, "file_name": file_name, "file_size": file_size}
+            )
+
+        pbar = (
+            tqdm(
+                desc="Uploading files",
+                total=len(files),
+                mininterval=0,
+                miniters=1,
+            )
+            if not self.mute_bars
+            else None
+        )
+        for entry in file_data:
+            if pbar:
+                pbar.set_description_str(f"Uploading {entry['file_name']}")
+
+            url_data: list[dict[str, str | int]] = self._post_or_put(
+                method="POST",
+                sub_url="data_entries/raw_data/staged/upload_urls/",
+                params={
+                    "original_filename": entry["file_name"],
+                    "num_parts": entry["num_urls"],
+                    "staging_type": "core",
+                },
+            )  # type: ignore  # noqa: PGH003
+
+            # Iterate through data structure above and upload file using multi-part S3 urls. Multithread appropriately.
+            # build kwargs_list using only serializable bits:
+            kwargs_list = []
+            for part in url_data:
+                part_no = int(part["part"]) - 1
+                offset = part_no * chunk_size
+                length = min(chunk_size, int(entry["file_size"]) - offset)  # type: ignore  # noqa: PGH003
+                kwargs_list.append(
+                    {
+                        "method": "PUT",
+                        "sub_url": "",
+                        "params": None,
+                        "base_override": part["url"],
+                        "file_name": entry["file_name"],
+                        "offset": offset,
+                        "length": length,
+                    }
+                )
+
+            def __upload_chunk(
+                method: Literal["PUT", "POST"],
+                sub_url: str,
+                params: dict[str, Any] | None,
+                base_override: str,
+                file_name: str,
+                offset: int,
+                length: int,
+            ) -> Any:
+                slice_obj = _FileSlice(file_name, offset, length)
+                return self._post_or_put(
+                    method=method,
+                    sub_url=sub_url,
+                    params=params,
+                    body=slice_obj,  # type: ignore  # noqa: PGH003
+                    deserialize=False,
+                    return_headers=True,
+                    base_override=base_override,
+                    headers={
+                        "Content-Length": str(length),
+                    },
+                )
+
+            etag_data = self._multi_thread(
+                __upload_chunk,
+                kwargs_list=kwargs_list,
+            )
+
+            # Confirm file upload
+            etag_body = [
+                {"ETag": entry["ETag"], "PartNumber": i + 1}
+                for i, entry in enumerate(etag_data)
+            ]
+            self._post_or_put(
+                method="POST",
+                sub_url="data_entries/raw_data/staged/upload_urls/complete/",
+                params={"staging_type": "core"},
+                body={
+                    "upload_id": url_data[0]["upload_id"],
+                    "new_filename": url_data[0]["new_filename"],
+                    "etag_data": etag_body,
+                },
+            )
+
+        if pbar is not None:
+            pbar.update(1)

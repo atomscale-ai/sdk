@@ -311,6 +311,8 @@ class RHEEDImageResult(MSONable):
                 "intensity_centroid_1": "mean",
                 "relative_centroid_0": "mean",
                 "relative_centroid_1": "mean",
+                "relative_intensity_centroid_0": "mean",
+                "relative_intensity_centroid_1": "mean",
                 "bbox_minc": "mean",
                 "bbox_minr": "mean",
                 "bbox_maxc": "mean",

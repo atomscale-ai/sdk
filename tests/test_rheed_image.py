@@ -40,6 +40,8 @@ def test_get_dataframe(result: RHEEDImageResult):
         "relative_centroid_1",
         "intensity_centroid_0",
         "intensity_centroid_1",
+        "relative_intensity_centroid_0",
+        "relative_intensity_centroid_1",
         "area",
         "fwhm_0",
         "fwhm_1",
@@ -63,8 +65,8 @@ def test_get_dataframe(result: RHEEDImageResult):
         "data_id",
         "test",
     }
-
     df = result.get_pattern_dataframe(extra_data={"test": "test"})
+
     assert isinstance(df, DataFrame)
     assert not len(set(df.columns) - cols)
 
