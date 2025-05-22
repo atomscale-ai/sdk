@@ -2,8 +2,7 @@ from pytest_httpserver import HTTPServer
 import pytest
 from requests import Session
 
-from tqdm.auto import tqdm
-from atomicds.core import BaseClient
+from atomicds.core import BaseClient, _make_progress
 
 from atomicds.core.client import ClientError
 
@@ -60,6 +59,6 @@ def test_core_multi_thread():
     assert results == [True] * 8
 
     # With progress bar
-    pbar = tqdm(total=8)
-    results = base_client._multi_thread(test_func, kwargs_list, pbar)
+    with _make_progress(False, False) as pbar:
+        results = base_client._multi_thread(test_func, kwargs_list, pbar)
     assert results == [True] * 8

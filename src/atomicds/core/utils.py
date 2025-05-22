@@ -2,6 +2,16 @@ import networkx as nx
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+from rich.progress import (
+    BarColumn,
+    Progress,
+    ProgressColumn,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from rich.text import Text
 
 
 def normalize_pixel_dimensions(
@@ -173,3 +183,44 @@ def generate_graph_from_nodes(node_df: pd.DataFrame) -> nx.Graph:
     pattern_graph.add_edges_from(edge_df[["start_node", "end_node"]].to_numpy())
 
     return pattern_graph
+
+
+def _make_progress(mute: bool, transient: bool) -> Progress:
+    """
+    If `muted` is True return (nullcontext(), None),
+    else return (progress, progress).
+
+    Transient determines if it hides after completion.
+    """
+    if mute:
+        return Progress(disable=True)
+
+    class PercentOrTotal(ProgressColumn):
+        """Render either % or completed/total depending on task flags."""
+
+        _percent = TaskProgressColumn()
+
+        def render(self, task) -> Text:
+            if task.fields.get("show_percent", False):  # 42.0
+                return self._percent.render(task)
+            if task.fields.get("show_total", True):  # 12/37
+                return Text(f"{int(task.completed)}/{int(task.total)}")  # type: ignore  # noqa: PGH003
+            return Text("")  # blank cell
+
+    class MaybeSpinner(SpinnerColumn):
+        """Show the spinner only when task.fields['show_spinner'] is truthy."""
+
+        def render(self, task) -> Text:
+            if task.fields.get("show_spinner", True):
+                return super().render(task)  # type: ignore  # noqa: PGH003
+            return Text("")
+
+    return Progress(
+        MaybeSpinner(),
+        TextColumn("[bold]{task.fields[pad]}{task.description}"),
+        BarColumn(),
+        PercentOrTotal(),
+        TimeElapsedColumn(),
+        transient=transient,
+        refresh_per_second=30,
+    )

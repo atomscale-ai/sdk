@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
@@ -10,9 +11,9 @@ import networkx as nx
 from pandas import DataFrame, concat
 from PIL import Image
 from pycocotools import mask as mask_util
-from tqdm.auto import tqdm
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
+from atomicds.core.utils import _make_progress
 from atomicds.results import RHEEDImageResult, RHEEDVideoResult, XPSResult
 
 
@@ -160,18 +161,13 @@ class Client(BaseClient):
         # sort by submission order; this is important to match external labels
         kwargs_list = sorted(kwargs_list, key=lambda x: data_ids.index(x["data_id"]))
 
-        pbar = (
-            tqdm(
-                desc="Obtaining data results",
-                total=len(data),
-                mininterval=0,
-                miniters=1,
+        with _make_progress(self.mute_bars, False) as progress:
+            return self._multi_thread(
+                self._get_result_data,
+                kwargs_list,
+                progress,
+                progress_description="Obtaining data results",
             )
-            if not self.mute_bars
-            else None
-        )
-
-        return self._multi_thread(self._get_result_data, kwargs_list, pbar)
 
     def _get_result_data(
         self,
@@ -338,22 +334,12 @@ class Client(BaseClient):
         )
 
     def upload(self, files: list[str | BinaryIO]):
-        """Upload files
+        """Upload and process files
 
         Args:
             files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from `open`.
         """
         chunk_size = 40 * 1024 * 1024  # 40 MiB
-        pbar = (
-            tqdm(
-                desc="Checking list of files",
-                total=len(files),
-                mininterval=0,
-                miniters=1,
-            )
-            if not self.mute_bars
-            else None
-        )
 
         # Check to make sure list is valid and get pre-signed URL nums
         file_data = []
@@ -376,33 +362,19 @@ class Client(BaseClient):
                 num_urls = -(-file_size // chunk_size)  # Ceiling division
                 file_name = file.name
 
-            if pbar is not None:
-                pbar.update(1)
-
             file_data.append(
                 {"num_urls": num_urls, "file_name": file_name, "file_size": file_size}
             )
 
-        pbar = (
-            tqdm(
-                desc="Uploading files",
-                total=len(files),
-                mininterval=0,
-                miniters=1,
-            )
-            if not self.mute_bars
-            else None
-        )
-        for entry in file_data:
-            if pbar:
-                pbar.set_description_str(f"Uploading {entry['file_name']}")
-
+        def __upload_file(
+            file_info: dict[Literal["num_urls", "file_name", "file_size"], int | str],
+        ):
             url_data: list[dict[str, str | int]] = self._post_or_put(
                 method="POST",
                 sub_url="data_entries/raw_data/staged/upload_urls/",
                 params={
-                    "original_filename": entry["file_name"],
-                    "num_parts": entry["num_urls"],
+                    "original_filename": file_info["file_name"],
+                    "num_parts": file_info["num_urls"],
                     "staging_type": "core",
                 },
             )  # type: ignore  # noqa: PGH003
@@ -413,14 +385,14 @@ class Client(BaseClient):
             for part in url_data:
                 part_no = int(part["part"]) - 1
                 offset = part_no * chunk_size
-                length = min(chunk_size, int(entry["file_size"]) - offset)  # type: ignore  # noqa: PGH003
+                length = min(chunk_size, int(file_info["file_size"]) - offset)  # type: ignore  # noqa: PGH003
                 kwargs_list.append(
                     {
                         "method": "PUT",
                         "sub_url": "",
                         "params": None,
                         "base_override": part["url"],
-                        "file_name": entry["file_name"],
+                        "file_name": file_info["file_name"],
                         "offset": offset,
                         "length": length,
                     }
@@ -452,6 +424,15 @@ class Client(BaseClient):
             etag_data = self._multi_thread(
                 __upload_chunk,
                 kwargs_list=kwargs_list,
+                progress_bar=progress,
+                progress_description=f"[red]{file_info['file_name']}",
+                progress_kwargs={
+                    "show_percent": True,
+                    "show_total": False,
+                    "show_spinner": False,
+                    "pad": "",
+                },
+                transient=True,
             )
 
             # Confirm file upload
@@ -470,5 +451,26 @@ class Client(BaseClient):
                 },
             )
 
-        if pbar is not None:
-            pbar.update(1)
+        main_task = None
+        file_count = len(file_data)
+        with _make_progress(self.mute_bars, False) as progress:
+            if not progress.disable:
+                main_task = progress.add_task(
+                    "Uploading files…",
+                    total=file_count,
+                    show_percent=False,
+                    show_total=True,
+                    show_spinner=True,
+                    pad="",
+                )
+
+            max_workers = min(8, len(file_data))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(__upload_file, file_info): file_info  # type: ignore  # noqa: PGH003
+                    for file_info in file_data
+                }
+                for future in as_completed(futures):
+                    future.result()  # raise early if anything went wrong
+                    if main_task is not None:
+                        progress.update(main_task, advance=1, refresh=True)
