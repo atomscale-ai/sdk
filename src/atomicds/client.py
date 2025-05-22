@@ -467,7 +467,7 @@ class Client(BaseClient):
             max_workers = min(8, len(file_data))
             with ThreadPoolExecutor(max_workers=max_workers) as executor:
                 futures = {
-                    executor.submit(__upload_file, file_info): file_info
+                    executor.submit(__upload_file, file_info): file_info  # type: ignore  # noqa: PGH003
                     for file_info in file_data
                 }
                 for future in as_completed(futures):
