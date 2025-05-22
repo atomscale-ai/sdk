@@ -11,15 +11,6 @@ import networkx as nx
 from pandas import DataFrame, concat
 from PIL import Image
 from pycocotools import mask as mask_util
-from rich.progress import (
-    BarColumn,
-    Progress,
-    SpinnerColumn,
-    TaskID,
-    TextColumn,
-    TimeElapsedColumn,
-)
-from tqdm.auto import tqdm
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
 from atomicds.core.utils import _make_progress

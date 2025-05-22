@@ -1,4 +1,3 @@
-from contextlib import nullcontext
 
 import networkx as nx
 import numpy as np
@@ -9,11 +8,10 @@ from rich.progress import (
     Progress,
     ProgressColumn,
     SpinnerColumn,
+    TaskProgressColumn,
     TextColumn,
     TimeElapsedColumn,
-    TaskProgressColumn,
 )
-from rich.table import Column
 from rich.text import Text
 
 
