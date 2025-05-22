@@ -32,7 +32,7 @@ dependencies = [
   "pillow",
   "networkx",
   "requests",
-  "tqdm",
+  "rich",
   "matplotlib",
   "pycocotools",
   "trackpy",

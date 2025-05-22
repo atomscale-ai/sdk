@@ -10,10 +10,9 @@ from importlib.metadata import version
 from typing import Any, Literal
 from urllib.parse import urljoin
 
-from rich.progress import Progress
 from requests import Session
 from requests.adapters import HTTPAdapter
-from tqdm.auto import tqdm
+from rich.progress import Progress
 from urllib3.util.retry import Retry
 
 __version__ = version("atomicds")
@@ -176,7 +175,7 @@ class BaseClient:
         kwargs_gen = iter(kwargs_list)
 
         if progress_bar is not None:
-            progress_kwargs = progress_kwargs or {}
+            progress_kwargs = progress_kwargs or {"pad": ""}
             task = progress_bar.add_task(
                 progress_description or "", total=total_count, **progress_kwargs
             )

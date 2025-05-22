@@ -6,18 +6,19 @@ from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from typing import Any, BinaryIO, Literal
-from rich.progress import (
-    Progress,
-    SpinnerColumn,
-    BarColumn,
-    TextColumn,
-    TimeElapsedColumn,
-    TaskID,
-)
+
 import networkx as nx
 from pandas import DataFrame, concat
 from PIL import Image
 from pycocotools import mask as mask_util
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskID,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from tqdm.auto import tqdm
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
@@ -169,18 +170,13 @@ class Client(BaseClient):
         # sort by submission order; this is important to match external labels
         kwargs_list = sorted(kwargs_list, key=lambda x: data_ids.index(x["data_id"]))
 
-        pbar = (
-            tqdm(
-                desc="Obtaining data results",
-                total=len(data),
-                mininterval=0,
-                miniters=1,
+        with _make_progress(self.mute_bars, False) as progress:
+            return self._multi_thread(
+                self._get_result_data,
+                kwargs_list,
+                progress,
+                progress_description="Obtaining data results",
             )
-            if not self.mute_bars
-            else None
-        )
-
-        return self._multi_thread(self._get_result_data, kwargs_list, pbar)
 
     def _get_result_data(
         self,

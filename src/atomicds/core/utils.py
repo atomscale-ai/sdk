@@ -204,9 +204,9 @@ def _make_progress(mute: bool, transient: bool) -> Progress:
         _percent = TaskProgressColumn()
 
         def render(self, task) -> Text:
-            if task.fields.get("show_percent"):  # 42.0
+            if task.fields.get("show_percent", False):  # 42.0
                 return self._percent.render(task)
-            if task.fields.get("show_total"):  # 12/37
+            if task.fields.get("show_total", True):  # 12/37
                 return Text(f"{int(task.completed)}/{int(task.total)}")  # type: ignore  # noqa: PGH003
             return Text("")  # blank cell
 
