@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
 from datetime import datetime
 from io import BytesIO
@@ -338,7 +339,7 @@ class Client(BaseClient):
         )
 
     def upload(self, files: list[str | BinaryIO]):
-        """Upload files
+        """Upload and process files
 
         Args:
             files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from `open`.
@@ -393,16 +394,16 @@ class Client(BaseClient):
             if not self.mute_bars
             else None
         )
-        for entry in file_data:
-            if pbar:
-                pbar.set_description_str(f"Uploading {entry['file_name']}")
 
+        def __upload_file(
+            file_info: dict[Literal["num_urls", "file_name", "file_size"], int | str],
+        ):
             url_data: list[dict[str, str | int]] = self._post_or_put(
                 method="POST",
                 sub_url="data_entries/raw_data/staged/upload_urls/",
                 params={
-                    "original_filename": entry["file_name"],
-                    "num_parts": entry["num_urls"],
+                    "original_filename": file_info["file_name"],
+                    "num_parts": file_info["num_urls"],
                     "staging_type": "core",
                 },
             )  # type: ignore  # noqa: PGH003
@@ -413,14 +414,14 @@ class Client(BaseClient):
             for part in url_data:
                 part_no = int(part["part"]) - 1
                 offset = part_no * chunk_size
-                length = min(chunk_size, int(entry["file_size"]) - offset)  # type: ignore  # noqa: PGH003
+                length = min(chunk_size, int(file_info["file_size"]) - offset)  # type: ignore  # noqa: PGH003
                 kwargs_list.append(
                     {
                         "method": "PUT",
                         "sub_url": "",
                         "params": None,
                         "base_override": part["url"],
-                        "file_name": entry["file_name"],
+                        "file_name": file_info["file_name"],
                         "offset": offset,
                         "length": length,
                     }
@@ -470,5 +471,13 @@ class Client(BaseClient):
                 },
             )
 
-        if pbar is not None:
-            pbar.update(1)
+        max_workers = min(8, len(file_data))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(__upload_file, file_info): file_info
+                for file_info in file_data
+            }
+            for future in as_completed(futures):
+                future.result()  # raise early if anything went wrong
+                if pbar:
+                    pbar.update(1)
