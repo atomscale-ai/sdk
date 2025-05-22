@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
 from typing import Any, BinaryIO, Literal
-
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    BarColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TaskID,
+)
 import networkx as nx
 from pandas import DataFrame, concat
 from PIL import Image
@@ -14,6 +21,7 @@ from pycocotools import mask as mask_util
 from tqdm.auto import tqdm
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
+from atomicds.core.utils import _make_progress
 from atomicds.results import RHEEDImageResult, RHEEDVideoResult, XPSResult
 
 
@@ -345,16 +353,6 @@ class Client(BaseClient):
             files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from `open`.
         """
         chunk_size = 40 * 1024 * 1024  # 40 MiB
-        pbar = (
-            tqdm(
-                desc="Checking list of files",
-                total=len(files),
-                mininterval=0,
-                miniters=1,
-            )
-            if not self.mute_bars
-            else None
-        )
 
         # Check to make sure list is valid and get pre-signed URL nums
         file_data = []
@@ -377,23 +375,9 @@ class Client(BaseClient):
                 num_urls = -(-file_size // chunk_size)  # Ceiling division
                 file_name = file.name
 
-            if pbar is not None:
-                pbar.update(1)
-
             file_data.append(
                 {"num_urls": num_urls, "file_name": file_name, "file_size": file_size}
             )
-
-        pbar = (
-            tqdm(
-                desc="Uploading files",
-                total=len(files),
-                mininterval=0,
-                miniters=1,
-            )
-            if not self.mute_bars
-            else None
-        )
 
         def __upload_file(
             file_info: dict[Literal["num_urls", "file_name", "file_size"], int | str],
@@ -453,6 +437,15 @@ class Client(BaseClient):
             etag_data = self._multi_thread(
                 __upload_chunk,
                 kwargs_list=kwargs_list,
+                progress_bar=progress,
+                progress_description=f"[red]{file_info['file_name']}",
+                progress_kwargs={
+                    "show_percent": True,
+                    "show_total": False,
+                    "show_spinner": False,
+                    "pad": "",
+                },
+                transient=True,
             )
 
             # Confirm file upload
@@ -471,13 +464,26 @@ class Client(BaseClient):
                 },
             )
 
-        max_workers = min(8, len(file_data))
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(__upload_file, file_info): file_info
-                for file_info in file_data
-            }
-            for future in as_completed(futures):
-                future.result()  # raise early if anything went wrong
-                if pbar:
-                    pbar.update(1)
+        main_task = None
+        file_count = len(file_data)
+        with _make_progress(self.mute_bars, False) as progress:
+            if not progress.disable:
+                main_task = progress.add_task(
+                    "Uploading files…",
+                    total=file_count,
+                    show_percent=False,
+                    show_total=True,
+                    show_spinner=True,
+                    pad="",
+                )
+
+            max_workers = min(8, len(file_data))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(__upload_file, file_info): file_info
+                    for file_info in file_data
+                }
+                for future in as_completed(futures):
+                    future.result()  # raise early if anything went wrong
+                    if main_task is not None:
+                        progress.update(main_task, advance=1, refresh=True)

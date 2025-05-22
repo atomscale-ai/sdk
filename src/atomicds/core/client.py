@@ -10,6 +10,7 @@ from importlib.metadata import version
 from typing import Any, Literal
 from urllib.parse import urljoin
 
+from rich.progress import Progress
 from requests import Session
 from requests.adapters import HTTPAdapter
 from tqdm.auto import tqdm
@@ -151,21 +152,34 @@ class BaseClient:
         self,
         func: Callable[..., Any],
         kwargs_list: list[dict[str, Any]],
-        progress_bar: tqdm | None = None,  # type: ignore[ruleName]
+        progress_bar: Progress | None = None,
+        progress_description: str | None = None,
+        progress_kwargs: dict | None = None,
+        transient: bool = False,
     ) -> list[Any]:
         """Handles running a function concurrently with a ThreadPoolExecutor
 
         Arguments:
             func (Callable): Function to run concurrently
             kwargs_list (list): List of keyword argument inputs for the function
-            progress_bar (tqdm): Progress bar to show. Defaults to None.
+            progress_bar (Progress | None): Progress bar to show. Defaults to None.
+            progress_description (str | None): Progress bar description.
+            progress_kwargs (dict | None): Additional kwargs to pass to the progress task.
+            transient (bool): Whether the progress bar is transient. Defaults to False,
 
         Returns:
             (list[Any]): List of results from passed function in the order of parameters passed
         """
         return_dict = {}
 
+        total_count = len(kwargs_list)
         kwargs_gen = iter(kwargs_list)
+
+        if progress_bar is not None:
+            progress_kwargs = progress_kwargs or {}
+            task = progress_bar.add_task(
+                progress_description or "", total=total_count, **progress_kwargs
+            )
 
         ind = 0
         num_parallel = min(os.cpu_count() or 8, 8)
@@ -191,7 +205,7 @@ class BaseClient:
                     data = future.result()
 
                     if progress_bar is not None:
-                        progress_bar.update(1)
+                        progress_bar.update(task, advance=1, refresh=True)  # type: ignore  # noqa: PGH003
 
                     return_dict[future.ind] = data  # type: ignore  # noqa: PGH003
 
@@ -205,6 +219,9 @@ class BaseClient:
                     new_future.ind = ind  # type: ignore  # noqa: PGH003
                     futures.add(new_future)
                     ind += 1
+
+        if progress_bar is not None and transient:
+            progress_bar.remove_task(task)  # type: ignore # noqa: PGH003
 
         return [t[1] for t in sorted(return_dict.items())]
 
@@ -226,9 +243,9 @@ class BaseClient:
         atomicds_info = "atomicds/" + __version__
         python_info = f"Python/{sys.version.split()[0]}"
         platform_info = f"{platform.system()}/{platform.release()}"
-        session.headers[
-            "user-agent"
-        ] = f"{atomicds_info} ({python_info} {platform_info})"
+        session.headers["user-agent"] = (
+            f"{atomicds_info} ({python_info} {platform_info})"
+        )
 
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3
