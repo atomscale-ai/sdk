@@ -474,3 +474,102 @@ class Client(BaseClient):
                     future.result()  # raise early if anything went wrong
                     if main_task is not None:
                         progress.update(main_task, advance=1, refresh=True)
+
+    def download_videos(
+        self,
+        data_ids: str | list[str],
+        dest_dir: str | Path | None = None,
+    ):
+        """
+        Download processed RHEED videos to disk.
+
+        Args:
+            data_ids (str | list[str]): One or more data IDs from the data catalogue.
+            dest_dir (str | Path | None): Directory to write the files to.
+                Defaults to the current working directory.
+        """
+        chunk_size: int = 20 * 1024 * 1024  # 20 MiB read chunks
+
+        # Normalise inputs
+        if isinstance(data_ids, str):
+            data_ids = [data_ids]
+        if dest_dir is None:
+            dest_dir = Path.cwd()
+        else:
+            dest_dir = Path(dest_dir).expanduser().resolve()
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        def __download_one(data_id: str) -> None:
+            # 1) Resolve the presigned URL -------------------------------------
+            meta: dict = self._get(  # type: ignore  # noqa: PGH003
+                sub_url=f"data_entries/processed_data/{data_id}",
+                params={"return_as": "url-download"},
+            )
+            if meta is None:
+                raise ClientError(f"No processed data found for data_id '{data_id}'")
+
+            url = meta["url"]
+            file_name = (
+                meta.get("file_name") or f"{data_id}.{meta.get('file_format', 'mp4')}"
+            )
+            target = dest_dir / file_name
+
+            # 2) Open the stream *once* (HEAD not allowed)
+            with self._session.get(  # type: ignore  # noqa: PGH003
+                url, stream=True, allow_redirects=True, timeout=30
+            ) as resp:
+                resp.raise_for_status()
+
+                # Attempt to read the size from **this** GET response
+                total_size = int(resp.headers.get("Content-Length", 0))
+
+                # 3) Create a nested bar for this file
+                if total_size:  # we know the size → percent bar
+                    bar_id = progress.add_task(
+                        f"[red]{file_name}",
+                        total=total_size,
+                        show_percent=True,
+                        show_total=False,
+                        show_spinner=False,
+                        pad="",
+                    )
+                else:  # unknown size → indeterminate spinner
+                    bar_id = progress.add_task(
+                        f"[red]{file_name}",
+                        total=None,
+                        show_percent=False,
+                        show_total=False,
+                        show_spinner=True,
+                        pad="",
+                    )
+
+                # 4) Stream the bytes to disk with updates
+                with Path.open(target, "wb") as fh:
+                    for chunk in resp.iter_content(chunk_size):
+                        if chunk:  # filter out keep-alives
+                            fh.write(chunk)
+                            progress.update(bar_id, advance=len(chunk))
+
+        # Download files
+        with _make_progress(self.mute_bars, False) as progress:
+            # master bar
+            master_task = None
+            if not progress.disable:
+                master_task = progress.add_task(
+                    "Downloading videos…",
+                    total=len(data_ids),
+                    show_percent=False,
+                    show_total=True,
+                    show_spinner=True,
+                    pad="",
+                )
+
+            # thread-pool for concurrent downloads
+            max_workers = min(8, len(data_ids))
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                futures = {pool.submit(__download_one, did): did for did in data_ids}
+                for fut in as_completed(futures):
+                    # propagate any exceptions early
+                    fut.result()
+                    if master_task is not None:
+                        progress.update(master_task, advance=1, refresh=True)
