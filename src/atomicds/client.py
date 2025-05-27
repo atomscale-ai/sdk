@@ -512,7 +512,7 @@ class Client(BaseClient):
             file_name = (
                 meta.get("file_name") or f"{data_id}.{meta.get('file_format', 'mp4')}"
             )
-            target = dest_dir / file_name
+            target = dest_dir / file_name  # type: ignore # noqa: PGH003
 
             # 2) Open the stream *once* (HEAD not allowed)
             with self._session.get(  # type: ignore  # noqa: PGH003
