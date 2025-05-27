@@ -546,7 +546,7 @@ class Client(BaseClient):
                 # 4) Stream the bytes to disk with updates
                 with Path.open(target, "wb") as fh:
                     for chunk in resp.iter_content(chunk_size):
-                        if chunk:  # filter out keep-alives
+                        if chunk:  # filter out keep-alive
                             fh.write(chunk)
                             progress.update(bar_id, advance=len(chunk))
 
