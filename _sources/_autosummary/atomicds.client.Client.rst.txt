@@ -17,6 +17,7 @@ atomicds.client.Client
    .. autosummary::
    
       ~Client.__init__
+      ~Client.download_videos
       ~Client.get
       ~Client.search
       ~Client.upload

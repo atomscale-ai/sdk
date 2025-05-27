@@ -520,6 +520,108 @@
                     <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>  <span class="c1"># raise early if anything went wrong</span>
                     <span class="k">if</span> <span class="n">main_task</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                         <span class="n">progress</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">main_task</span><span class="p">,</span> <span class="n">advance</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Client.download_videos">
+<a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.download_videos">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">download_videos</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">data_ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">dest_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Download processed RHEED videos to disk.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data_ids (str | list[str]): One or more data IDs from the data catalogue.</span>
+<span class="sd">            dest_dir (str | Path | None): Directory to write the files to.</span>
+<span class="sd">                Defaults to the current working directory.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>  <span class="c1"># 20 MiB read chunks</span>
+
+        <span class="c1"># Normalise inputs</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_ids</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">data_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_ids</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">dest_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">dest_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="o">.</span><span class="n">cwd</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dest_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dest_dir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="n">dest_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">__download_one</span><span class="p">(</span><span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># 1) Resolve the presigned URL -------------------------------------</span>
+            <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+                <span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data_entries/processed_data/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;return_as&quot;</span><span class="p">:</span> <span class="s2">&quot;url-download&quot;</span><span class="p">},</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">meta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ClientError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No processed data found for data_id &#39;</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+            <span class="n">url</span> <span class="o">=</span> <span class="n">meta</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">]</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file_name&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">meta</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;file_format&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;mp4&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="n">dest_dir</span> <span class="o">/</span> <span class="n">file_name</span>  <span class="c1"># type: ignore # noqa: PGH003</span>
+
+            <span class="c1"># 2) Open the stream *once* (HEAD not allowed)</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_session</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+                <span class="n">url</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">allow_redirects</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span>
+            <span class="p">)</span> <span class="k">as</span> <span class="n">resp</span><span class="p">:</span>
+                <span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+
+                <span class="c1"># Attempt to read the size from **this** GET response</span>
+                <span class="n">total_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Content-Length&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+                <span class="c1"># 3) Create a nested bar for this file</span>
+                <span class="k">if</span> <span class="n">total_size</span><span class="p">:</span>  <span class="c1"># we know the size → percent bar</span>
+                    <span class="n">bar_id</span> <span class="o">=</span> <span class="n">progress</span><span class="o">.</span><span class="n">add_task</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;[red]</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">total</span><span class="o">=</span><span class="n">total_size</span><span class="p">,</span>
+                        <span class="n">show_percent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">show_total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">show_spinner</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">pad</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>  <span class="c1"># unknown size → indeterminate spinner</span>
+                    <span class="n">bar_id</span> <span class="o">=</span> <span class="n">progress</span><span class="o">.</span><span class="n">add_task</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;[red]</span><span class="si">{</span><span class="n">file_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                        <span class="n">total</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">show_percent</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">show_total</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">show_spinner</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">pad</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                <span class="c1"># 4) Stream the bytes to disk with updates</span>
+                <span class="k">with</span> <span class="n">Path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">resp</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">):</span>
+                        <span class="k">if</span> <span class="n">chunk</span><span class="p">:</span>  <span class="c1"># filter out keep-alive</span>
+                            <span class="n">fh</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+                            <span class="n">progress</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">bar_id</span><span class="p">,</span> <span class="n">advance</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span>
+
+        <span class="c1"># Download files</span>
+        <span class="k">with</span> <span class="n">_make_progress</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mute_bars</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">progress</span><span class="p">:</span>
+            <span class="c1"># master bar</span>
+            <span class="n">master_task</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">progress</span><span class="o">.</span><span class="n">disable</span><span class="p">:</span>
+                <span class="n">master_task</span> <span class="o">=</span> <span class="n">progress</span><span class="o">.</span><span class="n">add_task</span><span class="p">(</span>
+                    <span class="s2">&quot;Downloading videos…&quot;</span><span class="p">,</span>
+                    <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">data_ids</span><span class="p">),</span>
+                    <span class="n">show_percent</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">show_total</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">show_spinner</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">pad</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="c1"># thread-pool for concurrent downloads</span>
+            <span class="n">max_workers</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_ids</span><span class="p">))</span>
+            <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">max_workers</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+                <span class="n">futures</span> <span class="o">=</span> <span class="p">{</span><span class="n">pool</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="n">__download_one</span><span class="p">,</span> <span class="n">did</span><span class="p">):</span> <span class="n">did</span> <span class="k">for</span> <span class="n">did</span> <span class="ow">in</span> <span class="n">data_ids</span><span class="p">}</span>
+                <span class="k">for</span> <span class="n">fut</span> <span class="ow">in</span> <span class="n">as_completed</span><span class="p">(</span><span class="n">futures</span><span class="p">):</span>
+                    <span class="c1"># propagate any exceptions early</span>
+                    <span class="n">fut</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">master_task</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">progress</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">master_task</span><span class="p">,</span> <span class="n">advance</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

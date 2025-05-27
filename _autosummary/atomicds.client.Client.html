@@ -70,13 +70,16 @@ If none provided it defaults to ‘<a class="reference external" href="https://a
 <tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.client.Client.__init__" title="atomicds.client.Client.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>([api_key, endpoint, mute_bars])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.client.Client.get" title="atomicds.client.Client.get"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get</span></code></a>(data_ids)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.client.Client.download_videos" title="atomicds.client.Client.download_videos"><code class="xref py py-obj docutils literal notranslate"><span class="pre">download_videos</span></code></a>(data_ids[, dest_dir])</p></td>
+<td><p>Download processed RHEED videos to disk.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.client.Client.get" title="atomicds.client.Client.get"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get</span></code></a>(data_ids)</p></td>
 <td><p>Get analyzed data results</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.client.Client.search" title="atomicds.client.Client.search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">search</span></code></a>([keywords, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.client.Client.search" title="atomicds.client.Client.search"><code class="xref py py-obj docutils literal notranslate"><span class="pre">search</span></code></a>([keywords, ...])</p></td>
 <td><p>Search and obtain data catalogue entries</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.client.Client.upload" title="atomicds.client.Client.upload"><code class="xref py py-obj docutils literal notranslate"><span class="pre">upload</span></code></a>(files)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.client.Client.upload" title="atomicds.client.Client.upload"><code class="xref py py-obj docutils literal notranslate"><span class="pre">upload</span></code></a>(files)</p></td>
 <td><p>Upload and process files</p></td>
 </tr>
 </tbody>
@@ -144,6 +147,21 @@ Defaults to (None, None).</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>files</strong> (<em>list</em><em>[</em><em>str</em><em> | </em><em>BinaryIO</em><em>]</em>) – List containing string paths to files, or BinaryIO objects from <cite>open</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="atomicds.client.Client.download_videos">
+<span class="sig-name descname"><span class="pre">download_videos</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dest_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/atomicds/client.html#Client.download_videos"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#atomicds.client.Client.download_videos" title="Link to this definition">¶</a></dt>
+<dd><p>Download processed RHEED videos to disk.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_ids</strong> (<em>str</em><em> | </em><em>list</em><em>[</em><em>str</em><em>]</em>) – One or more data IDs from the data catalogue.</p></li>
+<li><p><strong>dest_dir</strong> (<em>str</em><em> | </em><em>Path</em><em> | </em><em>None</em>) – Directory to write the files to.
+Defaults to the current working directory.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
