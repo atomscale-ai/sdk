@@ -116,11 +116,13 @@ def test_get(client: Client):
 
     assert len(data_types) == 3
 
+
 @pytest.mark.order(2)
 def test_upload(client: Client):
     test_video = Path(__file__).parent / "data" / "test_rheed.mp4"
 
     client.upload(files=[str(test_video.absolute())])
+
 
 @pytest.mark.order(3)
 def test_download(client: Client):
@@ -136,8 +138,12 @@ def test_download(client: Client):
         file_path = Path("./") / f"{data_id}.mp4"
         if file_path.exists():
             file_path.unlink()
-            
+
     response = client.session.delete(
-        url=urljoin(client.endpoint, "/data_entries"), verify=True, params={"data_ids": data_ids}
+        url=urljoin(client.endpoint, "/data_entries"),
+        verify=True,
+        params={"data_ids": data_ids},
     )
-    assert response.ok, f"Failed to delete data entries: {response.status_code} - {response.text}"
+    assert (
+        response.ok
+    ), f"Failed to delete data entries: {response.status_code} - {response.text}"
