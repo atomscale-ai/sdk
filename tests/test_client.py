@@ -127,7 +127,7 @@ def test_upload(client: Client):
 @pytest.mark.order(3)
 def test_download(client: Client):
     # Get data IDs from uploaded test files
-    data = client.search(keywords=["test_rheed"])
+    data = client.search(keywords=["test_rheed"], include_organization_data=False)
     assert len(data["Data ID"].values)
 
     data_ids = list(data["Data ID"].values)
