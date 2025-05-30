@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest import mock
 from urllib.parse import urljoin
 from .conftest import ResultIDs
-from atomicds.results import RHEEDVideoResult
 
 
 @pytest.fixture
@@ -118,6 +117,7 @@ def test_get(client: Client):
 
 
 @pytest.mark.order(2)
+@pytest.mark.dependency(name="upload")
 def test_upload(client: Client):
     test_video = Path(__file__).parent / "data" / "test_rheed.mp4"
 
@@ -125,6 +125,7 @@ def test_upload(client: Client):
 
 
 @pytest.mark.order(3)
+@pytest.mark.dependency(depends=["upload"])
 def test_download(client: Client):
     # Get data IDs from uploaded test files
     data = client.search(keywords=["test_rheed"], include_organization_data=False)
