@@ -98,7 +98,7 @@ def test_last_accessed_datetime_search(client: Client):
     assert len(data["Last Accessed Datetime"].values)
 
 
-@pytest.mark.dependency(name="get")
+@pytest.mark.order(1)
 def test_get(client: Client):
     data_types = ["rheed_image", "rheed_stationary", "rheed_rotating", "xps"]
     data_ids = []
@@ -116,12 +116,14 @@ def test_get(client: Client):
     assert len(data_types) == 3
 
 
-# @pytest.mark.dependency(name="upload", depends=["get"])
+# @pytest.mark.order(2)
+# @pytest.mark.dependency(name="upload", dependds=["get"])
 # def test_upload(client: Client):
-#     test_video = Path(__file__).parent / "data" / "test_rheed.mp4"
-#     client.upload(files=[str(test_video.absolute())])
-
-
+#     test_video = str(Path(__file__).parent.absolute()) + "/data/test_rheed.mp4"
+#     client.upload(files=[test_video])
+#
+#
+# @pytest.mark.order(3)
 # @pytest.mark.dependency(depends=["upload"])
 # def test_download(client: Client):
 #     # Get data IDs from uploaded test files
