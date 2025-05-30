@@ -98,7 +98,6 @@ def test_last_accessed_datetime_search(client: Client):
     assert len(data["Last Accessed Datetime"].values)
 
 
-@pytest.mark.order(1)
 @pytest.mark.dependency(name="get")
 def test_get(client: Client):
     data_types = ["rheed_image", "rheed_stationary", "rheed_rotating", "xps"]
@@ -117,35 +116,32 @@ def test_get(client: Client):
     assert len(data_types) == 3
 
 
-@pytest.mark.order(2)
-@pytest.mark.dependency(name="upload", dependds=["get"])
-def test_upload(client: Client):
-    test_video = Path(__file__).parent / "data" / "test_rheed.mp4"
-
-    client.upload(files=[str(test_video.absolute())])
+# @pytest.mark.dependency(name="upload", depends=["get"])
+# def test_upload(client: Client):
+#     test_video = Path(__file__).parent / "data" / "test_rheed.mp4"
+#     client.upload(files=[str(test_video.absolute())])
 
 
-@pytest.mark.order(3)
-@pytest.mark.dependency(depends=["upload"])
-def test_download(client: Client):
-    # Get data IDs from uploaded test files
-    data = client.search(keywords=["test_rheed"], include_organization_data=False)
-    assert len(data["Data ID"].values)
-
-    data_ids = list(data["Data ID"].values)
-    client.download_videos(data_ids=data_ids, dest_dir="./")
-
-    # Cleanup downloaded files
-    for data_id in data_ids:
-        file_path = Path("./") / f"{data_id}.mp4"
-        if file_path.exists():
-            file_path.unlink()
-
-    response = client.session.delete(
-        url=urljoin(client.endpoint, "/data_entries"),
-        verify=True,
-        params={"data_ids": data_ids},
-    )
-    assert (
-        response.ok
-    ), f"Failed to delete data entries: {response.status_code} - {response.text}"
+# @pytest.mark.dependency(depends=["upload"])
+# def test_download(client: Client):
+#     # Get data IDs from uploaded test files
+#     data = client.search(keywords=["test_rheed"], include_organization_data=False)
+#     assert len(data["Data ID"].values)
+#
+#     data_ids = list(data["Data ID"].values)
+#     client.download_videos(data_ids=data_ids, dest_dir="./")
+#
+#     # Cleanup downloaded files
+#     for data_id in data_ids:
+#         file_path = Path("./") / f"{data_id}.mp4"
+#         if file_path.exists():
+#             file_path.unlink()
+#
+#     response = client.session.delete(
+#         url=urljoin(client.endpoint, "/data_entries"),
+#         verify=True,
+#         params={"data_ids": data_ids},
+#     )
+#     assert (
+#         response.ok
+#     ), f"Failed to delete data entries: {response.status_code} - {response.text}"

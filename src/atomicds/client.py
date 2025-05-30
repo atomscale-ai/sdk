@@ -363,11 +363,18 @@ class Client(BaseClient):
                 file_name = file.name
 
             file_data.append(
-                {"num_urls": num_urls, "file_name": file_name, "file_size": file_size}
+                {
+                    "num_urls": num_urls,
+                    "file_name": file_name,
+                    "file_size": file_size,
+                    "file_path": file,
+                }
             )
 
         def __upload_file(
-            file_info: dict[Literal["num_urls", "file_name", "file_size"], int | str],
+            file_info: dict[
+                Literal["num_urls", "file_name", "file_size", "file_path"], int | str
+            ],
         ):
             url_data: list[dict[str, str | int]] = self._post_or_put(
                 method="POST",
@@ -392,7 +399,7 @@ class Client(BaseClient):
                         "sub_url": "",
                         "params": None,
                         "base_override": part["url"],
-                        "file_path": file,
+                        "file_path": file_info["file_path"],
                         "offset": offset,
                         "length": length,
                     }
