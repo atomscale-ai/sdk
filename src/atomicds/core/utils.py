@@ -262,7 +262,7 @@ def normalize_path(path_str: str) -> Path:
         filtered = m.group(1)
 
     # 4. Expand ~ and env vars
-    expanded = os.path.expanduser(os.path.expandvars(filtered))
+    expanded = os.path.expanduser(os.path.expandvars(filtered))  # noqa: PTH111
 
     # 5. Normalize Unicode and separators
     normalized_unicode = unicodedata.normalize("NFC", expanded)
