@@ -1,6 +1,8 @@
-import re
 import os
+import re
 import unicodedata
+from pathlib import Path
+
 import networkx as nx
 import numpy as np
 import numpy.typing as npt
@@ -15,7 +17,6 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 from rich.text import Text
-from pathlib import Path
 
 
 def normalize_pixel_dimensions(
@@ -247,14 +248,10 @@ def normalize_path(path_str: str) -> Path:
         A pathlib.Path pointing to the normalized path.
     """
     # 1. Drop control characters
-    filtered = ''.join(ch for ch in path_str
-                       if unicodedata.category(ch)[0] != 'C')
+    filtered = "".join(ch for ch in path_str if unicodedata.category(ch)[0] != "C")
 
     # 2. Convert smart quotes to plain ones
-    smart_quotes = {
-        '\u201c': '"', '\u201d': '"',
-        '\u2018': "'", '\u2019': "'"
-    }
+    smart_quotes = {"\u201c": '"', "\u201d": '"', "\u2018": "'", "\u2019": "'"}
     for smart, plain in smart_quotes.items():
         filtered = filtered.replace(smart, plain)
 
@@ -268,8 +265,8 @@ def normalize_path(path_str: str) -> Path:
     expanded = os.path.expanduser(os.path.expandvars(filtered))
 
     # 5. Normalize Unicode and separators
-    normalized_unicode = unicodedata.normalize('NFC', expanded)
-    unified_sep = normalized_unicode.replace('/', os.sep)
+    normalized_unicode = unicodedata.normalize("NFC", expanded)
+    unified_sep = normalized_unicode.replace("/", os.sep)
 
     # 6. Collapse redundant segments
     final_path = os.path.normpath(unified_sep)
