@@ -435,21 +435,24 @@ class Client(BaseClient):
                 transient=True,
             )
 
-            # Confirm file upload
-            etag_body = [
-                {"ETag": entry["ETag"], "PartNumber": i + 1}
-                for i, entry in enumerate(etag_data)
-            ]
-            self._post_or_put(
-                method="POST",
-                sub_url="data_entries/raw_data/staged/upload_urls/complete/",
-                params={"staging_type": "core"},
-                body={
-                    "upload_id": url_data[0]["upload_id"],
-                    "new_filename": url_data[0]["new_filename"],
-                    "etag_data": etag_body,
-                },
-            )
+            # Complete multipart upload *only* if the backend issued an upload_id
+            first_part = url_data[0]
+            upload_id = first_part.get("upload_id")
+            if upload_id:
+                etag_body = [
+                    {"ETag": entry["ETag"], "PartNumber": i + 1}
+                    for i, entry in enumerate(etag_data)
+                ]
+                self._post_or_put(
+                    method="POST",
+                    sub_url="data_entries/raw_data/staged/upload_urls/complete/",
+                    params={"staging_type": "core"},
+                    body={
+                        "upload_id": upload_id,
+                        "new_filename": first_part["new_filename"],
+                        "etag_data": etag_body,
+                    },
+                )
 
         main_task = None
         file_count = len(file_data)
