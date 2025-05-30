@@ -1,3 +1,6 @@
+import re
+import os
+import unicodedata
 import networkx as nx
 import numpy as np
 import numpy.typing as npt
@@ -12,6 +15,7 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 from rich.text import Text
+from pathlib import Path
 
 
 def normalize_pixel_dimensions(
@@ -224,3 +228,50 @@ def _make_progress(mute: bool, transient: bool) -> Progress:
         transient=transient,
         refresh_per_second=30,
     )
+
+
+def normalize_path(path_str: str) -> Path:
+    """Normalize a file path string for use with pathlib.
+
+    This will:
+      1. Remove control characters and convert “smart” quotes into plain quotes.
+      2. Strip leading/trailing whitespace and any surrounding quotes.
+      3. Expand user (~) and environment variables.
+      4. Normalize Unicode, unify separators, and collapse “..”/“.” segments.
+
+    Args:
+        path_str: Raw path string copied from Windows (may contain spaces,
+                  smart quotes, stray control chars, etc.)
+
+    Returns:
+        A pathlib.Path pointing to the normalized path.
+    """
+    # 1. Drop control characters
+    filtered = ''.join(ch for ch in path_str
+                       if unicodedata.category(ch)[0] != 'C')
+
+    # 2. Convert smart quotes to plain ones
+    smart_quotes = {
+        '\u201c': '"', '\u201d': '"',
+        '\u2018': "'", '\u2019': "'"
+    }
+    for smart, plain in smart_quotes.items():
+        filtered = filtered.replace(smart, plain)
+
+    # 3. Trim whitespace and surrounding quotes
+    filtered = filtered.strip()
+    m = re.match(r'^[\'"](.*)[\'"]$', filtered)
+    if m:
+        filtered = m.group(1)
+
+    # 4. Expand ~ and env vars
+    expanded = os.path.expanduser(os.path.expandvars(filtered))
+
+    # 5. Normalize Unicode and separators
+    normalized_unicode = unicodedata.normalize('NFC', expanded)
+    unified_sep = normalized_unicode.replace('/', os.sep)
+
+    # 6. Collapse redundant segments
+    final_path = os.path.normpath(unified_sep)
+
+    return Path(final_path)

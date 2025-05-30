@@ -13,7 +13,7 @@ from PIL import Image
 from pycocotools import mask as mask_util
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
-from atomicds.core.utils import _make_progress
+from atomicds.core.utils import _make_progress, normalize_path
 from atomicds.results import RHEEDImageResult, RHEEDVideoResult, XPSResult
 
 
@@ -345,7 +345,7 @@ class Client(BaseClient):
         file_data = []
         for file in files:
             if isinstance(file, str):
-                path = Path(file)
+                path = normalize_path(file)
                 if not (path.exists() and path.is_file()):
                     raise ClientError(f"{path} is not a file or does not exist")
 
@@ -392,7 +392,7 @@ class Client(BaseClient):
                         "sub_url": "",
                         "params": None,
                         "base_override": part["url"],
-                        "file_name": file_info["file_name"],
+                        "file_path": file,
                         "offset": offset,
                         "length": length,
                     }
@@ -403,11 +403,11 @@ class Client(BaseClient):
                 sub_url: str,
                 params: dict[str, Any] | None,
                 base_override: str,
-                file_name: str,
+                file_path: Path,
                 offset: int,
                 length: int,
             ) -> Any:
-                slice_obj = _FileSlice(file_name, offset, length)
+                slice_obj = _FileSlice(file_path, offset, length)
                 return self._post_or_put(
                     method=method,
                     sub_url=sub_url,
