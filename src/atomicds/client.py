@@ -13,7 +13,7 @@ from PIL import Image
 from pycocotools import mask as mask_util
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
-from atomicds.core.utils import _make_progress
+from atomicds.core.utils import _make_progress, normalize_path
 from atomicds.results import RHEEDImageResult, RHEEDVideoResult, XPSResult
 
 
@@ -345,7 +345,7 @@ class Client(BaseClient):
         file_data = []
         for file in files:
             if isinstance(file, str):
-                path = Path(file)
+                path = normalize_path(file)
                 if not (path.exists() and path.is_file()):
                     raise ClientError(f"{path} is not a file or does not exist")
 
@@ -363,11 +363,18 @@ class Client(BaseClient):
                 file_name = file.name
 
             file_data.append(
-                {"num_urls": num_urls, "file_name": file_name, "file_size": file_size}
+                {
+                    "num_urls": num_urls,
+                    "file_name": file_name,
+                    "file_size": file_size,
+                    "file_path": file,
+                }
             )
 
         def __upload_file(
-            file_info: dict[Literal["num_urls", "file_name", "file_size"], int | str],
+            file_info: dict[
+                Literal["num_urls", "file_name", "file_size", "file_path"], int | str
+            ],
         ):
             url_data: list[dict[str, str | int]] = self._post_or_put(
                 method="POST",
@@ -392,7 +399,7 @@ class Client(BaseClient):
                         "sub_url": "",
                         "params": None,
                         "base_override": part["url"],
-                        "file_name": file_info["file_name"],
+                        "file_path": file_info["file_path"],
                         "offset": offset,
                         "length": length,
                     }
@@ -403,11 +410,11 @@ class Client(BaseClient):
                 sub_url: str,
                 params: dict[str, Any] | None,
                 base_override: str,
-                file_name: str,
+                file_path: Path,
                 offset: int,
                 length: int,
             ) -> Any:
-                slice_obj = _FileSlice(file_name, offset, length)
+                slice_obj = _FileSlice(file_path, offset, length)
                 return self._post_or_put(
                     method=method,
                     sub_url=sub_url,
@@ -435,21 +442,24 @@ class Client(BaseClient):
                 transient=True,
             )
 
-            # Confirm file upload
-            etag_body = [
-                {"ETag": entry["ETag"], "PartNumber": i + 1}
-                for i, entry in enumerate(etag_data)
-            ]
-            self._post_or_put(
-                method="POST",
-                sub_url="data_entries/raw_data/staged/upload_urls/complete/",
-                params={"staging_type": "core"},
-                body={
-                    "upload_id": url_data[0]["upload_id"],
-                    "new_filename": url_data[0]["new_filename"],
-                    "etag_data": etag_body,
-                },
-            )
+            # Complete multipart upload *only* if the backend issued an upload_id
+            first_part = url_data[0]
+            upload_id = first_part.get("upload_id")
+            if upload_id:
+                etag_body = [
+                    {"ETag": entry["ETag"], "PartNumber": i + 1}
+                    for i, entry in enumerate(etag_data)
+                ]
+                self._post_or_put(
+                    method="POST",
+                    sub_url="data_entries/raw_data/staged/upload_urls/complete/",
+                    params={"staging_type": "core"},
+                    body={
+                        "upload_id": upload_id,
+                        "new_filename": first_part["new_filename"],
+                        "etag_data": etag_body,
+                    },
+                )
 
         main_task = None
         file_count = len(file_data)

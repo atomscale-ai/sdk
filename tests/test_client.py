@@ -2,9 +2,10 @@ from pandas import DataFrame
 import pytest
 from atomicds import Client
 from datetime import datetime
+from pathlib import Path
 from unittest import mock
+from urllib.parse import urljoin
 from .conftest import ResultIDs
-from atomicds.results import RHEEDVideoResult
 
 
 @pytest.fixture
@@ -113,3 +114,36 @@ def test_get(client: Client):
     data_types = set([type(result) for result in results])
 
     assert len(data_types) == 3
+
+
+# @pytest.mark.order(2)
+# @pytest.mark.dependency(name="upload", dependds=["get"])
+# def test_upload(client: Client):
+#     test_video = str(Path(__file__).parent.absolute()) + "/data/test_rheed.mp4"
+#     client.upload(files=[test_video])
+#
+#
+# @pytest.mark.order(3)
+# @pytest.mark.dependency(depends=["upload"])
+# def test_download(client: Client):
+#     # Get data IDs from uploaded test files
+#     data = client.search(keywords=["test_rheed"], include_organization_data=False)
+#     assert len(data["Data ID"].values)
+#
+#     data_ids = list(data["Data ID"].values)
+#     client.download_videos(data_ids=data_ids, dest_dir="./")
+#
+#     # Cleanup downloaded files
+#     for data_id in data_ids:
+#         file_path = Path("./") / f"{data_id}.mp4"
+#         if file_path.exists():
+#             file_path.unlink()
+#
+#     response = client.session.delete(
+#         url=urljoin(client.endpoint, "/data_entries"),
+#         verify=True,
+#         params={"data_ids": data_ids},
+#     )
+#     assert (
+#         response.ok
+#     ), f"Failed to delete data entries: {response.status_code} - {response.text}"
