@@ -113,6 +113,7 @@ class Client(BaseClient):
             "file_metadata": "File Metadata",
             "tags": "Tags",
             "name": "Owner",
+            "workspaces": "Workspaces",
         }
 
         columns_to_drop = [
