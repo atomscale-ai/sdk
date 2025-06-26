@@ -113,6 +113,7 @@ class Client(BaseClient):
             "file_metadata": "File Metadata",
             "tags": "Tags",
             "name": "Owner",
+            "workspaces": "Workspaces",
         }
 
         columns_to_drop = [
@@ -255,6 +256,11 @@ class Client(BaseClient):
 
         timeseries_data = concat(timeseries_dfs, axis=0)
 
+        # Remove certain timeseries values if all None to avoid confusion
+        for col in ["reconstruction_intensity", "tar_metric"]:
+            if col in timeseries_data and timeseries_data[col].isna().all():
+                timeseries_data = timeseries_data.drop(columns=[col])
+
         column_mapping = {
             "time_seconds": "Time",
             "frame_number": "Frame Number",
@@ -265,8 +271,13 @@ class Client(BaseClient):
             "oscillation_period": "Oscillation Period",
             "spot_count": "Diffraction Spot Count",
             "first_order_intensity": "First Order Intensity",
+            "half_order_intensity": "Half Order Intensity",
             "specular_intensity": "Specular Intensity",
+            "reconstruction_intensity": "Reconstruction Intensity",
+            "specular_fwhm_1": "Specular FWHM",
+            "first_order_fwhm_1": "First Order FWHM",
             "lattice_spacing": "Lattice Spacing",
+            "tar_metric": "TAR Metric",
         }
 
         timeseries_data = timeseries_data.rename(columns=column_mapping)

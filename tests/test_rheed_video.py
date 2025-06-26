@@ -32,6 +32,9 @@ def test_get_dataframe(result: RHEEDVideoResult):
             "Oscillation Period",
             "Specular Intensity",
             "First Order Intensity",
+            "Half Order Intensity",
+            "Specular FWHM",
+            "First Order FWHM",
             "Time",
         ]
     )
