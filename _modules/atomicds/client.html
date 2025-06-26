@@ -153,6 +153,7 @@
             <span class="s2">&quot;file_metadata&quot;</span><span class="p">:</span> <span class="s2">&quot;File Metadata&quot;</span><span class="p">,</span>
             <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="s2">&quot;Tags&quot;</span><span class="p">,</span>
             <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Owner&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;workspaces&quot;</span><span class="p">:</span> <span class="s2">&quot;Workspaces&quot;</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="n">columns_to_drop</span> <span class="o">=</span> <span class="p">[</span>
@@ -299,6 +300,11 @@
 
         <span class="n">timeseries_data</span> <span class="o">=</span> <span class="n">concat</span><span class="p">(</span><span class="n">timeseries_dfs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
+        <span class="c1"># Remove certain timeseries values if all None to avoid confusion</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;reconstruction_intensity&quot;</span><span class="p">,</span> <span class="s2">&quot;tar_metric&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">timeseries_data</span> <span class="ow">and</span> <span class="n">timeseries_data</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+                <span class="n">timeseries_data</span> <span class="o">=</span> <span class="n">timeseries_data</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">col</span><span class="p">])</span>
+
         <span class="n">column_mapping</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;time_seconds&quot;</span><span class="p">:</span> <span class="s2">&quot;Time&quot;</span><span class="p">,</span>
             <span class="s2">&quot;frame_number&quot;</span><span class="p">:</span> <span class="s2">&quot;Frame Number&quot;</span><span class="p">,</span>
@@ -309,8 +315,13 @@
             <span class="s2">&quot;oscillation_period&quot;</span><span class="p">:</span> <span class="s2">&quot;Oscillation Period&quot;</span><span class="p">,</span>
             <span class="s2">&quot;spot_count&quot;</span><span class="p">:</span> <span class="s2">&quot;Diffraction Spot Count&quot;</span><span class="p">,</span>
             <span class="s2">&quot;first_order_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;First Order Intensity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;half_order_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;Half Order Intensity&quot;</span><span class="p">,</span>
             <span class="s2">&quot;specular_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;Specular Intensity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;reconstruction_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;Reconstruction Intensity&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;specular_fwhm_1&quot;</span><span class="p">:</span> <span class="s2">&quot;Specular FWHM&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;first_order_fwhm_1&quot;</span><span class="p">:</span> <span class="s2">&quot;First Order FWHM&quot;</span><span class="p">,</span>
             <span class="s2">&quot;lattice_spacing&quot;</span><span class="p">:</span> <span class="s2">&quot;Lattice Spacing&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;tar_metric&quot;</span><span class="p">:</span> <span class="s2">&quot;TAR Metric&quot;</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="n">timeseries_data</span> <span class="o">=</span> <span class="n">timeseries_data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">column_mapping</span><span class="p">)</span>
