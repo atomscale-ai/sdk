@@ -173,7 +173,9 @@ class Client(BaseClient):
     def _get_result_data(
         self,
         data_id: str,
-        data_type: Literal["xps", "rheed_image", "rheed_stationary", "rheed_rotating"],
+        data_type: Literal[
+            "xps", "rheed_image", "rheed_stationary", "rheed_rotating", "rheed_xscan"
+        ],
     ) -> RHEEDVideoResult | RHEEDImageResult | XPSResult | None:
         if data_type == "xps":
             result: dict = self._get(sub_url=f"xps/{data_id}")  # type: ignore  # noqa: PGH003
@@ -191,7 +193,7 @@ class Client(BaseClient):
         if data_type == "rheed_image":
             return self._get_rheed_image_result(data_id)
 
-        if data_type in ["rheed_stationary", "rheed_rotating"]:
+        if data_type in ["rheed_stationary", "rheed_rotating", "rheed_xscan"]:
             # Get timeseries data
             timeseries_data = self._get_rheed_timeseries_result(data_id)
 
