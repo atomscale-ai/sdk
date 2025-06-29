@@ -217,7 +217,9 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_result_data</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">data_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;xps&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">],</span>
+        <span class="n">data_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
+            <span class="s2">&quot;xps&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_xscan&quot;</span>
+        <span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RHEEDVideoResult</span> <span class="o">|</span> <span class="n">RHEEDImageResult</span> <span class="o">|</span> <span class="n">XPSResult</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;xps&quot;</span><span class="p">:</span>
             <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;xps/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
@@ -235,7 +237,7 @@
         <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;rheed_image&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_rheed_image_result</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">data_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">data_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_xscan&quot;</span><span class="p">]:</span>
             <span class="c1"># Get timeseries data</span>
             <span class="n">timeseries_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_rheed_timeseries_result</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
 
