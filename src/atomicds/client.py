@@ -51,7 +51,17 @@ class Client(BaseClient):
         data_type: Literal[
             "rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"
         ] = "all",
-        status: Literal["success", "pending", "error", "running", "all"] = "success",
+        status: Literal[
+            "success",
+            "pending",
+            "error",
+            "running",
+            "stream_active",
+            "stream_interrupted",
+            "stream_finalizing",
+            "stream_error",
+            "all",
+        ] = "all",
         growth_length: tuple[int | None, int | None] = (None, None),
         upload_datetime: tuple[datetime | None, datetime | None] = (None, None),
         last_accessed_datetime: tuple[datetime | None, datetime | None] = (None, None),
