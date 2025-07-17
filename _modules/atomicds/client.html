@@ -91,7 +91,17 @@
         <span class="n">data_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
             <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span> <span class="s2">&quot;xps&quot;</span><span class="p">,</span> <span class="s2">&quot;all&quot;</span>
         <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
-        <span class="n">status</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;success&quot;</span><span class="p">,</span> <span class="s2">&quot;pending&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="s2">&quot;running&quot;</span><span class="p">,</span> <span class="s2">&quot;all&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;success&quot;</span><span class="p">,</span>
+        <span class="n">status</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
+            <span class="s2">&quot;success&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pending&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;error&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;running&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;stream_active&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;stream_interrupted&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;stream_finalizing&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;stream_error&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;all&quot;</span><span class="p">,</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
         <span class="n">growth_length</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
         <span class="n">upload_datetime</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
         <span class="n">last_accessed_datetime</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="n">datetime</span> <span class="o">|</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
