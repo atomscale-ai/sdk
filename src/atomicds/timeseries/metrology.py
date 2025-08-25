@@ -6,10 +6,11 @@ from typing import Any
 from pandas import DataFrame
 
 from atomicds.core import BaseClient
+from atomicds.results.metrology import MetrologyResult
 from atomicds.timeseries.provider import TimeseriesProvider
 
 
-class MetrologyProvider(TimeseriesProvider):
+class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
     TYPE = "metrology"
 
     RENAME_MAP: Mapping[str, str] = {
@@ -33,3 +34,15 @@ class MetrologyProvider(TimeseriesProvider):
         if idx_cols:
             series_df = series_df.set_index(idx_cols)
         return series_df
+
+    def build_result(
+        self,
+        client: BaseClient,  # noqa: ARG002
+        data_id: str,
+        data_type: str,  # noqa: ARG002
+        ts_df: DataFrame,
+    ) -> MetrologyResult:
+        return MetrologyResult(
+            data_id=data_id,
+            timeseries_data=ts_df,
+        )
