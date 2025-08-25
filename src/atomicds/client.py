@@ -15,6 +15,11 @@ from pycocotools import mask as mask_util
 from atomicds.core import BaseClient, ClientError, _FileSlice
 from atomicds.core.utils import _make_progress, normalize_path
 from atomicds.results import RHEEDImageResult, RHEEDVideoResult, XPSResult
+from atomicds.results_timeseries import TimeseriesResult
+from atomicds.timeseries.registry import get_provider
+from atomicds.timeseries.providers import RHEEDProvider
+
+TimeseriesDomain = Literal["rheed", "optical", "metrology"]
 
 
 class Client(BaseClient):
@@ -217,118 +222,53 @@ class Client(BaseClient):
             "optical",
         ]:
             timeseries_type = "rheed" if "rheed" in data_type else data_type
+            provider = get_provider(timeseries_type)
 
             # Get timeseries data
-            timeseries_data = self._get_timeseries_result(data_id, timeseries_type)  # type: ignore  #noqa: PGH003
+            raw = provider.fetch_raw(self, data_id)
+            timeseries_data = provider.to_dataframe(raw)
 
-            if data_type not in ["metrology"]:
+            # Handle frame snapshots / extracted frames
+            if provider.snapshot_url(data_id):
                 # Get cluster and extracted image data
-                extracted_frames: list[dict] = self._get(  # type: ignore  # noqa: PGH003
-                    sub_url=f"data_entries/video_single_frames/{data_id}",
+                frames_payload: dict | None = self._get(  # type: ignore  # noqa: PGH003
+                    sub_url=provider.snapshot_url(data_id),
                 )
+                extracted = None
+                if frames_payload:
+                    image_reqs = provider.snapshot_image_uuids(frames_payload)
 
-                def __obtain_frame_data(frames, metadata_fields):
-                    image_params = []
+                    def _resolve(img_uuid: str, meta: dict) -> RHEEDImageResult | None:
+                        return self._get_rheed_image_result(img_uuid, metadata=meta)
 
-                    for frame in frames.get("frames", []):
-                        metadata = {
-                            key: value
-                            for key, value in frame.items()
-                            if key in metadata_fields
-                        }
-
-                        image_params.append(
-                            {"data_id": frame["image_uuid"], "metadata": metadata}
+                    kwargs_list = [
+                        {"img_uuid": x["image_uuid"], "meta": x.get("metadata", {})}
+                        for x in image_reqs
+                    ]
+                    extracted = [
+                        res
+                        for res in self._multi_thread(
+                            lambda img_uuid, meta: _resolve(img_uuid, meta),
+                            kwargs_list=[
+                                {"img_uuid": k["img_uuid"], "meta": k["meta"]}
+                                for k in kwargs_list
+                            ],
                         )
-
-                    return [
-                        result
-                        for result in self._multi_thread(
-                            self._get_rheed_image_result, kwargs_list=image_params
-                        )
-                        if result
+                        if res
                     ]
 
-                extracted_image_results = (
-                    __obtain_frame_data(
-                        extracted_frames,
-                        ["timestamp_seconds"],
-                    )
-                    if extracted_frames
-                    else None
-                )
                 return RHEEDVideoResult(
                     data_id=data_id,
                     timeseries_data=timeseries_data,
-                    snapshot_image_data=extracted_image_results,
+                    snapshot_image_data=extracted,
                     rotating=data_type == "rheed_rotating",
                 )
 
         raise ValueError("Data type must be rheed_video, rheed_image, or xps")
 
-    def _get_timeseries_result(
-        self, data_id: str, data_type: Literal["rheed", "metrology", "optical"]
-    ):
-        if data_type not in ["rheed", "metrology", "optical"]:
-            raise ValueError(
-                "Data type must be one of 'rheed', 'metrology', or 'optical'"
-            )
-
-        # Get rheed video timeseries results
-        if data_type == "metrology":
-            sub_url = f"metrology/{data_id}/timeseries/"
-
-        else:
-            sub_url = f"{data_type}/timeseries/{data_id}/"
-
-        plot_data = self._get(sub_url=sub_url)
-
-        if plot_data is None:
-            return DataFrame(None)
-
-        timeseries_dfs = []
-
-        if data_type == "rheed":
-            for angle_data in plot_data["series_by_angle"]:  # type: ignore # noqa: PGH003
-                temp_df = DataFrame(angle_data["series"])
-                temp_df["Angle"] = angle_data["angle"]
-                timeseries_dfs.append(temp_df)
-
-            timeseries_data = concat(timeseries_dfs, axis=0)
-
-            # Remove certain timeseries values if all None to avoid confusion
-            for col in ["reconstruction_intensity", "tar_metric"]:
-                if col in timeseries_data and timeseries_data[col].isna().all():
-                    timeseries_data = timeseries_data.drop(columns=[col])
-
-            column_mapping = {
-                "time_seconds": "Time",
-                "frame_number": "Frame Number",
-                "cluster_id": "Cluster ID",
-                "cluster_std": "Cluster ID Uncertainty",
-                "referenced_strain": "Strain",
-                "nearest_neighbor_strain": "Cumulative Strain",
-                "oscillation_period": "Oscillation Period",
-                "spot_count": "Diffraction Spot Count",
-                "first_order_intensity": "First Order Intensity",
-                "half_order_intensity": "Half Order Intensity",
-                "specular_intensity": "Specular Intensity",
-                "reconstruction_intensity": "Reconstruction Intensity",
-                "specular_fwhm_1": "Specular FWHM",
-                "first_order_fwhm_1": "First Order FWHM",
-                "lattice_spacing": "Lattice Spacing",
-                "tar_metric": "TAR Metric",
-            }
-
-        timeseries_data = timeseries_data.rename(columns=column_mapping)
-
-        return timeseries_data.set_index(["Angle", "Frame Number"])
-
     def _get_rheed_image_result(self, data_id: str, metadata: dict | None = None):
         # Get pattern graph data
-        if metadata is None:
-            metadata = {}
-
+        metadata = metadata or {}
         graph_data = self._get(sub_url=f"rheed/images/{data_id}/fingerprint")
         graph = (
             nx.node_link_graph(
