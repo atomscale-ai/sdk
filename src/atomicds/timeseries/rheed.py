@@ -5,6 +5,7 @@ from typing import Any
 
 from pandas import DataFrame, concat
 
+from atomicds.client import Client, RHEEDVideoResult
 from atomicds.core import BaseClient
 from atomicds.timeseries.provider import TimeseriesProvider
 
@@ -66,6 +67,48 @@ class RHEEDProvider(TimeseriesProvider):
             df_all = df_all.set_index(idx_cols)
 
         return df_all
+
+    def build_result(
+        self,
+        client: Client,
+        data_id: str,
+        df: DataFrame,
+        *,
+        context: dict | None = None,
+    ) -> RHEEDVideoResult:
+        context = context or {}
+        rotating = bool(context.get("rotating", False))
+
+        # fetch snapshots if available
+        payload: dict | None = client._get(  # type: ignore  # noqa: PGH003
+            sub_url=f"data_entries/video_single_frames/{data_id}"
+        )
+        snapshots = None
+        if payload:
+            reqs = []
+            for frame in payload.get("frames", []):
+                meta = {k: v for k, v in frame.items() if k in {"timestamp_seconds"}}
+                reqs.append({"image_uuid": frame["image_uuid"], "metadata": meta})
+
+            def _one(r: dict):
+                return client._get_rheed_image_result(
+                    r["image_uuid"], metadata=r.get("metadata") or {}
+                )
+
+            snapshots = [
+                res
+                for res in client._multi_thread(
+                    lambda r: _one(r), kwargs_list=[{"r": x} for x in reqs]
+                )
+                if res
+            ]
+
+        return RHEEDVideoResult(
+            data_id=data_id,
+            timeseries_data=df,
+            snapshot_image_data=snapshots,
+            rotating=rotating,
+        )
 
     def snapshot_url(self, data_id: str) -> str:
         return f"data_entries/video_single_frames/{data_id}"

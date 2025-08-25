@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Generic, TypeVar
 
 from pandas import DataFrame
 
+from atomicds.client import Client
 from atomicds.core import BaseClient
 
+R = TypeVar("R")  # the result type this provider returns
 
-class TimeseriesProvider(ABC):
+
+class TimeseriesProvider(ABC, Generic[R]):
     """Strategy interface for parsing timeseries by domain."""
 
     # canonical domain name used as a key in the registry
@@ -21,6 +24,15 @@ class TimeseriesProvider(ABC):
     @abstractmethod
     def to_dataframe(self, raw: Any) -> DataFrame:
         """Convert raw payload to a tidy DataFrame with domain-specific renames/index."""
+
+    def build_result(
+        self,
+        client: Client,
+        data_id: str,
+        df: DataFrame,
+        *,
+        context: dict | None = None,
+    ) -> R: ...
 
     # Optional override points
     def snapshot_url(self, data_id: str) -> str:  # noqa: ARG002
