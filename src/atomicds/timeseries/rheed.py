@@ -1,16 +1,20 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from io import BytesIO
 from typing import Any
 
+import networkx as nx
 from pandas import DataFrame, concat
+from PIL import Image
+from pycocotools import mask as mask_util
 
-from atomicds.client import Client, RHEEDVideoResult
 from atomicds.core import BaseClient
+from atomicds.results import RHEEDImageResult, RHEEDVideoResult
 from atomicds.timeseries.provider import TimeseriesProvider
 
 
-class RHEEDProvider(TimeseriesProvider):
+class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
     TYPE = "rheed"
 
     # Mapping from API fields → user-facing column names
@@ -68,55 +72,105 @@ class RHEEDProvider(TimeseriesProvider):
 
         return df_all
 
-    def build_result(
-        self,
-        client: Client,
-        data_id: str,
-        df: DataFrame,
-        *,
-        context: dict | None = None,
-    ) -> RHEEDVideoResult:
-        context = context or {}
-        rotating = bool(context.get("rotating", False))
-
-        # fetch snapshots if available
-        payload: dict | None = client._get(  # type: ignore  # noqa: PGH003
-            sub_url=f"data_entries/video_single_frames/{data_id}"
-        )
-        snapshots = None
-        if payload:
-            reqs = []
-            for frame in payload.get("frames", []):
-                meta = {k: v for k, v in frame.items() if k in {"timestamp_seconds"}}
-                reqs.append({"image_uuid": frame["image_uuid"], "metadata": meta})
-
-            def _one(r: dict):
-                return client._get_rheed_image_result(
-                    r["image_uuid"], metadata=r.get("metadata") or {}
-                )
-
-            snapshots = [
-                res
-                for res in client._multi_thread(
-                    lambda r: _one(r), kwargs_list=[{"r": x} for x in reqs]
-                )
-                if res
-            ]
-
-        return RHEEDVideoResult(
-            data_id=data_id,
-            timeseries_data=df,
-            snapshot_image_data=snapshots,
-            rotating=rotating,
-        )
-
     def snapshot_url(self, data_id: str) -> str:
         return f"data_entries/video_single_frames/{data_id}"
 
-    def snapshot_image_uuids(self, raw_frames_payload: dict[str, Any]) -> list[dict]:
+    def snapshot_image_uuids(self, frames_payload: dict[str, Any]) -> list[dict]:
         # payload shape: {"frames": [{"image_uuid": "...", "timestamp_seconds": ...}, ...]}
         out = []
-        for frame in (raw_frames_payload or {}).get("frames", []):
+        for frame in (frames_payload or {}).get("frames", []):
             meta = {k: v for k, v in frame.items() if k in {"timestamp_seconds"}}
             out.append({"image_uuid": frame["image_uuid"], "metadata": meta})
         return out
+
+    def fetch_snapshot(self, client: BaseClient, req: dict) -> RHEEDImageResult | None:
+        img_uuid = req.get("image_uuid")
+        if not img_uuid:
+            return None
+        # Reuse the client helper to build a RHEEDImageResult (graph, mask, etc.)
+        return self._get_rheed_image_result(
+            client=client, data_id=img_uuid, metadata=req.get("metadata", {})
+        )
+
+    def build_result(
+        self, client: BaseClient, data_id: str, data_type: str, ts_df: DataFrame
+    ) -> RHEEDVideoResult:
+        extracted = None
+        idx_url = self.snapshot_url(data_id)
+        if idx_url:
+            frames_payload: dict | None = client._get(sub_url=idx_url)  # type: ignore[assignment]
+            if frames_payload:
+                reqs = self.snapshot_image_uuids(frames_payload)
+                extracted = [
+                    res
+                    for res in client._multi_thread(
+                        self.fetch_snapshot, [{"req": r} for r in reqs]
+                    )
+                    if res
+                ]
+        return RHEEDVideoResult(
+            data_id=data_id,
+            timeseries_data=ts_df,
+            snapshot_image_data=extracted,
+            rotating=(data_type == "rheed_rotating"),
+        )
+
+    def _get_rheed_image_result(
+        self, client: BaseClient, data_id: str, metadata: dict | None = None
+    ):
+        # Get pattern graph data
+        metadata = metadata or {}
+        graph_data = client._get(sub_url=f"rheed/images/{data_id}/fingerprint")
+        graph = (
+            nx.node_link_graph(
+                graph_data["fingerprint"],  # type: ignore #noqa: PGH003
+                source="start_id",  # type: ignore #noqa: PGH003
+                target="end_id",  # type: ignore #noqa: PGH003
+                link="horizontal_distances",  # type: ignore #noqa: PGH003
+            )
+            if graph_data
+            else None
+        )
+        processed_data_id = (
+            graph_data.get("processed_data_id") if graph_data is not None else data_id  # type: ignore #noqa: PGH003
+        )
+
+        # Get mask data
+        mask_data: dict = client._get(sub_url=f"rheed/images/{data_id}/mask")  # type: ignore  #noqa: PGH003
+        mask_rle = mask_data.get("mask_rle")
+        mask_array = None
+
+        if mask_data is not None and mask_rle is not None:
+            mask_height = mask_data["mask_height"]
+            mask_width = mask_data["mask_width"]
+
+            mask_dict = {
+                "counts": mask_rle,
+                "size": (mask_height, mask_width),
+            }
+            mask_array = mask_util.decode(mask_dict)  # type: ignore  # noqa: PGH003
+
+        # Get raw and processed image data
+        image_download: dict[str, str] | None = client._get(  # type: ignore  # noqa: PGH003
+            sub_url=f"data_entries/processed_data/{data_id}",
+            params={"return_as": "url-download"},
+        )
+
+        if image_download is None:
+            return None
+
+        # Image is pulled from the S3 pre-signed URL
+        image_bytes: bytes = client._get(  # type: ignore  # noqa: PGH003
+            base_override=image_download["url"], sub_url="", deserialize=False
+        )
+
+        image_data = Image.open(BytesIO(image_bytes))
+
+        return RHEEDImageResult(
+            data_id=data_id,
+            processed_data_id=processed_data_id,  # type: ignore  # noqa: PGH003
+            processed_image=image_data,
+            mask=mask_array,
+            pattern_graph=graph,
+            metadata=metadata,
+        )

@@ -5,7 +5,6 @@ from typing import Any, ClassVar, Generic, TypeVar
 
 from pandas import DataFrame
 
-from atomicds.client import Client
 from atomicds.core import BaseClient
 
 R = TypeVar("R")  # the result type this provider returns
@@ -27,11 +26,10 @@ class TimeseriesProvider(ABC, Generic[R]):
 
     def build_result(
         self,
-        client: Client,
+        client: BaseClient,
         data_id: str,
-        df: DataFrame,
-        *,
-        context: dict | None = None,
+        data_type: str,
+        ts_df: DataFrame,
     ) -> R: ...
 
     # Optional override points
@@ -39,7 +37,10 @@ class TimeseriesProvider(ABC, Generic[R]):
         """API endpoint that exposes extracted/snapshot frames."""
         return ""
 
-    def snapshot_image_uuids(self, raw_frames_payload: dict[str, Any]) -> list[dict]:  # noqa: ARG002
-        """Given the payload from `snapshot_url`, return
-        a list of dicts like {'image_uuid': ..., 'metadata': {...}} to be resolved."""
+    def snapshot_image_uuids(self, frames_payload: dict[str, Any]) -> list[SnapshotReq]:
+        """Extract requests from frames payload. Default: no snapshots."""
         return []
+
+    def fetch_snapshot(self, client: BaseClient, req: dict) -> Any | None:
+        """Resolve one snapshot request → domain-specific ImageResult (or None)."""
+        return None

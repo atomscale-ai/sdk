@@ -15,9 +15,7 @@ from pycocotools import mask as mask_util
 from atomicds.core import BaseClient, ClientError, _FileSlice
 from atomicds.core.utils import _make_progress, normalize_path
 from atomicds.results import RHEEDImageResult, RHEEDVideoResult, XPSResult
-from atomicds.results_timeseries import TimeseriesResult
 from atomicds.timeseries.registry import get_provider
-from atomicds.timeseries.providers import RHEEDProvider
 
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
 
