@@ -10,7 +10,7 @@ from atomicds.timeseries.provider import TimeseriesProvider
 
 
 class RHEEDProvider(TimeseriesProvider):
-    DOMAIN = "rheed"
+    TYPE = "rheed"
 
     # Mapping from API fields → user-facing column names
     RENAME_MAP: Mapping[str, str] = {
