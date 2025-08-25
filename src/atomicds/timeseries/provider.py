@@ -31,7 +31,8 @@ class TimeseriesProvider(ABC, Generic[R]):
         data_id: str,
         data_type: str,
         ts_df: DataFrame,
-    ) -> R: ...
+    ) -> R:
+        """Build time series result object"""
 
     # Optional override points
     def snapshot_url(self, data_id: str) -> str:  # noqa: ARG002
