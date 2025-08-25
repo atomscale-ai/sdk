@@ -184,7 +184,13 @@ class Client(BaseClient):
         self,
         data_id: str,
         data_type: Literal[
-            "xps", "rheed_image", "rheed_stationary", "rheed_rotating", "rheed_xscan"
+            "xps",
+            "rheed_image",
+            "rheed_stationary",
+            "rheed_rotating",
+            "rheed_xscan",
+            "metrology",
+            "optical",
         ],
     ) -> RHEEDVideoResult | RHEEDImageResult | XPSResult | None:
         if data_type == "xps":
@@ -203,94 +209,116 @@ class Client(BaseClient):
         if data_type == "rheed_image":
             return self._get_rheed_image_result(data_id)
 
-        if data_type in ["rheed_stationary", "rheed_rotating", "rheed_xscan"]:
+        if data_type in [
+            "rheed_stationary",
+            "rheed_rotating",
+            "rheed_xscan",
+            "metrology",
+            "optical",
+        ]:
+            timeseries_type = "rheed" if "rheed" in data_type else data_type
+
             # Get timeseries data
-            timeseries_data = self._get_rheed_timeseries_result(data_id)
+            timeseries_data = self._get_timeseries_result(data_id, timeseries_type)  # type: ignore  #noqa: PGH003
 
-            # Get cluster and extracted image data
-
-            extracted_frames: list[dict] = self._get(  # type: ignore  # noqa: PGH003
-                sub_url=f"data_entries/video_single_frames/{data_id}",
-            )
-
-            def __obtain_frame_data(frames, metadata_fields):
-                image_params = []
-
-                for frame in frames.get("frames", []):
-                    metadata = {
-                        key: value
-                        for key, value in frame.items()
-                        if key in metadata_fields
-                    }
-
-                    image_params.append(
-                        {"data_id": frame["image_uuid"], "metadata": metadata}
-                    )
-
-                return [
-                    result
-                    for result in self._multi_thread(
-                        self._get_rheed_image_result, kwargs_list=image_params
-                    )
-                    if result
-                ]
-
-            extracted_image_results = (
-                __obtain_frame_data(
-                    extracted_frames,
-                    ["timestamp_seconds"],
+            if data_type not in ["metrology"]:
+                # Get cluster and extracted image data
+                extracted_frames: list[dict] = self._get(  # type: ignore  # noqa: PGH003
+                    sub_url=f"data_entries/video_single_frames/{data_id}",
                 )
-                if extracted_frames
-                else None
-            )
-            return RHEEDVideoResult(
-                data_id=data_id,
-                timeseries_data=timeseries_data,
-                snapshot_image_data=extracted_image_results,
-                rotating=data_type == "rheed_rotating",
-            )
+
+                def __obtain_frame_data(frames, metadata_fields):
+                    image_params = []
+
+                    for frame in frames.get("frames", []):
+                        metadata = {
+                            key: value
+                            for key, value in frame.items()
+                            if key in metadata_fields
+                        }
+
+                        image_params.append(
+                            {"data_id": frame["image_uuid"], "metadata": metadata}
+                        )
+
+                    return [
+                        result
+                        for result in self._multi_thread(
+                            self._get_rheed_image_result, kwargs_list=image_params
+                        )
+                        if result
+                    ]
+
+                extracted_image_results = (
+                    __obtain_frame_data(
+                        extracted_frames,
+                        ["timestamp_seconds"],
+                    )
+                    if extracted_frames
+                    else None
+                )
+                return RHEEDVideoResult(
+                    data_id=data_id,
+                    timeseries_data=timeseries_data,
+                    snapshot_image_data=extracted_image_results,
+                    rotating=data_type == "rheed_rotating",
+                )
 
         raise ValueError("Data type must be rheed_video, rheed_image, or xps")
 
-    def _get_rheed_timeseries_result(self, data_id: str):
+    def _get_timeseries_result(
+        self, data_id: str, data_type: Literal["rheed", "metrology", "optical"]
+    ):
+        if data_type not in ["rheed", "metrology", "optical"]:
+            raise ValueError(
+                "Data type must be one of 'rheed', 'metrology', or 'optical'"
+            )
+
         # Get rheed video timeseries results
-        plot_data = self._get(sub_url=f"rheed/timeseries/{data_id}/")
+        if data_type == "metrology":
+            sub_url = f"metrology/{data_id}/timeseries/"
+
+        else:
+            sub_url = f"{data_type}/timeseries/{data_id}/"
+
+        plot_data = self._get(sub_url=sub_url)
 
         if plot_data is None:
             return DataFrame(None)
 
         timeseries_dfs = []
 
-        for angle_data in plot_data["series_by_angle"]:  # type: ignore # noqa: PGH003
-            temp_df = DataFrame(angle_data["series"])
-            temp_df["Angle"] = angle_data["angle"]
-            timeseries_dfs.append(temp_df)
+        if data_type == "rheed":
+            for angle_data in plot_data["series_by_angle"]:  # type: ignore # noqa: PGH003
+                temp_df = DataFrame(angle_data["series"])
+                temp_df["Angle"] = angle_data["angle"]
+                timeseries_dfs.append(temp_df)
 
-        timeseries_data = concat(timeseries_dfs, axis=0)
+            timeseries_data = concat(timeseries_dfs, axis=0)
 
-        # Remove certain timeseries values if all None to avoid confusion
-        for col in ["reconstruction_intensity", "tar_metric"]:
-            if col in timeseries_data and timeseries_data[col].isna().all():
-                timeseries_data = timeseries_data.drop(columns=[col])
+            # Remove certain timeseries values if all None to avoid confusion
+            for col in ["reconstruction_intensity", "tar_metric"]:
+                if col in timeseries_data and timeseries_data[col].isna().all():
+                    timeseries_data = timeseries_data.drop(columns=[col])
 
-        column_mapping = {
-            "time_seconds": "Time",
-            "frame_number": "Frame Number",
-            "cluster_id": "Cluster ID",
-            "cluster_std": "Cluster ID Uncertainty",
-            "referenced_strain": "Strain",
-            "nearest_neighbor_strain": "Cumulative Strain",
-            "oscillation_period": "Oscillation Period",
-            "spot_count": "Diffraction Spot Count",
-            "first_order_intensity": "First Order Intensity",
-            "half_order_intensity": "Half Order Intensity",
-            "specular_intensity": "Specular Intensity",
-            "reconstruction_intensity": "Reconstruction Intensity",
-            "specular_fwhm_1": "Specular FWHM",
-            "first_order_fwhm_1": "First Order FWHM",
-            "lattice_spacing": "Lattice Spacing",
-            "tar_metric": "TAR Metric",
-        }
+            column_mapping = {
+                "time_seconds": "Time",
+                "frame_number": "Frame Number",
+                "cluster_id": "Cluster ID",
+                "cluster_std": "Cluster ID Uncertainty",
+                "referenced_strain": "Strain",
+                "nearest_neighbor_strain": "Cumulative Strain",
+                "oscillation_period": "Oscillation Period",
+                "spot_count": "Diffraction Spot Count",
+                "first_order_intensity": "First Order Intensity",
+                "half_order_intensity": "Half Order Intensity",
+                "specular_intensity": "Specular Intensity",
+                "reconstruction_intensity": "Reconstruction Intensity",
+                "specular_fwhm_1": "Specular FWHM",
+                "first_order_fwhm_1": "First Order FWHM",
+                "lattice_spacing": "Lattice Spacing",
+                "tar_metric": "TAR Metric",
+            }
 
         timeseries_data = timeseries_data.rename(columns=column_mapping)
 
