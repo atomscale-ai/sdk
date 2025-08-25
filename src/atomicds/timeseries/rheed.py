@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from io import BytesIO
 from typing import Any
 
-import networkx as nx
 from pandas import DataFrame, concat
-from PIL import Image
-from pycocotools import mask as mask_util
 
 from atomicds.core import BaseClient
-from atomicds.results import RHEEDImageResult, RHEEDVideoResult
+from atomicds.results import RHEEDImageResult, RHEEDVideoResult, _get_rheed_image_result
 from atomicds.timeseries.provider import TimeseriesProvider
 
 
@@ -88,7 +84,7 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         if not img_uuid:
             return None
         # Reuse the client helper to build a RHEEDImageResult (graph, mask, etc.)
-        return self._get_rheed_image_result(
+        return _get_rheed_image_result(
             client=client, data_id=img_uuid, metadata=req.get("metadata", {})
         )
 
