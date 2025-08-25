@@ -3,18 +3,19 @@ from __future__ import annotations
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from io import BytesIO
 from pathlib import Path
 from typing import Any, BinaryIO, Literal
 
-import networkx as nx
-from pandas import DataFrame, concat
-from PIL import Image
-from pycocotools import mask as mask_util
+from pandas import DataFrame
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
 from atomicds.core.utils import _make_progress, normalize_path
-from atomicds.results import RHEEDImageResult, RHEEDVideoResult, XPSResult
+from atomicds.results import (
+    RHEEDImageResult,
+    RHEEDVideoResult,
+    XPSResult,
+    _get_rheed_image_result,
+)
 from atomicds.timeseries.registry import get_provider
 
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
@@ -210,7 +211,7 @@ class Client(BaseClient):
             )
 
         if data_type == "rheed_image":
-            return self._get_rheed_image_result(data_id)
+            return _get_rheed_image_result(self, data_id)
 
         if data_type in [
             "rheed_stationary",
@@ -224,103 +225,11 @@ class Client(BaseClient):
 
             # Get timeseries data
             raw = provider.fetch_raw(self, data_id)
-            timeseries_data = provider.to_dataframe(raw)
+            ts_df = provider.to_dataframe(raw)
 
-            # Handle frame snapshots / extracted frames
-            if provider.snapshot_url(data_id):
-                # Get cluster and extracted image data
-                frames_payload: dict | None = self._get(  # type: ignore  # noqa: PGH003
-                    sub_url=provider.snapshot_url(data_id),
-                )
-                extracted = None
-                if frames_payload:
-                    image_reqs = provider.snapshot_image_uuids(frames_payload)
+            return provider.build_result(self, data_id, data_type, ts_df)
 
-                    def _resolve(img_uuid: str, meta: dict) -> RHEEDImageResult | None:
-                        return self._get_rheed_image_result(img_uuid, metadata=meta)
-
-                    kwargs_list = [
-                        {"img_uuid": x["image_uuid"], "meta": x.get("metadata", {})}
-                        for x in image_reqs
-                    ]
-                    extracted = [
-                        res
-                        for res in self._multi_thread(
-                            lambda img_uuid, meta: _resolve(img_uuid, meta),
-                            kwargs_list=[
-                                {"img_uuid": k["img_uuid"], "meta": k["meta"]}
-                                for k in kwargs_list
-                            ],
-                        )
-                        if res
-                    ]
-
-                return RHEEDVideoResult(
-                    data_id=data_id,
-                    timeseries_data=timeseries_data,
-                    snapshot_image_data=extracted,
-                    rotating=data_type == "rheed_rotating",
-                )
-
-        raise ValueError("Data type must be rheed_video, rheed_image, or xps")
-
-    def _get_rheed_image_result(self, data_id: str, metadata: dict | None = None):
-        # Get pattern graph data
-        metadata = metadata or {}
-        graph_data = self._get(sub_url=f"rheed/images/{data_id}/fingerprint")
-        graph = (
-            nx.node_link_graph(
-                graph_data["fingerprint"],  # type: ignore #noqa: PGH003
-                source="start_id",  # type: ignore #noqa: PGH003
-                target="end_id",  # type: ignore #noqa: PGH003
-                link="horizontal_distances",  # type: ignore #noqa: PGH003
-            )
-            if graph_data
-            else None
-        )
-        processed_data_id = (
-            graph_data.get("processed_data_id") if graph_data is not None else data_id  # type: ignore #noqa: PGH003
-        )
-
-        # Get mask data
-        mask_data: dict = self._get(sub_url=f"rheed/images/{data_id}/mask")  # type: ignore  #noqa: PGH003
-        mask_rle = mask_data.get("mask_rle")
-        mask_array = None
-
-        if mask_data is not None and mask_rle is not None:
-            mask_height = mask_data["mask_height"]
-            mask_width = mask_data["mask_width"]
-
-            mask_dict = {
-                "counts": mask_rle,
-                "size": (mask_height, mask_width),
-            }
-            mask_array = mask_util.decode(mask_dict)  # type: ignore  # noqa: PGH003
-
-        # Get raw and processed image data
-        image_download: dict[str, str] | None = self._get(  # type: ignore  # noqa: PGH003
-            sub_url=f"data_entries/processed_data/{data_id}",
-            params={"return_as": "url-download"},
-        )
-
-        if image_download is None:
-            return None
-
-        # Image is pulled from the S3 pre-signed URL
-        image_bytes: bytes = self._get(  # type: ignore  # noqa: PGH003
-            base_override=image_download["url"], sub_url="", deserialize=False
-        )
-
-        image_data = Image.open(BytesIO(image_bytes))
-
-        return RHEEDImageResult(
-            data_id=data_id,
-            processed_data_id=processed_data_id,  # type: ignore  # noqa: PGH003
-            processed_image=image_data,
-            mask=mask_array,
-            pattern_graph=graph,
-            metadata=metadata,
-        )
+        raise ValueError("Data type must be supported")
 
     def upload(self, files: list[str | BinaryIO]):
         """Upload and process files
