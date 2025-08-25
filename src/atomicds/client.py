@@ -512,6 +512,7 @@ class Client(BaseClient):
         self,
         data_ids: str | list[str],
         dest_dir: str | Path | None = None,
+        data_type: Literal["raw", "processed"] = "processed",
     ):
         """
         Download processed RHEED videos to disk.
@@ -520,6 +521,7 @@ class Client(BaseClient):
             data_ids (str | list[str]): One or more data IDs from the data catalogue.
             dest_dir (str | Path | None): Directory to write the files to.
                 Defaults to the current working directory.
+            data_type (Literal["raw", "processed"]): Whether to download raw or processed data.
         """
         chunk_size: int = 20 * 1024 * 1024  # 20 MiB read chunks
 
@@ -534,8 +536,9 @@ class Client(BaseClient):
 
         def __download_one(data_id: str) -> None:
             # 1) Resolve the presigned URL -------------------------------------
+            url_type = "raw_data" if data_type == "raw" else "processed_data"
             meta: dict = self._get(  # type: ignore  # noqa: PGH003
-                sub_url=f"data_entries/processed_data/{data_id}",
+                sub_url=f"data_entries/{url_type}/{data_id}",
                 params={"return_as": "url-download"},
             )
             if meta is None:
