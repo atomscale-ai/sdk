@@ -4,9 +4,13 @@ from uuid import UUID
 
 from monty.json import MSONable
 from pandas import DataFrame
+from PIL.Image import Image
 
 
-class OpticalImageResult: ...
+class OpticalImageResult:
+    def __init__(self, data_id: str, processed_image: Image):
+        self.data_id = data_id
+        self.processed_image = processed_image
 
 
 class OpticalResult(MSONable):
