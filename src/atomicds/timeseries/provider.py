@@ -23,9 +23,9 @@ class TimeseriesProvider(ABC):
         """Convert raw payload to a tidy DataFrame with domain-specific renames/index."""
 
     # Optional override points
-    def supports_snapshots(self) -> bool:
-        """Whether this domain exposes extracted/snapshot frames."""
-        return False
+    def snapshot_url(self, data_id: str) -> str | None:  # noqa: ARG002
+        """API endpoint that exposes extracted/snapshot frames."""
+        return None
 
     def snapshot_image_uuids(self, raw_frames_payload: dict[str, Any]) -> list[dict]:  # noqa: ARG002
         """Given the payload from `data_entries/video_single_frames/{data_id}`, return

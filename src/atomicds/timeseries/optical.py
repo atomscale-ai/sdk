@@ -21,6 +21,9 @@ class OpticalProvider(TimeseriesProvider):
     }
     INDEX_COLS: Sequence[str] = ["Time"]
 
+    def snapshot_url(self, data_id: str) -> str:
+        return f"optical/frame/video_single_frames/{data_id}"
+
     def fetch_raw(self, client: BaseClient, data_id: str) -> Any:
         return client._get(sub_url=f"optical/timeseries/{data_id}/")
 

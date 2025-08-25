@@ -67,8 +67,8 @@ class RHEEDProvider(TimeseriesProvider):
 
         return df_all
 
-    def supports_snapshots(self) -> bool:
-        return True
+    def snapshot_url(self, data_id: str) -> str:
+        return f"data_entries/video_single_frames/{data_id}"
 
     def snapshot_image_uuids(self, raw_frames_payload: dict[str, Any]) -> list[dict]:
         # payload shape: {"frames": [{"image_uuid": "...", "timestamp_seconds": ...}, ...]}
