@@ -9,7 +9,7 @@ from atomicds.core import BaseClient
 from atomicds.timeseries.provider import TimeseriesProvider
 
 
-class OpticalProvider(TimeseriesProvider):
+class MetrologyProvider(TimeseriesProvider):
     TYPE = "metrology"
 
     RENAME_MAP: Mapping[str, str] = {
