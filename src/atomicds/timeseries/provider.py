@@ -24,14 +24,14 @@ class TimeseriesProvider(ABC, Generic[R]):
     def to_dataframe(self, raw: Any) -> DataFrame:
         """Convert raw payload to a tidy DataFrame with domain-specific renames/index."""
 
+    @abstractmethod
     def build_result(
         self,
         client: BaseClient,
         data_id: str,
         data_type: str,
         ts_df: DataFrame,
-    ) -> R:
-        ...
+    ) -> R: ...
 
     # Optional override points
     def snapshot_url(self, data_id: str) -> str:  # noqa: ARG002
