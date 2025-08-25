@@ -42,7 +42,7 @@ class OpticalProvider(TimeseriesProvider):
             series_df = series_df.set_index(idx_cols)
         return series_df
 
-    def snapshot_image_uuids(self, frames_payload: dict[str, Any]) -> list[SnapshotReq]:
+    def snapshot_image_uuids(self, frames_payload: dict[str, Any]) -> list[dict]:
         out: list[dict] = []
         frames = (frames_payload or {}).get("frames", [])
         for frame in frames:

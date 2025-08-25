@@ -30,17 +30,25 @@ class TimeseriesProvider(ABC, Generic[R]):
         data_id: str,
         data_type: str,
         ts_df: DataFrame,
-    ) -> R: ...
+    ) -> R:
+        ...
 
     # Optional override points
     def snapshot_url(self, data_id: str) -> str:  # noqa: ARG002
         """API endpoint that exposes extracted/snapshot frames."""
         return ""
 
-    def snapshot_image_uuids(self, frames_payload: dict[str, Any]) -> list[SnapshotReq]:
+    def snapshot_image_uuids(
+        self,
+        frames_payload: dict[str, Any],  # noqa: ARG002
+    ) -> list[dict]:
         """Extract requests from frames payload. Default: no snapshots."""
         return []
 
-    def fetch_snapshot(self, client: BaseClient, req: dict) -> Any | None:
+    def fetch_snapshot(
+        self,
+        client: BaseClient,  # noqa: ARG002
+        req: dict,  # noqa: ARG002
+    ) -> Any | None:
         """Resolve one snapshot request → domain-specific ImageResult (or None)."""
         return None
