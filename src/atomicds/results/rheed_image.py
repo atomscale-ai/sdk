@@ -13,8 +13,8 @@ from numpy.typing import NDArray
 from PIL import Image as PILImage
 from PIL import ImageDraw
 from PIL.Image import Image
-
 from pycocotools import mask as mask_util
+
 from atomicds.core import BaseClient, boxes_overlap, generate_graph_from_nodes
 
 tp.quiet()
