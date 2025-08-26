@@ -36,18 +36,22 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span><span class="p">,</span> <span class="n">as_completed</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">BytesIO</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">BinaryIO</span><span class="p">,</span> <span class="n">Literal</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span><span class="p">,</span> <span class="n">concat</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pycocotools</span><span class="w"> </span><span class="kn">import</span> <span class="n">mask</span> <span class="k">as</span> <span class="n">mask_util</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseClient</span><span class="p">,</span> <span class="n">ClientError</span><span class="p">,</span> <span class="n">_FileSlice</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.core.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_make_progress</span><span class="p">,</span> <span class="n">normalize_path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.results</span><span class="w"> </span><span class="kn">import</span> <span class="n">RHEEDImageResult</span><span class="p">,</span> <span class="n">RHEEDVideoResult</span><span class="p">,</span> <span class="n">XPSResult</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.results</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">RHEEDImageResult</span><span class="p">,</span>
+    <span class="n">RHEEDVideoResult</span><span class="p">,</span>
+    <span class="n">XPSResult</span><span class="p">,</span>
+    <span class="n">_get_rheed_image_result</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.timeseries.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_provider</span>
+
+<span class="n">TimeseriesDomain</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;rheed&quot;</span><span class="p">,</span> <span class="s2">&quot;optical&quot;</span><span class="p">,</span> <span class="s2">&quot;metrology&quot;</span><span class="p">]</span>
 
 
 <div class="viewcode-block" id="Client">
@@ -228,7 +232,13 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">data_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
-            <span class="s2">&quot;xps&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_xscan&quot;</span>
+            <span class="s2">&quot;xps&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rheed_xscan&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;metrology&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;optical&quot;</span><span class="p">,</span>
         <span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RHEEDVideoResult</span> <span class="o">|</span> <span class="n">RHEEDImageResult</span> <span class="o">|</span> <span class="n">XPSResult</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;xps&quot;</span><span class="p">:</span>
@@ -245,164 +255,25 @@
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;rheed_image&quot;</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_rheed_image_result</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">_get_rheed_image_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">data_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_xscan&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">data_type</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rheed_xscan&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;metrology&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;optical&quot;</span><span class="p">,</span>
+        <span class="p">]:</span>
+            <span class="n">timeseries_type</span> <span class="o">=</span> <span class="s2">&quot;rheed&quot;</span> <span class="k">if</span> <span class="s2">&quot;rheed&quot;</span> <span class="ow">in</span> <span class="n">data_type</span> <span class="k">else</span> <span class="n">data_type</span>
+            <span class="n">provider</span> <span class="o">=</span> <span class="n">get_provider</span><span class="p">(</span><span class="n">timeseries_type</span><span class="p">)</span>
+
             <span class="c1"># Get timeseries data</span>
-            <span class="n">timeseries_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_rheed_timeseries_result</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
+            <span class="n">raw</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">fetch_raw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">)</span>
+            <span class="n">ts_df</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
 
-            <span class="c1"># Get cluster and extracted image data</span>
+            <span class="k">return</span> <span class="n">provider</span><span class="o">.</span><span class="n">build_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">data_type</span><span class="p">,</span> <span class="n">ts_df</span><span class="p">)</span>
 
-            <span class="n">extracted_frames</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-                <span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data_entries/video_single_frames/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="p">)</span>
-
-            <span class="k">def</span><span class="w"> </span><span class="nf">__obtain_frame_data</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">metadata_fields</span><span class="p">):</span>
-                <span class="n">image_params</span> <span class="o">=</span> <span class="p">[]</span>
-
-                <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">frames</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;frames&quot;</span><span class="p">,</span> <span class="p">[]):</span>
-                    <span class="n">metadata</span> <span class="o">=</span> <span class="p">{</span>
-                        <span class="n">key</span><span class="p">:</span> <span class="n">value</span>
-                        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
-                        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">metadata_fields</span>
-                    <span class="p">}</span>
-
-                    <span class="n">image_params</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
-                        <span class="p">{</span><span class="s2">&quot;data_id&quot;</span><span class="p">:</span> <span class="n">frame</span><span class="p">[</span><span class="s2">&quot;image_uuid&quot;</span><span class="p">],</span> <span class="s2">&quot;metadata&quot;</span><span class="p">:</span> <span class="n">metadata</span><span class="p">}</span>
-                    <span class="p">)</span>
-
-                <span class="k">return</span> <span class="p">[</span>
-                    <span class="n">result</span>
-                    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_multi_thread</span><span class="p">(</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_get_rheed_image_result</span><span class="p">,</span> <span class="n">kwargs_list</span><span class="o">=</span><span class="n">image_params</span>
-                    <span class="p">)</span>
-                    <span class="k">if</span> <span class="n">result</span>
-                <span class="p">]</span>
-
-            <span class="n">extracted_image_results</span> <span class="o">=</span> <span class="p">(</span>
-                <span class="n">__obtain_frame_data</span><span class="p">(</span>
-                    <span class="n">extracted_frames</span><span class="p">,</span>
-                    <span class="p">[</span><span class="s2">&quot;timestamp_seconds&quot;</span><span class="p">],</span>
-                <span class="p">)</span>
-                <span class="k">if</span> <span class="n">extracted_frames</span>
-                <span class="k">else</span> <span class="kc">None</span>
-            <span class="p">)</span>
-            <span class="k">return</span> <span class="n">RHEEDVideoResult</span><span class="p">(</span>
-                <span class="n">data_id</span><span class="o">=</span><span class="n">data_id</span><span class="p">,</span>
-                <span class="n">timeseries_data</span><span class="o">=</span><span class="n">timeseries_data</span><span class="p">,</span>
-                <span class="n">snapshot_image_data</span><span class="o">=</span><span class="n">extracted_image_results</span><span class="p">,</span>
-                <span class="n">rotating</span><span class="o">=</span><span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span>
-            <span class="p">)</span>
-
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data type must be rheed_video, rheed_image, or xps&quot;</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_rheed_timeseries_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-        <span class="c1"># Get rheed video timeseries results</span>
-        <span class="n">plot_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rheed/timeseries/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">/&quot;</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">plot_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">DataFrame</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-
-        <span class="n">timeseries_dfs</span> <span class="o">=</span> <span class="p">[]</span>
-
-        <span class="k">for</span> <span class="n">angle_data</span> <span class="ow">in</span> <span class="n">plot_data</span><span class="p">[</span><span class="s2">&quot;series_by_angle&quot;</span><span class="p">]:</span>  <span class="c1"># type: ignore # noqa: PGH003</span>
-            <span class="n">temp_df</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">angle_data</span><span class="p">[</span><span class="s2">&quot;series&quot;</span><span class="p">])</span>
-            <span class="n">temp_df</span><span class="p">[</span><span class="s2">&quot;Angle&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">angle_data</span><span class="p">[</span><span class="s2">&quot;angle&quot;</span><span class="p">]</span>
-            <span class="n">timeseries_dfs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp_df</span><span class="p">)</span>
-
-        <span class="n">timeseries_data</span> <span class="o">=</span> <span class="n">concat</span><span class="p">(</span><span class="n">timeseries_dfs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-
-        <span class="c1"># Remove certain timeseries values if all None to avoid confusion</span>
-        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;reconstruction_intensity&quot;</span><span class="p">,</span> <span class="s2">&quot;tar_metric&quot;</span><span class="p">]:</span>
-            <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">timeseries_data</span> <span class="ow">and</span> <span class="n">timeseries_data</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
-                <span class="n">timeseries_data</span> <span class="o">=</span> <span class="n">timeseries_data</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">col</span><span class="p">])</span>
-
-        <span class="n">column_mapping</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;time_seconds&quot;</span><span class="p">:</span> <span class="s2">&quot;Time&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;frame_number&quot;</span><span class="p">:</span> <span class="s2">&quot;Frame Number&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;cluster_id&quot;</span><span class="p">:</span> <span class="s2">&quot;Cluster ID&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;cluster_std&quot;</span><span class="p">:</span> <span class="s2">&quot;Cluster ID Uncertainty&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;referenced_strain&quot;</span><span class="p">:</span> <span class="s2">&quot;Strain&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;nearest_neighbor_strain&quot;</span><span class="p">:</span> <span class="s2">&quot;Cumulative Strain&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;oscillation_period&quot;</span><span class="p">:</span> <span class="s2">&quot;Oscillation Period&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;spot_count&quot;</span><span class="p">:</span> <span class="s2">&quot;Diffraction Spot Count&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;first_order_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;First Order Intensity&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;first_order_intensity_l&quot;</span><span class="p">:</span> <span class="s2">&quot;First Order Intensity L&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;first_order_intensity_r&quot;</span><span class="p">:</span> <span class="s2">&quot;First Order Intensity R&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;half_order_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;Half Order Intensity&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;half_order_intensity_l&quot;</span><span class="p">:</span> <span class="s2">&quot;Half Order Intensity L&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;half_order_intensity_r&quot;</span><span class="p">:</span> <span class="s2">&quot;Half Order Intensity R&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;specular_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;Specular Intensity&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;reconstruction_intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;Reconstruction Intensity&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;specular_fwhm_1&quot;</span><span class="p">:</span> <span class="s2">&quot;Specular FWHM&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;first_order_fwhm_1&quot;</span><span class="p">:</span> <span class="s2">&quot;First Order FWHM&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;lattice_spacing&quot;</span><span class="p">:</span> <span class="s2">&quot;Lattice Spacing&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;tar_metric&quot;</span><span class="p">:</span> <span class="s2">&quot;TAR Metric&quot;</span><span class="p">,</span>
-        <span class="p">}</span>
-
-        <span class="n">timeseries_data</span> <span class="o">=</span> <span class="n">timeseries_data</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">column_mapping</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">timeseries_data</span><span class="o">.</span><span class="n">set_index</span><span class="p">([</span><span class="s2">&quot;Angle&quot;</span><span class="p">,</span> <span class="s2">&quot;Frame Number&quot;</span><span class="p">])</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_get_rheed_image_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
-        <span class="c1"># Get pattern graph data</span>
-        <span class="k">if</span> <span class="n">metadata</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">metadata</span> <span class="o">=</span> <span class="p">{}</span>
-
-        <span class="n">graph_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rheed/images/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">/fingerprint&quot;</span><span class="p">)</span>
-        <span class="n">graph</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">nx</span><span class="o">.</span><span class="n">node_link_graph</span><span class="p">(</span>
-                <span class="n">graph_data</span><span class="p">[</span><span class="s2">&quot;fingerprint&quot;</span><span class="p">],</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
-                <span class="n">source</span><span class="o">=</span><span class="s2">&quot;start_id&quot;</span><span class="p">,</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
-                <span class="n">target</span><span class="o">=</span><span class="s2">&quot;end_id&quot;</span><span class="p">,</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
-                <span class="n">link</span><span class="o">=</span><span class="s2">&quot;horizontal_distances&quot;</span><span class="p">,</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
-            <span class="p">)</span>
-            <span class="k">if</span> <span class="n">graph_data</span>
-            <span class="k">else</span> <span class="kc">None</span>
-        <span class="p">)</span>
-        <span class="n">processed_data_id</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">graph_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;processed_data_id&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">graph_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">data_id</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
-        <span class="p">)</span>
-
-        <span class="c1"># Get mask data</span>
-        <span class="n">mask_data</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rheed/images/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">/mask&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore  #noqa: PGH003</span>
-        <span class="n">mask_rle</span> <span class="o">=</span> <span class="n">mask_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mask_rle&quot;</span><span class="p">)</span>
-        <span class="n">mask_array</span> <span class="o">=</span> <span class="kc">None</span>
-
-        <span class="k">if</span> <span class="n">mask_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">mask_rle</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">mask_height</span> <span class="o">=</span> <span class="n">mask_data</span><span class="p">[</span><span class="s2">&quot;mask_height&quot;</span><span class="p">]</span>
-            <span class="n">mask_width</span> <span class="o">=</span> <span class="n">mask_data</span><span class="p">[</span><span class="s2">&quot;mask_width&quot;</span><span class="p">]</span>
-
-            <span class="n">mask_dict</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;counts&quot;</span><span class="p">:</span> <span class="n">mask_rle</span><span class="p">,</span>
-                <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">mask_height</span><span class="p">,</span> <span class="n">mask_width</span><span class="p">),</span>
-            <span class="p">}</span>
-            <span class="n">mask_array</span> <span class="o">=</span> <span class="n">mask_util</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">mask_dict</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-
-        <span class="c1"># Get raw and processed image data</span>
-        <span class="n">image_download</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-            <span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data_entries/processed_data/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;return_as&quot;</span><span class="p">:</span> <span class="s2">&quot;url-download&quot;</span><span class="p">},</span>
-        <span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">image_download</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="kc">None</span>
-
-        <span class="c1"># Image is pulled from the S3 pre-signed URL</span>
-        <span class="n">image_bytes</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-            <span class="n">base_override</span><span class="o">=</span><span class="n">image_download</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span> <span class="n">sub_url</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">deserialize</span><span class="o">=</span><span class="kc">False</span>
-        <span class="p">)</span>
-
-        <span class="n">image_data</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">image_bytes</span><span class="p">))</span>
-
-        <span class="k">return</span> <span class="n">RHEEDImageResult</span><span class="p">(</span>
-            <span class="n">data_id</span><span class="o">=</span><span class="n">data_id</span><span class="p">,</span>
-            <span class="n">processed_data_id</span><span class="o">=</span><span class="n">processed_data_id</span><span class="p">,</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-            <span class="n">processed_image</span><span class="o">=</span><span class="n">image_data</span><span class="p">,</span>
-            <span class="n">mask</span><span class="o">=</span><span class="n">mask_array</span><span class="p">,</span>
-            <span class="n">pattern_graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span>
-            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data type must be supported&quot;</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Client.upload">
 <a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.upload">[docs]</a>
@@ -565,6 +436,7 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data_ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
         <span class="n">dest_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">data_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;raw&quot;</span><span class="p">,</span> <span class="s2">&quot;processed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;processed&quot;</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Download processed RHEED videos to disk.</span>
@@ -573,6 +445,7 @@
 <span class="sd">            data_ids (str | list[str]): One or more data IDs from the data catalogue.</span>
 <span class="sd">            dest_dir (str | Path | None): Directory to write the files to.</span>
 <span class="sd">                Defaults to the current working directory.</span>
+<span class="sd">            data_type (Literal[&quot;raw&quot;, &quot;processed&quot;]): Whether to download raw or processed data.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">20</span> <span class="o">*</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>  <span class="c1"># 20 MiB read chunks</span>
 
@@ -587,8 +460,9 @@
 
         <span class="k">def</span><span class="w"> </span><span class="nf">__download_one</span><span class="p">(</span><span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># 1) Resolve the presigned URL -------------------------------------</span>
+            <span class="n">url_type</span> <span class="o">=</span> <span class="s2">&quot;raw_data&quot;</span> <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;raw&quot;</span> <span class="k">else</span> <span class="s2">&quot;processed_data&quot;</span>
             <span class="n">meta</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-                <span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data_entries/processed_data/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data_entries/</span><span class="si">{</span><span class="n">url_type</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
                 <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;return_as&quot;</span><span class="p">:</span> <span class="s2">&quot;url-download&quot;</span><span class="p">},</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">meta</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>

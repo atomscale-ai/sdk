@@ -1,0 +1,25 @@
+atomicds.results.optical.OpticalImageResult
+===========================================
+
+.. currentmodule:: atomicds.results.optical
+
+.. autoclass:: OpticalImageResult
+   :members:
+   :show-inheritance:
+   :inherited-members:
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~OpticalImageResult.__init__
+   
+   
+
+   
+   
+   

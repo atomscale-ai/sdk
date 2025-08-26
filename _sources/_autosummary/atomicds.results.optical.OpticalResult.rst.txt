@@ -1,0 +1,39 @@
+atomicds.results.optical.OpticalResult
+======================================
+
+.. currentmodule:: atomicds.results.optical
+
+.. autoclass:: OpticalResult
+   :members:
+   :show-inheritance:
+   :inherited-members:
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~OpticalResult.__init__
+      ~OpticalResult.as_dict
+      ~OpticalResult.from_dict
+      ~OpticalResult.load
+      ~OpticalResult.save
+      ~OpticalResult.to_json
+      ~OpticalResult.unsafe_hash
+      ~OpticalResult.validate_monty_v1
+      ~OpticalResult.validate_monty_v2
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~OpticalResult.REDIRECT
+   
+   

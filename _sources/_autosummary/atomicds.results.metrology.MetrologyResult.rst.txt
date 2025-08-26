@@ -1,0 +1,39 @@
+atomicds.results.metrology.MetrologyResult
+==========================================
+
+.. currentmodule:: atomicds.results.metrology
+
+.. autoclass:: MetrologyResult
+   :members:
+   :show-inheritance:
+   :inherited-members:
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~MetrologyResult.__init__
+      ~MetrologyResult.as_dict
+      ~MetrologyResult.from_dict
+      ~MetrologyResult.load
+      ~MetrologyResult.save
+      ~MetrologyResult.to_json
+      ~MetrologyResult.unsafe_hash
+      ~MetrologyResult.validate_monty_v1
+      ~MetrologyResult.validate_monty_v2
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~MetrologyResult.REDIRECT
+   
+   

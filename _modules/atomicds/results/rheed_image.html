@@ -33,6 +33,7 @@
   <h1>Source code for atomicds.results.rheed_image</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">io</span><span class="w"> </span><span class="kn">import</span> <span class="n">BytesIO</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">uuid</span><span class="w"> </span><span class="kn">import</span> <span class="n">UUID</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
@@ -45,9 +46,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span> <span class="k">as</span> <span class="n">PILImage</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PIL</span><span class="w"> </span><span class="kn">import</span> <span class="n">ImageDraw</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">PIL.Image</span><span class="w"> </span><span class="kn">import</span> <span class="n">Image</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pycocotools</span><span class="w"> </span><span class="kn">import</span> <span class="n">mask</span> <span class="k">as</span> <span class="n">mask_util</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">mask_util</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">boxes_overlap</span><span class="p">,</span> <span class="n">generate_graph_from_nodes</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseClient</span><span class="p">,</span> <span class="n">boxes_overlap</span><span class="p">,</span> <span class="n">generate_graph_from_nodes</span>
 
 <span class="n">tp</span><span class="o">.</span><span class="n">quiet</span><span class="p">()</span>
 <span class="c1"># test comment</span>
@@ -749,6 +750,67 @@
     <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rheed_images</span><span class="p">)</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_get_rheed_image_result</span><span class="p">(</span>
+    <span class="n">client</span><span class="p">:</span> <span class="n">BaseClient</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="p">):</span>
+    <span class="c1"># Get pattern graph data</span>
+    <span class="n">metadata</span> <span class="o">=</span> <span class="n">metadata</span> <span class="ow">or</span> <span class="p">{}</span>
+    <span class="n">graph_data</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rheed/images/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">/fingerprint&quot;</span><span class="p">)</span>
+    <span class="n">graph</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">node_link_graph</span><span class="p">(</span>
+            <span class="n">graph_data</span><span class="p">[</span><span class="s2">&quot;fingerprint&quot;</span><span class="p">],</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
+            <span class="n">source</span><span class="o">=</span><span class="s2">&quot;start_id&quot;</span><span class="p">,</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
+            <span class="n">target</span><span class="o">=</span><span class="s2">&quot;end_id&quot;</span><span class="p">,</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
+            <span class="n">link</span><span class="o">=</span><span class="s2">&quot;horizontal_distances&quot;</span><span class="p">,</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">graph_data</span>
+        <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">)</span>
+    <span class="n">processed_data_id</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">graph_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;processed_data_id&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">graph_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">data_id</span>  <span class="c1"># type: ignore #noqa: PGH003</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Get mask data</span>
+    <span class="n">mask_data</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;rheed/images/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">/mask&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore  #noqa: PGH003</span>
+    <span class="n">mask_rle</span> <span class="o">=</span> <span class="n">mask_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;mask_rle&quot;</span><span class="p">)</span>
+    <span class="n">mask_array</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">if</span> <span class="n">mask_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">mask_rle</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">mask_height</span> <span class="o">=</span> <span class="n">mask_data</span><span class="p">[</span><span class="s2">&quot;mask_height&quot;</span><span class="p">]</span>
+        <span class="n">mask_width</span> <span class="o">=</span> <span class="n">mask_data</span><span class="p">[</span><span class="s2">&quot;mask_width&quot;</span><span class="p">]</span>
+
+        <span class="n">mask_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;counts&quot;</span><span class="p">:</span> <span class="n">mask_rle</span><span class="p">,</span>
+            <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="p">(</span><span class="n">mask_height</span><span class="p">,</span> <span class="n">mask_width</span><span class="p">),</span>
+        <span class="p">}</span>
+        <span class="n">mask_array</span> <span class="o">=</span> <span class="n">mask_util</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">mask_dict</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+
+    <span class="c1"># Get raw and processed image data</span>
+    <span class="n">image_download</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+        <span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;data_entries/processed_data/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;return_as&quot;</span><span class="p">:</span> <span class="s2">&quot;url-download&quot;</span><span class="p">},</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">image_download</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="c1"># Image is pulled from the S3 pre-signed URL</span>
+    <span class="n">image_bytes</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+        <span class="n">base_override</span><span class="o">=</span><span class="n">image_download</span><span class="p">[</span><span class="s2">&quot;url&quot;</span><span class="p">],</span> <span class="n">sub_url</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">deserialize</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+
+    <span class="n">image_data</span> <span class="o">=</span> <span class="n">PILImage</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">image_bytes</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">RHEEDImageResult</span><span class="p">(</span>
+        <span class="n">data_id</span><span class="o">=</span><span class="n">data_id</span><span class="p">,</span>
+        <span class="n">processed_data_id</span><span class="o">=</span><span class="n">processed_data_id</span><span class="p">,</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+        <span class="n">processed_image</span><span class="o">=</span><span class="n">image_data</span><span class="p">,</span>
+        <span class="n">mask</span><span class="o">=</span><span class="n">mask_array</span><span class="p">,</span>
+        <span class="n">pattern_graph</span><span class="o">=</span><span class="n">graph</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+    <span class="p">)</span>
 </pre></div>
 
           </div>

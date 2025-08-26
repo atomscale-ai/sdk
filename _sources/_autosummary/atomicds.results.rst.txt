@@ -28,6 +28,8 @@
    :template: custom-module-template.rst
    :recursive:
 
+   metrology
+   optical
    rheed_image
    rheed_video
    xps
