@@ -230,7 +230,6 @@ class Client(BaseClient):
             return provider.build_result(self, data_id, data_type, ts_df)
 
         raise ValueError("Data type must be supported")
-        
 
     def upload(self, files: list[str | BinaryIO]):
         """Upload and process files
