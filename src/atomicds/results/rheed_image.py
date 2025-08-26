@@ -14,7 +14,7 @@ from PIL import Image as PILImage
 from PIL import ImageDraw
 from PIL.Image import Image
 
-from atomicds.client import mask_util
+from pycocotools import mask as mask_util
 from atomicds.core import BaseClient, boxes_overlap, generate_graph_from_nodes
 
 tp.quiet()
@@ -371,9 +371,7 @@ class RHEEDImageResult(MSONable):
                 x,
                 new_df["mask_height"].iloc[0],  # type: ignore  # noqa: PGH003
                 new_df["mask_width"].iloc[0],  # type: ignore  # noqa: PGH003
-            )[
-                "counts"
-            ]
+            )["counts"]
 
             new_df = new_df.groupby("node_id").agg(agg_dict).reset_index(drop=True)
 
