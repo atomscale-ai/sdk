@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from io import BytesIO
 from uuid import UUID
 
 import networkx as nx
@@ -12,9 +13,9 @@ from numpy.typing import NDArray
 from PIL import Image as PILImage
 from PIL import ImageDraw
 from PIL.Image import Image
+from pycocotools import mask as mask_util
 
-from atomicds.client import mask_util
-from atomicds.core import boxes_overlap, generate_graph_from_nodes
+from atomicds.core import BaseClient, boxes_overlap, generate_graph_from_nodes
 
 tp.quiet()
 # test comment
@@ -689,3 +690,64 @@ class RHEEDImageCollection(MSONable):
 
     def __len__(self) -> int:
         return len(self.rheed_images)
+
+
+def _get_rheed_image_result(
+    client: BaseClient, data_id: str, metadata: dict | None = None
+):
+    # Get pattern graph data
+    metadata = metadata or {}
+    graph_data = client._get(sub_url=f"rheed/images/{data_id}/fingerprint")
+    graph = (
+        nx.node_link_graph(
+            graph_data["fingerprint"],  # type: ignore #noqa: PGH003
+            source="start_id",  # type: ignore #noqa: PGH003
+            target="end_id",  # type: ignore #noqa: PGH003
+            link="horizontal_distances",  # type: ignore #noqa: PGH003
+        )
+        if graph_data
+        else None
+    )
+    processed_data_id = (
+        graph_data.get("processed_data_id") if graph_data is not None else data_id  # type: ignore #noqa: PGH003
+    )
+
+    # Get mask data
+    mask_data: dict = client._get(sub_url=f"rheed/images/{data_id}/mask")  # type: ignore  #noqa: PGH003
+    mask_rle = mask_data.get("mask_rle")
+    mask_array = None
+
+    if mask_data is not None and mask_rle is not None:
+        mask_height = mask_data["mask_height"]
+        mask_width = mask_data["mask_width"]
+
+        mask_dict = {
+            "counts": mask_rle,
+            "size": (mask_height, mask_width),
+        }
+        mask_array = mask_util.decode(mask_dict)  # type: ignore  # noqa: PGH003
+
+    # Get raw and processed image data
+    image_download: dict[str, str] | None = client._get(  # type: ignore  # noqa: PGH003
+        sub_url=f"data_entries/processed_data/{data_id}",
+        params={"return_as": "url-download"},
+    )
+
+    if image_download is None:
+        return None
+
+    # Image is pulled from the S3 pre-signed URL
+    image_bytes: bytes = client._get(  # type: ignore  # noqa: PGH003
+        base_override=image_download["url"], sub_url="", deserialize=False
+    )
+
+    image_data = PILImage.open(BytesIO(image_bytes))
+
+    return RHEEDImageResult(
+        data_id=data_id,
+        processed_data_id=processed_data_id,  # type: ignore  # noqa: PGH003
+        processed_image=image_data,
+        mask=mask_array,
+        pattern_graph=graph,
+        metadata=metadata,
+    )
