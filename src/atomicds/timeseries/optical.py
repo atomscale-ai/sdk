@@ -16,13 +16,15 @@ class OpticalProvider(TimeseriesProvider):
     TYPE = "optical"
 
     RENAME_MAP: Mapping[str, str] = {
-        "time_seconds": "Time",
+        "relative_time_seconds": "Time",
+        "frame_number": "Frame Number",
+        "unix_timestamp_ms": "UNIX Timestamp",
         "perimeter_px": "Edge Perimeter",
         "circularity": "Edge Circularity",
         "edge_roughness": "Edge Roughness",
         "hausdorff_px": "Hausdorff Similarity",
     }
-    INDEX_COLS: Sequence[str] = ["Time"]
+    INDEX_COLS: Sequence[str] = ["Frame Number"]
 
     def snapshot_url(self, data_id: str) -> str:
         return f"optical/frame/video_single_frames/{data_id}"

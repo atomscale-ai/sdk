@@ -14,13 +14,15 @@ class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
     TYPE = "metrology"
 
     RENAME_MAP: Mapping[str, str] = {
-        "time_seconds": "Time",
+        "relative_time_seconds": "Time",
+        "frame_number": "Frame Number",
+        "unix_timestamp_ms": "UNIX Timestamp",
         "ratio_pyrometer": "Ratio Pyrometer",
         "sc_pyrometer": "SC Pyrometer",
         "decay_constant_minutes": "Decay Constant",
         "median_period": "Median Period",
     }
-    INDEX_COLS: Sequence[str] = ["Time"]
+    INDEX_COLS: Sequence[str] = ["Frame Number"]
 
     def fetch_raw(self, client: BaseClient, data_id: str) -> Any:
         return client._get(sub_url=f"metrology/{data_id}/timeseries/")

@@ -100,7 +100,8 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
                 extracted = [
                     res
                     for res in client._multi_thread(
-                        self.fetch_snapshot, [{"req": r} for r in reqs]
+                        self.fetch_snapshot,
+                        [{"client": client, "req": r} for r in reqs],
                     )
                     if res
                 ]
