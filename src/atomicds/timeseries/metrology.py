@@ -21,6 +21,7 @@ class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
         "sc_pyrometer": "SC Pyrometer",
         "decay_constant_minutes": "Decay Constant",
         "median_period": "Median Period",
+        "median_period_seconds": "Median Period",
     }
     INDEX_COLS: Sequence[str] = ["Frame Number"]
 
