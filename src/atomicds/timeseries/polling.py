@@ -81,7 +81,7 @@ def iter_poll(
     Args:
         client: API client instance forwarded to the provider.
         data_id: Identifier to fetch data for.
-        last_n: Last number of time serie data points to poll. None is all.
+        last_n: Last number of time series data points to poll. None is all.
         interval: Seconds between polls. Defaults to 1.0.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
@@ -156,7 +156,7 @@ async def aiter_poll(
         client: API client instance forwarded to the provider.
         data_id: Identifier to fetch data for.
         interval: Seconds between polls. Defaults to 1.0.
-        last_n: Last number of time serie data points to poll. None is all.
+        last_n: Last number of time series data points to poll. None is all.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
         until: Optional predicate; stop when it returns True for a result.

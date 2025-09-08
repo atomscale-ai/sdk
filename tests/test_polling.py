@@ -100,7 +100,9 @@ def test_iter_poll_yields_max_polls(
 ):
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = SeqProvider([{"i": 1}, {"i": 2}, {"i": 3}])
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     results = list(iter_poll(client, data_id, interval=0.01, max_polls=3))
     assert [r["i"] for r in results] == [1, 2, 3]
@@ -112,7 +114,9 @@ def test_iter_poll_dedupes_by_key(
 ):
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = SeqProvider([{"rev": 1}, {"rev": 1}, {"rev": 2}])
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     results = list(
         iter_poll(
@@ -131,7 +135,9 @@ def test_iter_poll_until_predicate(
 ):
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = SeqProvider([{"status": "ok"}, {"status": "done"}, {"status": "ok"}])
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     results = list(
         iter_poll(
@@ -150,7 +156,9 @@ def test_iter_poll_on_error_and_continue(
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = FlakyThenOKProvider()
     errors: List[BaseException] = []
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     results = list(
         iter_poll(
@@ -182,7 +190,9 @@ def test_iter_poll_jitter_uses_interval_bound(
     monkeypatch.setattr(_random, "uniform", fake_uniform)
 
     provider = SeqProvider([{"x": 1}, {"x": 2}])
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     it = iter_poll(
         client,
@@ -204,7 +214,9 @@ def test_iter_poll_with_fixture_result_payload(
     provider = SeqProvider(
         [{"rev": 1, "payload": result}, {"rev": 2, "payload": result}]
     )
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     out = list(
         iter_poll(
@@ -229,7 +241,9 @@ async def test_aiter_poll_yields_max_polls(
     monkeypatch.setattr(asyncio, "sleep", fast_sleep)
 
     provider = SeqProvider([{"i": 1}, {"i": 2}, {"i": 3}])
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     got: List[int] = []
     async for r in aiter_poll(client, data_id, interval=0.01, max_polls=3):
@@ -248,7 +262,9 @@ async def test_aiter_poll_dedupes(
     monkeypatch.setattr(asyncio, "sleep", fast_sleep)
 
     provider = SeqProvider([{"rev": 1}, {"rev": 1}, {"rev": 2}])
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     got: List[int] = []
     async for r in aiter_poll(
@@ -273,7 +289,9 @@ async def test_aiter_poll_on_error_and_continue(
 
     provider = FlakyThenOKProvider()
     errors: List[BaseException] = []
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     got: List[int] = []
     async for r in aiter_poll(
@@ -301,7 +319,9 @@ async def test_start_polling_task_awaits_on_result(
     monkeypatch.setattr(asyncio, "sleep", fast_sleep)
 
     provider = SeqProvider([{"n": 1}, {"n": 2}, {"n": 3}])
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     seen: List[int] = []
 
@@ -329,7 +349,9 @@ def test_start_polling_thread_stops_with_event(
     monkeypatch.setattr(time, "sleep", lambda *_: None)
 
     provider = SeqProvider([{"n": 1}, {"n": 2}, {"n": 3}, {"n": 4}, {"n": 5}])
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider
+    )
 
     seen: List[int] = []
     first_seen = threading.Event()
@@ -358,14 +380,18 @@ def test_iter_poll_fire_immediately_smoke(
     provider2 = SeqProvider([{"y": 1}])
 
     # True
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider1)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider1
+    )
     out1 = list(
         iter_poll(client, data_id, interval=0.01, max_polls=1, fire_immediately=True)
     )
     assert out1 == [{"x": 1}]
 
     # False
-    monkeypatch.setattr("atomicds.timeseries.polling.get_provider", lambda name: provider2)
+    monkeypatch.setattr(
+        "atomicds.timeseries.polling.get_provider", lambda name: provider2
+    )
     out2 = list(
         iter_poll(client, data_id, interval=0.01, max_polls=1, fire_immediately=False)
     )
