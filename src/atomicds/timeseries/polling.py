@@ -18,18 +18,20 @@ Predicate = Callable[[Result], bool]
 ErrorHandler = Callable[[BaseException], None]
 
 
-def _fetch_result(client, data_id: str) -> Result:
+def _fetch_result(client, data_id: str, last_n: int | None) -> Result:
     """Build a result via provider -> fetch_raw -> to_dataframe.
 
     Args:
         client: API client instance passed to the provider.
         data_id: Identifier of the resource to fetch.
+        last_n: Last number of entries to poll for
 
     Returns:
         Any: The provider-converted result (typically a pandas.DataFrame).
     """
     provider = get_provider("rheed")
-    raw = provider.fetch_raw(client, data_id)
+    kwargs = {"last_n": last_n} if last_n is not None else {}
+    raw = provider.fetch_raw(client, data_id, **kwargs)
     return provider.to_dataframe(raw)
 
 
@@ -62,6 +64,7 @@ def iter_poll(
     data_id: str,
     *,
     interval: float = 1.0,
+    last_n: int | None = None,
     distinct_by: DistinctFn | None = None,
     until: Predicate | None = None,
     max_polls: int | None = None,
@@ -78,6 +81,7 @@ def iter_poll(
     Args:
         client: API client instance forwarded to the provider.
         data_id: Identifier to fetch data for.
+        last_n: Last number of time serie data points to poll. None is all.
         interval: Seconds between polls. Defaults to 1.0.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
@@ -108,7 +112,7 @@ def iter_poll(
     while True:
         polls += 1
         try:
-            result = _fetch_result(client, data_id)
+            result = _fetch_result(client, data_id, last_n)
         except BaseException as exc:
             if on_error:
                 on_error(exc)
@@ -135,6 +139,7 @@ async def aiter_poll(
     data_id: str,
     *,
     interval: float = 1.0,
+    last_n: int | None = None,
     distinct_by: DistinctFn | None = None,
     until: Predicate | None = None,
     max_polls: int | None = None,
@@ -151,6 +156,7 @@ async def aiter_poll(
         client: API client instance forwarded to the provider.
         data_id: Identifier to fetch data for.
         interval: Seconds between polls. Defaults to 1.0.
+        last_n: Last number of time serie data points to poll. None is all.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
         until: Optional predicate; stop when it returns True for a result.
@@ -181,7 +187,7 @@ async def aiter_poll(
     while True:
         polls += 1
         try:
-            result = await asyncio.to_thread(_fetch_result, client, data_id)
+            result = await asyncio.to_thread(_fetch_result, client, data_id, last_n)
         except BaseException as exc:
             if on_error:
                 on_error(exc)
@@ -212,6 +218,7 @@ def start_polling_thread(
     data_id: str,
     *,
     interval: float = 1.0,
+    last_n: int | None = None,
     on_result: Callable[[Result], None],
     **kwargs,
 ) -> threading.Event:
@@ -225,6 +232,7 @@ def start_polling_thread(
         client: API client instance forwarded to the provider.
         data_id: Identifier to fetch data for.
         interval: Seconds between polls. Defaults to 1.0.
+        last_n: Last number of time series data points to poll for. None is all.
         on_result: Callback invoked with each yielded result.
         **kwargs: Additional keyword arguments forwarded to `iter_poll`
             (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,
@@ -236,7 +244,9 @@ def start_polling_thread(
     stop = threading.Event()
 
     def _runner():
-        for res in iter_poll(client, data_id, interval=interval, **kwargs):
+        for res in iter_poll(
+            client, data_id, interval=interval, last_n=last_n, **kwargs
+        ):
             if stop.is_set():
                 break
             on_result(res)
@@ -251,6 +261,7 @@ def start_polling_task(
     data_id: str,
     *,
     interval: float = 1.0,
+    last_n: int | None = None,
     on_result: Callable[[Result], Any] | None = None,
     **kwargs,
 ) -> asyncio.Task[None]:
@@ -263,6 +274,7 @@ def start_polling_task(
         client: API client instance forwarded to the provider.
         data_id: Identifier to fetch data for.
         interval: Seconds between polls. Defaults to 1.0.
+        last_n: Last number of time series data points to poll for. None is all.
         on_result: Optional callback invoked with each yielded result. If it
             returns a coroutine, it will be awaited.
         **kwargs: Additional keyword arguments forwarded to `aiter_poll`
@@ -277,7 +289,9 @@ def start_polling_task(
     """
 
     async def _runner():
-        async for res in aiter_poll(client, data_id, interval=interval, **kwargs):
+        async for res in aiter_poll(
+            client, data_id, interval=interval, last_n=last_n, **kwargs
+        ):
             if on_result is None:
                 continue
             maybe = on_result(res)
