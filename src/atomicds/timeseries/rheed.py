@@ -39,8 +39,8 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
     DROP_IF_ALL_NA: Sequence[str] = ["reconstruction_intensity", "tar_metric"]
     INDEX_COLS: Sequence[str] = ["Angle", "Frame Number"]
 
-    def fetch_raw(self, client: BaseClient, data_id: str) -> Any:
-        return client._get(sub_url=f"rheed/timeseries/{data_id}/")
+    def fetch_raw(self, client: BaseClient, data_id: str, **kwargs) -> Any:
+        return client._get(sub_url=f"rheed/timeseries/{data_id}/", params=kwargs)
 
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:
