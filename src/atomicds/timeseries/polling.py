@@ -53,7 +53,7 @@ def _drift_corrected_sleep(next_tick: float, interval: float) -> float:
     now = time.monotonic()
     delay = next_tick - now
     if delay < 0:
-        missed = int((-delay) // interval) + 1
+        missed = int((-delay) // interval)
         next_tick += missed * interval
         delay = next_tick - time.monotonic()
     return max(0.0, delay)
