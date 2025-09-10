@@ -138,9 +138,8 @@ pub fn package_to_zarr_bytes(frames_flat: &[u8], n: usize, h: usize, w: usize) -
 
     arr.store_metadata()?;
     arr.store_chunk_elements(&[0, 0, 0], frames_flat)?;
-    Ok(arr
-        .retrieve_encoded_chunk(&[0, 0, 0])?
-        .ok_or_else(|| anyhow!("missing encoded chunk"))?)
+    arr.retrieve_encoded_chunk(&[0, 0, 0])?
+        .ok_or_else(|| anyhow!("missing encoded chunk"))
 }
 
 /// POST for a presigned URL (async). Returns the "url" string.

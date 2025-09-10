@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Context};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyIterator, PyModule};
 use reqwest::Client;
@@ -10,7 +10,7 @@ use tokio::runtime::Runtime;
 mod utils;
 use utils::{numpy_frames_to_flat, package_to_zarr_bytes, pydict_to_headers, pydict_to_json};
 
-use crate::utils::post_for_presigned;
+use crate::utils::{post_for_presigned, put_bytes_presigned};
 
 #[pyclass]
 pub struct ConcurrentStreamer {
@@ -133,6 +133,9 @@ impl ConcurrentStreamer {
                     "[rheed_stream] task#{task_id}: packaged in {:.2?} → shard_len={}, checksum={}, preview=[{}], url={}",
                     pack_dur, shard_len, shard_checksum, shard_preview, url
                 );
+                // PUT request to upload the byte data
+                put_bytes_presigned(&client, &url, &shard, &headers).await.with_context(|| format!("task#{task_id}/put bytes request failed"))?;
+
                 Ok::<(), anyhow::Error>(())
             });
 
