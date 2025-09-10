@@ -1623,6 +1623,7 @@ name = "rheed_stream"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
  "numpy",
  "pyo3",
  "reqwest",

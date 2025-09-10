@@ -1,5 +1,3 @@
-# Cargo.toml
-
 [package]
 name = "rheed_stream"
 version = "0.1.0"
@@ -13,7 +11,8 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.26", features = ["extension-module"] }
 numpy = "0.26"
 anyhow = "1"
-reqwest = { version = "0.12", features = ["rustls-tls", "json"] }
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+reqwest = { version = "0.12", features = ["rustls-tls", "json"] }        # async only
+bytes = "1.6"
 zarrs = { version = "0.21", features = ["zstd"] }
 serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }   # ✅

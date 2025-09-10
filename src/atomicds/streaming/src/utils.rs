@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Context, Result};
+use bytes::Bytes;
 use numpy::PyArrayMethods;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList, PyModule};
@@ -75,7 +76,7 @@ pub fn pydict_to_headers(d: Option<Bound<PyDict>>) -> Result<HashMap<String, Str
 pub fn numpy_frames_to_flat(obj: Bound<PyAny>) -> PyResult<(Vec<u8>, usize, usize, usize)> {
     use numpy::{PyArrayDyn, PyReadonlyArrayDyn};
 
-    // NOTE: downcast() returns &Bound<...>; clone it to get Bound<...>.
+    // downcast() returns &Bound<...>; clone it to get Bound<...>.
     let arr_u8: Bound<PyArrayDyn<u8>> = if let Ok(a) = obj.downcast::<PyArrayDyn<u8>>() {
         a.clone()
     } else {
@@ -128,26 +129,28 @@ pub fn package_to_zarr_bytes(frames_flat: &[u8], n: usize, h: usize, w: usize) -
         FillValue::from(0u8),
     )
     .array_to_bytes_codec(
+        // Lower compression for quick tests; bump to 9 if desired.
         ShardingCodecBuilder::new(vec![1u64, h as u64, w as u64].try_into()?)
-            .bytes_to_bytes_codecs(vec![Arc::new(ZstdCodec::new(9, false))])
+            .bytes_to_bytes_codecs(vec![Arc::new(ZstdCodec::new(3, false))])
             .build_arc(),
     )
     .build(store, "/frames")?;
 
     arr.store_metadata()?;
     arr.store_chunk_elements(&[0, 0, 0], frames_flat)?;
-    arr.retrieve_encoded_chunk(&[0, 0, 0])?
-        .ok_or_else(|| anyhow!("missing encoded chunk"))
+    Ok(arr
+        .retrieve_encoded_chunk(&[0, 0, 0])?
+        .ok_or_else(|| anyhow!("missing encoded chunk"))?)
 }
 
-/// POST for a presigned URL; return "url".
+/// POST for a presigned URL (async). Returns the "url" string.
 pub async fn post_for_presigned(
     client: &Client,
     url: &str,
     body: Value,
     hdrs: &HashMap<String, String>,
 ) -> Result<String> {
-    let mut req = client.post(url).json(&body);
+    let mut req = client.post(url).header("Connection", "close").json(&body);
     for (k, v) in hdrs {
         req = req.header(k, v);
     }
@@ -158,20 +161,24 @@ pub async fn post_for_presigned(
         .to_string())
 }
 
-/// PUT bytes to the presigned URL.
+/// PUT bytes to the presigned URL (async).
 pub async fn put_bytes_presigned(
     client: &Client,
     url: &str,
     bytes: &[u8],
     hdrs: &HashMap<String, String>,
 ) -> Result<()> {
+    // Use Bytes to avoid an extra copy inside reqwest
     let mut req = client
         .put(url)
         .header("content-type", "application/octet-stream")
-        .body(bytes.to_vec());
+        .header("Connection", "close")
+        .body(Bytes::copy_from_slice(bytes));
+
     for (k, v) in hdrs {
         req = req.header(k, v);
     }
+
     req.send().await?.error_for_status()?;
     Ok(())
 }
