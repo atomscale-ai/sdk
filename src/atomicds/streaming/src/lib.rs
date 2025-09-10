@@ -14,11 +14,11 @@ use crate::utils::{post_for_presigned, put_bytes_presigned};
 
 #[pyclass]
 pub struct ConcurrentStreamer {
-    client: Client, // unused in this mode, ok to keep
+    client: Client, 
     post_url: String,
     params: Value,
     headers: HashMap<String, String>,
-    rt: Runtime, // ✅ bring back a Tokio runtime to run tasks concurrently
+    rt: Runtime, 
 }
 
 #[pymethods]
@@ -59,7 +59,7 @@ impl ConcurrentStreamer {
     /// - Main (GIL) thread: iterate generator, do NumPy→Vec<u8> prep, print quick stats
     /// - For each chunk: spawn a task that does the **package** step on a blocking worker
     ///   and prints timing + shard preview. All tasks run in parallel.
-    fn run(&self, py: Python, frames_iter: Bound<PyAny>) -> PyResult<()> {
+    fn run(&self, frames_iter: Bound<PyAny>) -> PyResult<()> {
         eprintln!("[rheed_stream] run: starting (concurrent: prepare→spawn package tasks)");
         let iter = PyIterator::from_object(&frames_iter)?;
         let mut handles = Vec::new();
