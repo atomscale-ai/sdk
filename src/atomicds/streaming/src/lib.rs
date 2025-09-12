@@ -16,6 +16,33 @@ use upload::{numpy_frames_to_flat, package_to_zarr_bytes};
 
 use crate::upload::{post_for_presigned, put_bytes_presigned, FrameChunkMetadata};
 
+/// RHEEDStreamer(api_key: str, endpoint: Optional[str] = None)
+///
+/// A thin, high-performance Python interface (via PyO3) for **real-time RHEED frame
+/// streaming** into the Atomscale platform. This class takes **chunks of 8-bit frames**
+/// (NumPy arrays) and uploads them for analysis while they are being captured from a camera
+/// programmatically.
+///
+/// Typical usage:
+///
+/// 1) **Instantiate** the streamer
+/// 2) **initialize(...)** to create the remote data item and receive `data_id`
+/// 3a) **run(data_id, frames_iter)** to stream by yielding frame chunks from a generator/iterator, **or**
+/// 3b) **push(data_id, chunk_idx, frames)** repeatedly to send chunks from your own loop
+/// 4) **Finalize** the stream using your API’s end/finalization mechanism (if applicable)
+///
+/// Notes
+/// -----
+/// - Frame dtype is coerced to `uint8`. Shapes `(H, W)` or `(N, H, W)` are accepted; `(N,H,W)` is preferred for chunks.
+/// - Packaging happend concurrently for throughput; network PUTs are async.
+/// - This class is safe to call from Python; heavy work is offloaded to multithreaded async workers.
+///
+/// Args:
+///     api_key (str): Your Atomscale API key.
+///     endpoint (Optional[str]): Base API URL. Defaults to `"https://api.atomicdatasciences.com"`.
+///
+/// Raises:
+///     RuntimeError: If the HTTP client or async runtime cannot be constructed.
 #[pyclass]
 pub struct RHEEDStreamer {
     api_key: String,
@@ -30,7 +57,22 @@ pub struct RHEEDStreamer {
 
 #[pymethods]
 impl RHEEDStreamer {
+    /// RHEEDStreamer(api_key: str, endpoint: Optional[str] = None)
+    ///
+    /// Constructor for the streaming client.
+    ///
+    /// Args:
+    ///     api_key (str): Your AtomScale API key.
+    ///     endpoint (Optional[str]): Base API URL. Defaults to `"https://api.atomicdatasciences.com"`.
+    ///
+    /// Returns:
+    ///     RHEEDStreamer: A configured streamer ready to be initialized and used.
+    ///
+    /// Raises:
+    ///     RuntimeError: If the HTTP client or async runtime cannot be constructed.
     #[new]
+    #[pyo3(signature = (api_key, endpoint=None))]
+    #[pyo3(text_signature = "(api_key, endpoint=None)")]
     fn new(api_key: String, endpoint: Option<String>) -> PyResult<Self> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
@@ -58,6 +100,29 @@ impl RHEEDStreamer {
     }
 
     ////Initialize stream
+    /// initialize(self, stream_name: Optional[str] = None, fps: float, rotations_per_min: float, chunk_size: int) -> str
+    ///
+    /// Creates a new **remote data item** for this stream and returns its `data_id`.
+    /// Also captures runtime configuration used for subsequent chunk uploads.
+    ///
+    /// The rotational period (frames per rotation) is computed as:
+    /// `fpr = (fps * 60.0) / rotations_per_min`. If `rotations_per_min <= 0.0`, the stream is
+    /// treated as **stationary** (no rotation).
+    ///
+    /// Args:
+    ///     stream_name (Optional[str]): Human-readable name shown in the platform. If `None` or an empty string,
+    ///         a default like `"RHEED Stream @ 1:23PM"` is used.
+    ///     fps (float): Capture rate in frames per second.
+    ///     rotations_per_min (float): Wafer/crystal rotations per minute; use `0.0` for stationary operation.
+    ///     chunk_size (int): The **intended** number of frames per chunk you will send with `run(...)` or `push(...)`.
+    ///
+    /// Returns:
+    ///     str: The created `data_id` for this stream.
+    ///
+    /// Raises:
+    ///     RuntimeError: If the initialization POST fails.
+    #[pyo3(signature = (stream_name=None, fps, rotations_per_min, chunk_size))]
+    #[pyo3(text_signature = "(self, stream_name=None, fps, rotations_per_min, chunk_size)")]
     fn initialize(
         &mut self,
         stream_name: Option<String>,
@@ -99,10 +164,32 @@ impl RHEEDStreamer {
         Ok(data_id)
     }
 
-    /// Concurrent mode:
-    /// - Main (GIL) thread: iterate generator, do NumPy→Vec<u8> prep, print quick stats
-    /// - For each chunk: spawn a task that does the **package** step on a blocking worker
-    ///   and prints timing + shard preview. All tasks run in parallel.
+    /// run(self, data_id: str, frames_iter: Iterable[numpy.ndarray]) -> None
+    ///
+    /// **Generator/iterator mode.** Iterates `frames_iter`, where each yielded item is either:
+    ///
+    /// - `(N, H, W)` `numpy.ndarray[uint8]`: a chunk of `N` grayscale frames, or
+    /// - `(H, W)` `numpy.ndarray[uint8]`: a single frame (treated as `N = 1`)
+    ///
+    /// For each yielded item, the method:
+    /// 1) Converts to flat `uint8` bytes,
+    /// 2) Packages as a Zarr shard on a blocking worker thread,
+    /// 3) Uploads the shard to a presigned URL,
+    /// 4) Proceeds concurrently for high throughput.
+    ///
+    /// This method **blocks until all spawned tasks complete**.
+    ///
+    /// Args:
+    ///     data_id (str): The remote data identifier returned by `initialize(...)`.
+    ///     frames_iter (Iterable[numpy.ndarray]): Python iterable/generator of `(N,H,W)` or `(H,W)` uint8 arrays.
+    ///
+    /// Returns:
+    ///     None
+    ///
+    /// Raises:
+    ///     RuntimeError: If any packaging/join/upload step fails.
+    #[pyo3(signature = (data_id, frames_iter))]
+    #[pyo3(text_signature = "(self, data_id, frames_iter)")]
     fn run(&self, data_id: String, frames_iter: Bound<PyAny>) -> PyResult<()> {
         let (rotating, fps, chunk_size) = self.cfg()?;
 
@@ -178,9 +265,28 @@ impl RHEEDStreamer {
         Ok(())
     }
 
-    /// Callback mode: push a single chunk (frames) with a specific chunk index.
-    /// Call repeatedly, then call `end_stream(data_id)` to finalize.
+    /// push(self, data_id: str, chunk_idx: int, frames: numpy.ndarray) -> None
+    ///
+    /// **Callback mode.** Push a single chunk of frames that you produced externally (e.g., from a
+    /// camera callback). Call repeatedly for subsequent chunks.
+    ///
+    /// The `frames` argument may be `(N,H,W)` or `(H,W)`; dtype is coerced to `uint8`.
+    ///
+    /// After your last `push(...)`, finalize the stream using your API’s end/finalization
+    /// mechanism (e.g., `end_stream(data_id)` if available in your client).
+    ///
+    /// Args:
+    ///     data_id (str): The remote data identifier returned by `initialize(...)`.
+    ///     chunk_idx (int): Zero-based index of this chunk (used in Zarr shard path).
+    ///     frames (numpy.ndarray): `(N,H,W)` or `(H,W)` grayscale frames as `uint8`.
+    ///
+    /// Returns:
+    ///     None
+    ///
+    /// Raises:
+    ///     RuntimeError: If packaging or upload fails internally.
     #[pyo3(signature = (data_id, chunk_idx, frames))]
+    #[pyo3(text_signature = "(self, data_id, chunk_idx, frames)")]
     fn push(&self, data_id: String, chunk_idx: usize, frames: Bound<PyAny>) -> PyResult<()> {
         let (rotating, fps, chunk_size) = self.cfg()?;
 
@@ -210,7 +316,15 @@ impl RHEEDStreamer {
 
 // Private and rust only access
 impl RHEEDStreamer {
-    /// Validate required runtime config captured during `initialize`.
+    /// cfg(self) -> Tuple[bool, float, int]
+    ///
+    /// Internal helper: validates that `initialize(...)` populated required runtime config.
+    ///
+    /// Returns:
+    ///     Tuple[bool, float, int]: `(rotating, fps, chunk_size)`
+    ///
+    /// Raises:
+    ///     RuntimeError: If any required field is missing (i.e., `initialize(...)` not called).
     fn cfg(&self) -> PyResult<(bool, f64, usize)> {
         Ok((
             self.rotating.ok_or_else(|| {
@@ -224,8 +338,10 @@ impl RHEEDStreamer {
         ))
     }
 
-    /// Core: spawn packaging + upload for a prepared chunk.
-    /// NOTE: This is *not* exposed to Python (no #[pymethods]).
+    /// spawn_chunk_upload(self, chunk_idx: int, flat: bytes, n: int, h: int, w: int, metadata: FrameChunkMetadata) -> asyncio.Task
+    ///
+    /// Internal helper: packages a prepared chunk to Zarr and uploads via a presigned URL.
+    /// Not exposed to Python.
     fn spawn_chunk_upload(
         &self,
         chunk_idx: usize,
