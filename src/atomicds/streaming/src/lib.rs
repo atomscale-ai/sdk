@@ -173,14 +173,14 @@ impl RHEEDStreamer {
     ///
     /// For each yielded item, the method:
     /// 1) Converts to flat `uint8` bytes,
-    /// 2) Packages as a Zarr shard on a blocking worker thread,
-    /// 3) Uploads the shard to a presigned URL,
+    /// 2) Packages frames on a blocking worker thread,
+    /// 3) Uploads the shard,
     /// 4) Proceeds concurrently for high throughput.
     ///
     /// This method **blocks until all spawned tasks complete**.
     ///
     /// Args:
-    ///     data_id (str): The remote data identifier returned by `initialize(...)`.
+    ///     data_id (str): The stream data ID returned by `initialize(...)`.
     ///     frames_iter (Iterable[numpy.ndarray]): Python iterable/generator of `(N,H,W)` or `(H,W)` uint8 arrays.
     ///
     /// Returns:
