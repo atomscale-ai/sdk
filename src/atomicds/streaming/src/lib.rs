@@ -4,13 +4,13 @@ use pyo3::types::{PyAny,  PyIterator, PyModule};
 use reqwest::Client;
 use std::time::Instant;
 use tokio::runtime::Runtime;
+use chrono::Local;
 
 mod initialize;
-use initialize::post_for_initialization;
+use initialize::{post_for_initialization, RHEEDStreamSettings};
 
 mod upload;
 use upload::{numpy_frames_to_flat, package_to_zarr_bytes};
-
 
 use crate::upload::{post_for_presigned, put_bytes_presigned, FrameChunkMetadata};
 
@@ -54,13 +54,34 @@ impl RHEEDStreamer {
     }
 
     ////Initialize stream
-    fn initialize(&self) -> String {
-       let settings = RHEEDStreamSettings{
-    data_item_name: String,
-    rotational_period: f64,
-    rotations_per_min: usize,
-    fps_capture_rate: f64,}
-        post_for_initialization()
+    fn initialize(&self, stream_name: Option<String>, fps: f64, rotations_per_min: f64) -> String {
+        
+    // Default file name: "RHEED Stream @ #:##AM/PM"
+    let default_name = format!("RHEED Stream @ {}", Local::now().format("%-I:%M%p"));
+
+    // Falsy-style fallback (treat empty string like None)
+    let stream_name = stream_name
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or(default_name);
+
+    let fpr = (fps * 60.0) / rotations_per_min;
+
+    #[allow(clippy::redundant_field_names)]
+    let settings = 
+        RHEEDStreamSettings{ 
+            data_item_name: stream_name.clone(), 
+            rotational_period: fpr, 
+            rotations_per_min: rotations_per_min,
+            fps_capture_rate: fps};
+        
+
+    let base_endpoint = self.endpoint.clone();
+    let post_url  = format!("{base_endpoint}/rheed/stream/");
+    let init_fut = post_for_initialization(&self.client, &post_url, &settings, &self.api_key);
+
+    let data_id = self.rt.block_on(init_fut).with_context(|| format!("stream: {stream_name}/init request failed"));
+
+    return data_id.unwrap();
     }
 
            

@@ -16,6 +16,8 @@ use zarrs::{
     storage::store::MemoryStore,
 };
 
+use numpy::{PyArrayDyn, PyReadonlyArrayDyn};
+
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")] // Ensures JSON fields are snake_case (e.g., data_id)
 pub struct FrameChunkMetadata {
@@ -33,8 +35,6 @@ pub struct FrameChunkMetadata {
 
 /// Accept (H,W) or (N,H,W) frames (casts to uint8) → (flat bytes, N,H,W).
 pub fn numpy_frames_to_flat(obj: Bound<PyAny>) -> PyResult<(Vec<u8>, usize, usize, usize)> {
-    use numpy::{PyArrayDyn, PyReadonlyArrayDyn};
-
     // downcast() returns &Bound<...>; clone it to get Bound<...>.
     let arr_u8: Bound<PyArrayDyn<u8>> = if let Ok(a) = obj.downcast::<PyArrayDyn<u8>>() {
         a.clone()
