@@ -6,7 +6,6 @@ use pyo3::types::{PyAny, PyModule};
 use reqwest::Client;
 use serde::Serialize;
 use serde_json::Value;
-use std::collections::HashMap;
 use std::sync::Arc;
 use zarrs::{
     array::{
@@ -21,16 +20,16 @@ use numpy::{PyArrayDyn, PyReadonlyArrayDyn};
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")] // Ensures JSON fields are snake_case (e.g., data_id)
 pub struct FrameChunkMetadata {
-    data_id: String,
-    data_stream: String,
-    is_stream: u8,
-    is_rotating: u8,
-    raw_frame_rate: f64,
-    avg_frame_rate: f64,
-    chunk_size: usize,
-    dims: String,
-    start_unix_ms_utc: u64,
-    end_unix_ms_utc: u64,
+    pub data_id: String,
+    pub data_stream: String,
+    pub is_stream: u8,
+    pub is_rotating: u8,
+    pub raw_frame_rate: f64,
+    pub avg_frame_rate: f64,
+    pub chunk_size: usize,
+    pub dims: String,
+    pub start_unix_ms_utc: i64,
+    pub end_unix_ms_utc: i64,
 }
 
 /// Accept (H,W) or (N,H,W) frames (casts to uint8) → (flat bytes, N,H,W).
@@ -126,22 +125,12 @@ pub async fn post_for_presigned(
 }
 
 /// PUT bytes to the presigned URL (async).
-pub async fn put_bytes_presigned(
-    client: &Client,
-    url: &str,
-    bytes: &[u8],
-    hdrs: &HashMap<String, String>,
-) -> Result<()> {
+pub async fn put_bytes_presigned(client: &Client, url: &str, bytes: &[u8]) -> Result<()> {
     // Use Bytes to avoid an extra copy inside reqwest
-    let mut req = client
+    let req = client
         .put(url)
         .header("content-type", "application/octet-stream")
-        .header("Connection", "close")
         .body(Bytes::copy_from_slice(bytes));
-
-    for (k, v) in hdrs {
-        req = req.header(k, v);
-    }
 
     req.send().await?.error_for_status()?;
     Ok(())
