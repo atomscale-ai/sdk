@@ -1627,6 +1627,7 @@ dependencies = [
  "numpy",
  "pyo3",
  "reqwest",
+ "serde",
  "serde_json",
  "tokio",
  "zarrs",

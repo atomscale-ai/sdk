@@ -1,39 +1,34 @@
 use anyhow::{anyhow, Context};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict, PyIterator, PyModule};
+use pyo3::types::{PyAny,  PyIterator, PyModule};
 use reqwest::Client;
-use serde_json::Value;
-use std::collections::HashMap;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 
-mod utils;
-use utils::{numpy_frames_to_flat, package_to_zarr_bytes, pydict_to_headers, pydict_to_json};
+mod initialize;
+use initialize::post_for_initialization;
 
-use crate::utils::{post_for_presigned, put_bytes_presigned};
+mod upload;
+use upload::{numpy_frames_to_flat, package_to_zarr_bytes};
+
+
+use crate::upload::{post_for_presigned, put_bytes_presigned, FrameChunkMetadata};
 
 #[pyclass]
-pub struct ConcurrentStreamer {
+pub struct RHEEDStreamer {
+    api_key: String,
+    endpoint: String,
     client: Client, 
-    post_url: String,
-    params: Value,
-    headers: HashMap<String, String>,
     rt: Runtime, 
 }
 
 #[pymethods]
-impl ConcurrentStreamer {
+impl RHEEDStreamer {
     #[new]
     fn new(
-        post_url: String,
-        base_params: Option<Py<PyDict>>,
-        headers: Option<Py<PyDict>>,
-        py: Python,
+        api_key: String,
+        endpoint: Option<String>,
     ) -> PyResult<Self> {
-        let params = pydict_to_json(base_params.as_ref().map(|p| p.bind(py)).cloned())
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
-        let headers = pydict_to_headers(headers.as_ref().map(|p| p.bind(py)).cloned())
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
 
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
@@ -45,21 +40,36 @@ impl ConcurrentStreamer {
             .build()
             .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
 
-        eprintln!("[rheed_stream] init: post_url={}", post_url);
+
+        let endpoint = endpoint.unwrap_or("https://api.atomicdatasciences.com".to_string());
+
+        eprintln!("[rheed_stream] init: base_url={}", endpoint);
+
         Ok(Self {
+            api_key,
+            endpoint,
             client,
-            post_url,
-            params,
-            headers,
             rt,
         })
     }
+
+    ////Initialize stream
+    fn initialize(&self) -> String {
+       let settings = RHEEDStreamSettings{
+    data_item_name: String,
+    rotational_period: f64,
+    rotations_per_min: usize,
+    fps_capture_rate: f64,}
+        post_for_initialization()
+    }
+
+           
 
     /// Concurrent mode:
     /// - Main (GIL) thread: iterate generator, do NumPy→Vec<u8> prep, print quick stats
     /// - For each chunk: spawn a task that does the **package** step on a blocking worker
     ///   and prints timing + shard preview. All tasks run in parallel.
-    fn run(&self, frames_iter: Bound<PyAny>) -> PyResult<()> {
+    fn run(&self, data_id: String, frames_iter: Bound<PyAny>) -> PyResult<()> {
         eprintln!("[rheed_stream] run: starting (concurrent: prepare→spawn package tasks)");
         let iter = PyIterator::from_object(&frames_iter)?;
         let mut handles = Vec::new();
@@ -96,14 +106,22 @@ impl ConcurrentStreamer {
             // Move data into the task; package on a blocking worker thread
             let task_id = idx;
             let flat_task = flat; // move
+
             let client    = self.client.clone();
-            let post_url  = self.post_url.clone();
-            let params    = self.params.clone();
-            let headers   = self.headers.clone();
+
+            let base_endpoint = self.endpoint.clone();
+            let post_url  = format!("{base_endpoint}/data_entries/raw_data/staged/upload_urls/");
+
+            // This is the object key we will PUT to S3 (single shard file)
+            let zarr_shard_key = format!("frames.zarr/frames/c/{idx}/0/0");
+
+            // let metadata = FrameChunkMetadata{data_id: data_id, };
             let handle = self.rt.spawn(async move {
                 eprintln!("[rheed_stream] task#{task_id}: package start (N,H,W=({n},{h},{w}), flat_len={flat_len})");
                 let t_pack0 = Instant::now();
-                let url_fut = post_for_presigned(&client, &post_url, params, &headers);
+
+
+                let url_fut = post_for_presigned(&client, &post_url, &zarr_shard_key, &self.api_key);
                 let shard_handle = tokio::task::spawn_blocking(move || package_to_zarr_bytes(&flat_task, n, h, w));
                 let (url, shard): (String, Vec<u8>) = tokio::try_join!(
                     async {
@@ -122,17 +140,12 @@ impl ConcurrentStreamer {
                 )?;
                 
                 let pack_dur = t_pack0.elapsed();
-                let shard_len = shard.len();
-                let shard_checksum: u64 = shard.iter().take(1024).fold(0u64, |acc, &b| acc + b as u64);
-                let shard_preview = {
-                    let take = shard.iter().take(16).map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(" ");
-                    if shard_len > 16 { format!("{take} …") } else { take }
-                };
 
                 eprintln!(
-                    "[rheed_stream] task#{task_id}: packaged in {:.2?} → shard_len={}, checksum={}, preview=[{}], url={}",
-                    pack_dur, shard_len, shard_checksum, shard_preview, url
+                    "[rheed_stream] task#{task_id}: packaged in {:.2?} → uploading with url={}",
+                    pack_dur, url
                 );
+
                 // PUT request to upload the byte data
                 put_bytes_presigned(&client, &url, &shard, &headers).await.with_context(|| format!("task#{task_id}/put bytes request failed"))?;
 
@@ -177,6 +190,6 @@ impl ConcurrentStreamer {
 
 #[pymodule]
 fn rheed_stream(m: &Bound<PyModule>) -> PyResult<()> {
-    m.add_class::<ConcurrentStreamer>()?;
+    m.add_class::<RHEEDStreamer>()?;
     Ok(())
 }

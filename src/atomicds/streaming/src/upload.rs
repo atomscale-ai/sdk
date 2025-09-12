@@ -2,9 +2,10 @@ use anyhow::{anyhow, Context, Result};
 use bytes::Bytes;
 use numpy::PyArrayMethods;
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyDict, PyList, PyModule};
+use pyo3::types::{PyAny, PyModule};
 use reqwest::Client;
-use serde_json::{Map as JsonMap, Value};
+use serde::Serialize;
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use zarrs::{
@@ -15,61 +16,19 @@ use zarrs::{
     storage::store::MemoryStore,
 };
 
-/// PyDict → JSON (common primitives, lists, dicts; fallback to str()).
-pub fn pydict_to_json(d: Option<Bound<PyDict>>) -> Result<Value> {
-    fn to_value(obj: &Bound<PyAny>) -> Result<Value> {
-        if let Ok(s) = obj.extract::<String>() {
-            return Ok(Value::String(s));
-        }
-        if let Ok(i) = obj.extract::<i64>() {
-            return Ok(i.into());
-        }
-        if let Ok(f) = obj.extract::<f64>() {
-            return Ok(serde_json::json!(f));
-        }
-        if let Ok(b) = obj.extract::<bool>() {
-            return Ok(Value::Bool(b));
-        }
-        if let Ok(d) = obj.downcast::<PyDict>() {
-            let mut m = JsonMap::new();
-            for (k, v) in d.iter() {
-                m.insert(k.str()?.to_str()?.to_string(), to_value(&v)?);
-            }
-            return Ok(Value::Object(m));
-        }
-        if let Ok(lst) = obj.downcast::<PyList>() {
-            let mut a = Vec::with_capacity(lst.len());
-            for it in lst.iter() {
-                a.push(to_value(&it)?);
-            }
-            return Ok(Value::Array(a));
-        }
-        Ok(Value::String(obj.str()?.to_str()?.to_string()))
-    }
-
-    if let Some(d) = d {
-        let mut m = JsonMap::new();
-        for (k, v) in d.iter() {
-            m.insert(k.str()?.to_str()?.to_string(), to_value(&v)?);
-        }
-        Ok(Value::Object(m))
-    } else {
-        Ok(Value::Object(JsonMap::new()))
-    }
-}
-
-/// PyDict → header map (String → String).
-pub fn pydict_to_headers(d: Option<Bound<PyDict>>) -> Result<HashMap<String, String>> {
-    let mut out = HashMap::new();
-    if let Some(d) = d {
-        for (k, v) in d.iter() {
-            out.insert(
-                k.str()?.to_str()?.to_string(),
-                v.str()?.to_str()?.to_string(),
-            );
-        }
-    }
-    Ok(out)
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "snake_case")] // Ensures JSON fields are snake_case (e.g., data_id)
+pub struct FrameChunkMetadata {
+    data_id: String,
+    data_stream: String,
+    is_stream: u8,
+    is_rotating: u8,
+    raw_frame_rate: f64,
+    avg_frame_rate: f64,
+    chunk_size: usize,
+    dims: String,
+    start_unix_ms_utc: u64,
+    end_unix_ms_utc: u64,
 }
 
 /// Accept (H,W) or (N,H,W) frames (casts to uint8) → (flat bytes, N,H,W).
@@ -146,13 +105,19 @@ pub fn package_to_zarr_bytes(frames_flat: &[u8], n: usize, h: usize, w: usize) -
 pub async fn post_for_presigned(
     client: &Client,
     url: &str,
-    body: Value,
-    hdrs: &HashMap<String, String>,
+    original_filename: &str,
+    chunk_metadata: &FrameChunkMetadata,
+    api_key: &str,
 ) -> Result<String> {
-    let mut req = client.post(url).header("Connection", "close").json(&body);
-    for (k, v) in hdrs {
-        req = req.header(k, v);
-    }
+    let req = client
+        .post(url)
+        .header("X-API-KEY", api_key)
+        .query(&[
+            ("original_filename", original_filename),
+            ("num_parts", "1"),
+            ("staging_type", "stream"),
+        ])
+        .json(chunk_metadata);
     let v: Value = req.send().await?.error_for_status()?.json().await?;
     Ok(v.get("url")
         .and_then(|x| x.as_str())
