@@ -1,18 +1,15 @@
 [build-system]
-requires = ["setuptools", "setuptools-scm"]
+requires = ["setuptools", "setuptools-scm", "setuptools-rust", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "atomicds"
-description = "API client for Atomic Data Sciences."
+description = "API client for Atomscale."
 dynamic = ["version"]
 readme = "README.md"
 license = { text = "GPL-3.0-only" }
-authors = [
-  { name = "Atomic Data Sciences", email = "info@atomicdatasciences.com" },
-]
+authors = [{ name = "Atomscale", email = "info@atomscale.ai" }]
 classifiers = [
-  "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -39,8 +36,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://www.atomicdatasciences.com"
-Documentation = "https://github.com/artificial-atomic-intelligence/api-client"
+Homepage = "https://www.atomscale.ai"
+Documentation = "https://atomic-data-sciences.github.io/api-client"
 
 [tool.setuptools_scm]
 
@@ -57,6 +54,22 @@ dev = [
   "pandas-stubs",
 ]
 docs = []
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["atomicds*"]
+
+[tool.setuptools-rust]
+# optional global defaults (e.g., debug = false)
+
+[[tool.setuptools-rust.extension]]
+name = "atomicds.streaming.rheed_stream"
+path = "src/atomicds/streaming/Cargo.toml"
+binding = "pyo3"
+
 
 [tool.pyright]
 include = ["atomicds"]
