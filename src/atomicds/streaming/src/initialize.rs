@@ -1,7 +1,6 @@
 use anyhow::Result;
 use reqwest::Client;
 use serde::Serialize;
-use serde_json::Value;
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")] // Ensures JSON fields are snake_case (e.g., data_id)
@@ -24,7 +23,7 @@ pub async fn post_for_initialization(
         .header("X-API-KEY", api_key)
         .json(stream_settings);
 
-    let v: Value = req.send().await?.error_for_status()?.json().await?;
+    let v: String = req.send().await?.error_for_status()?.json().await?;
 
-    Ok(v.to_string())
+    Ok(v)
 }
