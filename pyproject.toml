@@ -65,10 +65,10 @@ include = ["atomicds*"]
 [tool.setuptools-rust]
 # optional global defaults (e.g., debug = false)
 
-[[tool.setuptools-rust.extension]]
-name = "atomicds.streaming.rheed_stream"
+[[tool.setuptools-rust.ext-modules]]
+target = "atomicds.streaming.rheed_stream"
 path = "src/atomicds/streaming/Cargo.toml"
-binding = "pyo3"
+binding = "PyO3"
 
 
 [tool.pyright]

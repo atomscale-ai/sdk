@@ -121,14 +121,14 @@ impl RHEEDStreamer {
     ///
     /// Raises:
     ///     RuntimeError: If the initialization POST fails.
-    #[pyo3(signature = (stream_name=None, fps, rotations_per_min, chunk_size))]
-    #[pyo3(text_signature = "(self, stream_name=None, fps, rotations_per_min, chunk_size)")]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None))]
+    #[pyo3(text_signature = "(self, fps, rotations_per_min, chunk_size, stream_name=None)")]
     fn initialize(
         &mut self,
-        stream_name: Option<String>,
         fps: f64,
         rotations_per_min: f64,
         chunk_size: usize,
+        stream_name: Option<String>,
     ) -> PyResult<String> {
         // Default file name: "RHEED Stream @ #:##AM/PM"
         let default_name = format!("RHEED Stream @ {}", Local::now().format("%-I:%M%p"));

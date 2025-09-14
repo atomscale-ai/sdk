@@ -1,1 +1,3 @@
 graft src/atomicds
+include Cargo.toml
+recursive-include src *.rs
