@@ -56,7 +56,7 @@ jobs:
           # Skip 32-bit, PyPy, and musllinux
           CIBW_SKIP: "pp* *-manylinux_i686 *-musllinux_*"
           # Architectures
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"
+          CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_MACOS: "universal2"
           CIBW_ARCHS_WINDOWS: "AMD64"
           # Ensure Rust is present inside manylinux Docker images

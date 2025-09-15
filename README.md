@@ -1,4 +1,4 @@
-# API Client for Atomic Data Sciences
+# API Client for Atomscale
 
 [![Testing](https://github.com/artificial-atomic-intelligence/api-client/workflows/Testing/badge.svg)](https://github.com/artificial-atomic-intelligence/api-client/actions?query=workflow:"Testing")
 [![GitHub tag](https://img.shields.io/github/tag/artificial-atomic-intelligence/api-client?include_prereleases=&sort=semver&color=blue)](https://github.com/artificial-atomic-intelligence/api-client/releases/)
