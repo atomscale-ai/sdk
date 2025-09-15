@@ -151,7 +151,7 @@ impl RHEEDStreamer {
         let settings = RHEEDStreamSettings {
             data_item_name: stream_name.clone(),
             rotational_period: fpr,
-            rotations_per_min: rotations_per_min,
+            rotations_per_min,
             fps_capture_rate: fps,
         };
 
