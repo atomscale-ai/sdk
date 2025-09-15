@@ -163,3 +163,6 @@ namespace_packages = true
 explicit_package_bases = true
 no_implicit_optional = false
 disable_error_code = "annotation-unchecked"
+
+[tool.codespell]
+ignore-words-list = "fpr"
