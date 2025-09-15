@@ -12,3 +12,4 @@ This page contains the list of project's modules
 
    atomicds.client
    atomicds.results
+   atomicds.streaming.rheed_stream
