@@ -7,6 +7,10 @@ use reqwest::Client;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
+use tracing::debug;
+
+mod utils;
+use utils::init_tracing_once;
 
 mod initialize;
 use initialize::{post_for_initialization, RHEEDStreamSettings};
@@ -71,9 +75,12 @@ impl RHEEDStreamer {
     /// Raises:
     ///     RuntimeError: If the HTTP client or async runtime cannot be constructed.
     #[new]
-    #[pyo3(signature = (api_key, endpoint=None))]
-    #[pyo3(text_signature = "(api_key, endpoint=None)")]
-    fn new(api_key: String, endpoint: Option<String>) -> PyResult<Self> {
+    #[pyo3(signature = (api_key, endpoint=None, verbosity=None))]
+    #[pyo3(text_signature = "(api_key, endpoint=None, verbosity=None)")]
+    fn new(api_key: String, endpoint: Option<String>, verbosity: Option<u8>) -> PyResult<Self> {
+        let verbosity = verbosity.unwrap_or(0);
+        init_tracing_once(verbosity);
+
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
             .build()
@@ -86,7 +93,7 @@ impl RHEEDStreamer {
 
         let endpoint = endpoint.unwrap_or("https://api.atomicdatasciences.com".to_string());
 
-        eprintln!("[rheed_stream] init: base_url={}", endpoint);
+        debug!("[rheed_stream] init: base_url={}", endpoint);
 
         Ok(Self {
             api_key,
@@ -193,7 +200,7 @@ impl RHEEDStreamer {
     fn run(&self, data_id: String, frames_iter: Bound<PyAny>) -> PyResult<()> {
         let (rotating, fps, chunk_size) = self.cfg()?;
 
-        eprintln!("[rheed_stream] run: starting (concurrent: prepare→spawn package tasks)");
+        debug!("[rheed_stream] run: starting (concurrent: prepare→spawn package tasks)");
 
         let iter = PyIterator::from_object(&frames_iter)?;
         let mut handles = Vec::new();
@@ -208,7 +215,7 @@ impl RHEEDStreamer {
             let (flat, n, h, w) = numpy_frames_to_flat(obj)?;
             let flat_len = flat.len();
 
-            eprintln!(
+            debug!(
                 "[rheed_stream] item#{idx}: prepared in {:.2?} → N,H,W=({n},{h},{w}), flat_len={}; spawning task…",
                 t0.elapsed(), flat_len
             );
@@ -233,7 +240,7 @@ impl RHEEDStreamer {
             handles.push(handle);
         }
 
-        eprintln!(
+        debug!(
             "[rheed_stream] run: spawned {} packaging task(s); awaiting…",
             handles.len()
         );
@@ -242,13 +249,13 @@ impl RHEEDStreamer {
         let res = self.rt.block_on(async {
             for (i, h) in handles.into_iter().enumerate() {
                 match h.await {
-                    Ok(Ok(())) => eprintln!("[rheed_stream] task#{i}: completed"),
+                    Ok(Ok(())) => debug!("[rheed_stream] task#{i}: completed"),
                     Ok(Err(e)) => {
-                        eprintln!("[rheed_stream] task#{i}: ERROR: {e}");
+                        debug!("[rheed_stream] task#{i}: ERROR: {e}");
                         return Err(e);
                     }
                     Err(e) => {
-                        eprintln!("[rheed_stream] task#{i}: JOIN ERROR: {e}");
+                        debug!("[rheed_stream] task#{i}: JOIN ERROR: {e}");
                         return Err(anyhow::anyhow!(e));
                     }
                 }
@@ -261,7 +268,7 @@ impl RHEEDStreamer {
         }
 
         let total_dur = t_total0.elapsed();
-        eprintln!("[rheed_stream] run: all tasks done in {:.2?}", total_dur);
+        debug!("[rheed_stream] run: all tasks done in {:.2?}", total_dur);
         Ok(())
     }
 
@@ -359,13 +366,13 @@ impl RHEEDStreamer {
         );
         let zarr_shard_key = format!("frames.zarr/frames/c/{chunk_idx}/0/0");
 
-        eprintln!(
+        debug!(
             "[rheed_stream] spawn#{chunk_idx}: queued (flat={} bytes, dims={n}x{h}x{w})",
             flat.len()
         );
 
         self.rt.spawn(async move {
-            eprintln!("[rheed_stream] spawn#{chunk_idx}: requesting presign + packaging…");
+            debug!("[rheed_stream] spawn#{chunk_idx}: requesting presign + packaging…");
 
             let url_fut =
                 post_for_presigned(&client, &post_url, &zarr_shard_key, &metadata, &api_key);
@@ -376,7 +383,7 @@ impl RHEEDStreamer {
             let (url, shard): (String, Vec<u8>) = match tokio::try_join!(
                 async {
                     let u = url_fut.await.context("presigned URL request failed")?;
-                    eprintln!("[rheed_stream] spawn#{chunk_idx}: presign OK");
+                    debug!("[rheed_stream] spawn#{chunk_idx}: presign OK");
                     Ok::<_, anyhow::Error>(u)
                 },
                 async {
@@ -384,7 +391,7 @@ impl RHEEDStreamer {
                         .await
                         .map_err(|e| anyhow!("shard join error: {e}"))?
                         .context("shard worker failed")?;
-                    eprintln!(
+                    debug!(
                         "[rheed_stream] spawn#{chunk_idx}: packaging OK ({} bytes)",
                         bytes.len()
                     );
@@ -393,17 +400,17 @@ impl RHEEDStreamer {
             ) {
                 Ok(v) => v,
                 Err(e) => {
-                    eprintln!("[rheed_stream] spawn#{chunk_idx}: presign/packaging ERROR:\n{e:#}");
+                    debug!("[rheed_stream] spawn#{chunk_idx}: presign/packaging ERROR:\n{e:#}");
                     return Err(e);
                 }
             };
 
-            eprintln!("[rheed_stream] spawn#{chunk_idx}: PUT start…");
+            debug!("[rheed_stream] spawn#{chunk_idx}: PUT start…");
             if let Err(e) = put_bytes_presigned(&client, &url, &shard).await {
-                eprintln!("[rheed_stream] spawn#{chunk_idx}: PUT ERROR:\n{e:#}");
+                debug!("[rheed_stream] spawn#{chunk_idx}: PUT ERROR:\n{e:#}");
                 return Err(e.context("PUT bytes failed"));
             }
-            eprintln!("[rheed_stream] spawn#{chunk_idx}: PUT done");
+            debug!("[rheed_stream] spawn#{chunk_idx}: PUT done");
 
             Ok(())
         })

@@ -15,6 +15,7 @@ use zarrs::{
 };
 
 use numpy::{PyArrayDyn, PyReadonlyArrayDyn};
+use tracing::debug;
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")] // Ensures JSON fields are snake_case (e.g., data_id)
@@ -106,7 +107,7 @@ pub async fn post_for_presigned(
     chunk_metadata: &FrameChunkMetadata,
     api_key: &str,
 ) -> Result<String> {
-    eprintln!("[rheed_stream] presign: POST {}", url);
+    debug!("[rheed_stream] presign: POST {}", url);
 
     // Serialize once, then stringify numbers/bools for APIs that expect all strings.
     let mut meta = serde_json::to_value(chunk_metadata)?;
@@ -117,7 +118,7 @@ pub async fn post_for_presigned(
             }
         }
     }
-    eprintln!(
+    debug!(
         "[presign] metadata json:\n{}",
         serde_json::to_string_pretty(&meta).unwrap_or_default()
     );
@@ -135,7 +136,7 @@ pub async fn post_for_presigned(
     let resp = req.send().await?;
     let status = resp.status();
     let final_url = resp.url().clone();
-    eprintln!("[presign] -> {} {}", status, final_url);
+    debug!("[presign] -> {} {}", status, final_url);
 
     let text = resp.text().await.unwrap_or_default();
     if !status.is_success() {
@@ -164,7 +165,7 @@ pub async fn post_for_presigned(
 
 /// PUT bytes to the presigned URL (async).
 pub async fn put_bytes_presigned(client: &Client, url: &str, bytes: &[u8]) -> Result<()> {
-    eprintln!("[rheed_stream] put: PUT {} ({} bytes)", url, bytes.len());
+    debug!("[rheed_stream] put: PUT {} ({} bytes)", url, bytes.len());
 
     let req = client
         .put(url)
@@ -176,17 +177,17 @@ pub async fn put_bytes_presigned(client: &Client, url: &str, bytes: &[u8]) -> Re
     let final_url = resp.url().clone();
     let resp_headers = resp.headers().clone();
 
-    eprintln!("[put] -> {} {}", status, final_url);
+    debug!("[put] -> {} {}", status, final_url);
 
     let text = resp.text().await.unwrap_or_default();
     if !status.is_success() {
-        eprintln!("[put] resp headers: {:#?}", resp_headers);
-        eprintln!("[put] resp body: {}", text);
+        debug!("[put] resp headers: {:#?}", resp_headers);
+        debug!("[put] resp body: {}", text);
         return Err(anyhow::anyhow!("put presigned {}: {}", status, text));
     }
 
     if let Some(etag) = resp_headers.get("etag").and_then(|v| v.to_str().ok()) {
-        eprintln!("[put] ETag: {}", etag);
+        debug!("[put] ETag: {}", etag);
     }
 
     Ok(())
