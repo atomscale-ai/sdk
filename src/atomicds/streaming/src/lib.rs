@@ -10,7 +10,7 @@ use tokio::task::JoinHandle;
 use tracing::debug;
 
 mod utils;
-use utils::init_tracing_once;
+use utils::{generic_post, init_tracing_once};
 
 mod initialize;
 use initialize::{post_for_initialization, RHEEDStreamSettings};
@@ -29,17 +29,18 @@ use crate::upload::{post_for_presigned, put_bytes_presigned, FrameChunkMetadata}
 ///
 /// Typical usage:
 ///
-/// 1) **Instantiate** the streamer
-/// 2) **initialize(...)** to create the remote data item and receive `data_id`
-/// 3a) **run(data_id, frames_iter)** to stream by yielding frame chunks from a generator/iterator, **or**
-/// 3b) **push(data_id, chunk_idx, frames)** repeatedly to send chunks from your own loop
-/// 4) **Finalize** the stream using your API’s end/finalization mechanism (if applicable)
+/// 1) **Instantiate** the streamer  
+/// 2) **initialize(...)** to create the remote data item and receive `data_id`  
+/// 3a) **run(data_id, frames_iter)** to stream by yielding frame chunks from a generator/iterator, **or**  
+/// 3b) **push(data_id, chunk_idx, frames)** repeatedly to send chunks from your own loop  
+/// 4) **finalize(data_id)** to mark the stream complete on the server
 ///
 /// Notes
 /// -----
 /// - Frame dtype is coerced to `uint8`. Shapes `(H, W)` or `(N, H, W)` are accepted; `(N,H,W)` is preferred for chunks.
-/// - Packaging happend concurrently for throughput; network PUTs are async.
+/// - Packaging happens concurrently for throughput; network PUTs are async.
 /// - This class is safe to call from Python; heavy work is offloaded to multithreaded async workers.
+/// - See also: `finalize(...)`.
 ///
 /// Args:
 ///     api_key (str): Your Atomscale API key.
@@ -116,6 +117,8 @@ impl RHEEDStreamer {
     /// `fpr = (fps * 60.0) / rotations_per_min`. If `rotations_per_min <= 0.0`, the stream is
     /// treated as **stationary** (no rotation).
     ///
+    /// After streaming via `run(...)` or `push(...)`, call `finalize(data_id)` to mark the stream as complete.
+    ///
     /// Args:
     ///     stream_name (Optional[str]): Human-readable name shown in the platform. If `None` or an empty string,
     ///         a default like `"RHEED Stream @ 1:23PM"` is used.
@@ -184,7 +187,8 @@ impl RHEEDStreamer {
     /// 3) Uploads the shard,
     /// 4) Proceeds concurrently for high throughput.
     ///
-    /// This method **blocks until all spawned tasks complete**.
+    /// This method **blocks until all spawned tasks complete**. After `run(...)` returns,
+    /// call `finalize(data_id)` to mark the stream complete on the server.
     ///
     /// Args:
     ///     data_id (str): The stream data ID returned by `initialize(...)`.
@@ -195,6 +199,9 @@ impl RHEEDStreamer {
     ///
     /// Raises:
     ///     RuntimeError: If any packaging/join/upload step fails.
+    ///
+    /// See also:
+    ///     finalize(data_id)
     #[pyo3(signature = (data_id, frames_iter))]
     #[pyo3(text_signature = "(data_id, frames_iter)")]
     fn run(&self, data_id: String, frames_iter: Bound<PyAny>) -> PyResult<()> {
@@ -279,8 +286,7 @@ impl RHEEDStreamer {
     ///
     /// The `frames` argument may be `(N,H,W)` or `(H,W)`; dtype is coerced to `uint8`.
     ///
-    /// After your last `push(...)`, finalize the stream using your API’s end/finalization
-    /// mechanism (e.g., `end_stream(data_id)` if available in your client).
+    /// After your last `push(...)`, call **`finalize(data_id)`** to mark the stream as complete on the server.
     ///
     /// Args:
     ///     data_id (str): The remote data identifier returned by `initialize(...)`.
@@ -292,6 +298,9 @@ impl RHEEDStreamer {
     ///
     /// Raises:
     ///     RuntimeError: If packaging or upload fails internally.
+    ///
+    /// See also:
+    ///     finalize(data_id)
     #[pyo3(signature = (data_id, chunk_idx, frames))]
     #[pyo3(text_signature = "(data_id, chunk_idx, frames)")]
     fn push(&self, data_id: String, chunk_idx: usize, frames: Bound<PyAny>) -> PyResult<()> {
@@ -317,6 +326,49 @@ impl RHEEDStreamer {
 
         // Spawn via private helper; detach by dropping the handle
         self.spawn_chunk_upload(chunk_idx, flat, n, h, w, metadata);
+        Ok(())
+    }
+
+    /// finalize(self, data_id: str) -> None
+    ///
+    /// Explicitly **closes** the remote stream for the given `data_id`. This signals to the
+    /// server that no further chunks will be uploaded and allows any downstream jobs
+    /// (e.g., indexing, aggregation, or post-processing) to begin.
+    ///
+    /// Typical use:
+    /// - After `run(...)` returns (it waits for all chunk tasks), call `finalize(data_id)`.
+    /// - In `push(...)` mode, call `finalize(data_id)` only after you have pushed your last
+    ///   chunk **and** ensured any in-flight uploads have finished (since `push(...)`
+    ///   detaches tasks).
+    ///
+    /// Notes
+    /// -----
+    /// - The operation performs a single HTTP POST to the `.../end` endpoint.
+    /// - It is safe to call more than once; the server may treat it as idempotent,
+    ///   but repeated calls are unnecessary.
+    ///
+    /// Args:
+    ///     data_id (str): The stream identifier returned by `initialize(...)`.
+    ///
+    /// Returns:
+    ///     None
+    ///
+    /// Raises:
+    ///     RuntimeError: If the finalization POST fails.
+    ///
+    /// See also:
+    ///     run(data_id, frames_iter), push(data_id, chunk_idx, frames)
+    #[pyo3(signature = (data_id))]
+    #[pyo3(text_signature = "(data_id)")]
+    fn finalize(&mut self, data_id: String) -> PyResult<()> {
+        let base_endpoint = self.endpoint.clone();
+        let post_url = format!("{base_endpoint}/rheed/stream/{data_id}/end");
+        let final_fut = generic_post(&self.client, &post_url, &self.api_key);
+
+        self.rt
+            .block_on(final_fut)
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+
         Ok(())
     }
 }
