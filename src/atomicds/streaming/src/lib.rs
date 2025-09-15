@@ -122,7 +122,7 @@ impl RHEEDStreamer {
     /// Raises:
     ///     RuntimeError: If the initialization POST fails.
     #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None))]
-    #[pyo3(text_signature = "(self, fps, rotations_per_min, chunk_size, stream_name=None)")]
+    #[pyo3(text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None)")]
     fn initialize(
         &mut self,
         fps: f64,
@@ -189,7 +189,7 @@ impl RHEEDStreamer {
     /// Raises:
     ///     RuntimeError: If any packaging/join/upload step fails.
     #[pyo3(signature = (data_id, frames_iter))]
-    #[pyo3(text_signature = "(self, data_id, frames_iter)")]
+    #[pyo3(text_signature = "(data_id, frames_iter)")]
     fn run(&self, data_id: String, frames_iter: Bound<PyAny>) -> PyResult<()> {
         let (rotating, fps, chunk_size) = self.cfg()?;
 
@@ -286,7 +286,7 @@ impl RHEEDStreamer {
     /// Raises:
     ///     RuntimeError: If packaging or upload fails internally.
     #[pyo3(signature = (data_id, chunk_idx, frames))]
-    #[pyo3(text_signature = "(self, data_id, chunk_idx, frames)")]
+    #[pyo3(text_signature = "(data_id, chunk_idx, frames)")]
     fn push(&self, data_id: String, chunk_idx: usize, frames: Bound<PyAny>) -> PyResult<()> {
         let (rotating, fps, chunk_size) = self.cfg()?;
 
@@ -359,31 +359,51 @@ impl RHEEDStreamer {
         );
         let zarr_shard_key = format!("frames.zarr/frames/c/{chunk_idx}/0/0");
 
+        eprintln!(
+            "[rheed_stream] spawn#{chunk_idx}: queued (flat={} bytes, dims={n}x{h}x{w})",
+            flat.len()
+        );
+
         self.rt.spawn(async move {
-            // Request URL for this shard
+            eprintln!("[rheed_stream] spawn#{chunk_idx}: requesting presign + packaging…");
+
             let url_fut =
                 post_for_presigned(&client, &post_url, &zarr_shard_key, &metadata, &api_key);
-
-            // Package on a blocking worker
             let shard_handle =
                 tokio::task::spawn_blocking(move || package_to_zarr_bytes(&flat, n, h, w));
 
-            // Join URL + packaged bytes concurrently
-            let (url, shard): (String, Vec<u8>) = tokio::try_join!(
-                async { url_fut.await.context("presigned URL request failed") },
+            // 🔎 If either future errors, print it so you see why we never reach PUT.
+            let (url, shard): (String, Vec<u8>) = match tokio::try_join!(
+                async {
+                    let u = url_fut.await.context("presigned URL request failed")?;
+                    eprintln!("[rheed_stream] spawn#{chunk_idx}: presign OK");
+                    Ok::<_, anyhow::Error>(u)
+                },
                 async {
                     let bytes = shard_handle
                         .await
                         .map_err(|e| anyhow!("shard join error: {e}"))?
                         .context("shard worker failed")?;
+                    eprintln!(
+                        "[rheed_stream] spawn#{chunk_idx}: packaging OK ({} bytes)",
+                        bytes.len()
+                    );
                     Ok::<_, anyhow::Error>(bytes)
                 }
-            )?;
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("[rheed_stream] spawn#{chunk_idx}: presign/packaging ERROR:\n{e:#}");
+                    return Err(e);
+                }
+            };
 
-            // Upload
-            put_bytes_presigned(&client, &url, &shard)
-                .await
-                .context("PUT bytes failed")?;
+            eprintln!("[rheed_stream] spawn#{chunk_idx}: PUT start…");
+            if let Err(e) = put_bytes_presigned(&client, &url, &shard).await {
+                eprintln!("[rheed_stream] spawn#{chunk_idx}: PUT ERROR:\n{e:#}");
+                return Err(e.context("PUT bytes failed"));
+            }
+            eprintln!("[rheed_stream] spawn#{chunk_idx}: PUT done");
 
             Ok(())
         })

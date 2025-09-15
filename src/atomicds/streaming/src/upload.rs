@@ -5,7 +5,6 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyModule};
 use reqwest::Client;
 use serde::Serialize;
-use serde_json::Value;
 use std::sync::Arc;
 use zarrs::{
     array::{
@@ -100,7 +99,6 @@ pub fn package_to_zarr_bytes(frames_flat: &[u8], n: usize, h: usize, w: usize) -
         .ok_or_else(|| anyhow!("missing encoded chunk"))
 }
 
-/// POST for a presigned URL (async). Returns the "url" string.
 pub async fn post_for_presigned(
     client: &Client,
     url: &str,
@@ -108,6 +106,22 @@ pub async fn post_for_presigned(
     chunk_metadata: &FrameChunkMetadata,
     api_key: &str,
 ) -> Result<String> {
+    eprintln!("[rheed_stream] presign: POST {}", url);
+
+    // Serialize once, then stringify numbers/bools for APIs that expect all strings.
+    let mut meta = serde_json::to_value(chunk_metadata)?;
+    if let serde_json::Value::Object(map) = &mut meta {
+        for v in map.values_mut() {
+            if matches!(v, serde_json::Value::Number(_) | serde_json::Value::Bool(_)) {
+                *v = serde_json::Value::String(v.to_string());
+            }
+        }
+    }
+    eprintln!(
+        "[presign] metadata json:\n{}",
+        serde_json::to_string_pretty(&meta).unwrap_or_default()
+    );
+
     let req = client
         .post(url)
         .header("X-API-KEY", api_key)
@@ -116,22 +130,64 @@ pub async fn post_for_presigned(
             ("num_parts", "1"),
             ("staging_type", "stream"),
         ])
-        .json(chunk_metadata);
-    let v: Value = req.send().await?.error_for_status()?.json().await?;
+        .json(&meta);
+
+    let resp = req.send().await?;
+    let status = resp.status();
+    let final_url = resp.url().clone();
+    eprintln!("[presign] -> {} {}", status, final_url);
+
+    let text = resp.text().await.unwrap_or_default();
+    if !status.is_success() {
+        return Err(anyhow::anyhow!("presign {}: {}", status, text));
+    }
+
+    let v: serde_json::Value = serde_json::from_str(&text)?;
+
+    // NEW: handle array response like: [{ "upload_id": "...", "url": "...", "part": 0, ... }]
+    if let Some(arr) = v.as_array() {
+        if let Some(u) = arr
+            .first()
+            .and_then(|o| o.get("url"))
+            .and_then(|x| x.as_str())
+        {
+            return Ok(u.to_string());
+        }
+        return Err(anyhow::anyhow!("missing 'url' in array response: {v}"));
+    }
+
     Ok(v.get("url")
         .and_then(|x| x.as_str())
-        .ok_or_else(|| anyhow!("missing 'url'"))?
+        .ok_or_else(|| anyhow::anyhow!("missing 'url'"))?
         .to_string())
 }
 
 /// PUT bytes to the presigned URL (async).
 pub async fn put_bytes_presigned(client: &Client, url: &str, bytes: &[u8]) -> Result<()> {
-    // Use Bytes to avoid an extra copy inside reqwest
+    eprintln!("[rheed_stream] put: PUT {} ({} bytes)", url, bytes.len());
+
     let req = client
         .put(url)
-        .header("content-type", "application/octet-stream")
+        .header("content-type", "")
         .body(Bytes::copy_from_slice(bytes));
 
-    req.send().await?.error_for_status()?;
+    let resp = req.send().await?;
+    let status = resp.status();
+    let final_url = resp.url().clone();
+    let resp_headers = resp.headers().clone();
+
+    eprintln!("[put] -> {} {}", status, final_url);
+
+    let text = resp.text().await.unwrap_or_default();
+    if !status.is_success() {
+        eprintln!("[put] resp headers: {:#?}", resp_headers);
+        eprintln!("[put] resp body: {}", text);
+        return Err(anyhow::anyhow!("put presigned {}: {}", status, text));
+    }
+
+    if let Some(etag) = resp_headers.get("etag").and_then(|v| v.to_str().ok()) {
+        eprintln!("[put] ETag: {}", etag);
+    }
+
     Ok(())
 }
