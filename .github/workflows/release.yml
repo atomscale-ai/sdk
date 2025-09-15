@@ -7,7 +7,7 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels (${ { matrix.os } })
+    name: Build wheels (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,6 +27,12 @@ jobs:
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
+
+      - name: Install SSL
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update || true
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev --fix-missing
 
       # Install Rust toolchain on host (macOS/Windows builds run on host)
       - name: Install Rust toolchain (host)
@@ -57,6 +63,8 @@ jobs:
           CIBW_BEFORE_ALL_LINUX: |
             curl https://sh.rustup.rs -sSf | sh -s -- -y
           CIBW_ENVIRONMENT_LINUX: 'PATH="$HOME/.cargo/bin:$PATH"'
+          CIBW_ENVIRONMENT_MACOS: >
+              MACOSX_DEPLOYMENT_TARGET=10.12
           # Make sure setuptools-rust is available in the build env
           CIBW_BEFORE_BUILD: "python -m pip install -U pip setuptools setuptools-rust wheel"
           # (Optional) If extra  system deps, use CIBW_BEFORE_ALL_* hooks per OS.
