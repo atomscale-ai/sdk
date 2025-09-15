@@ -61,6 +61,16 @@ jobs:
           CIBW_ARCHS_WINDOWS: "AMD64"
           # Ensure Rust is present inside manylinux Docker images
           CIBW_BEFORE_ALL_LINUX: |
+            set -euo pipefail
+            if command -v dnf >/dev/null 2>&1; then
+              dnf -y update || true
+              dnf -y install openssl-devel pkgconfig perl make gcc
+            else
+              yum -y update || true
+              yum -y install openssl-devel pkgconfig perl make gcc
+            fi
+
+            # Install Rust inside the manylinux container
             curl https://sh.rustup.rs -sSf | sh -s -- -y
           CIBW_ENVIRONMENT_LINUX: 'PATH="$HOME/.cargo/bin:$PATH"'
           CIBW_ENVIRONMENT_MACOS: >
@@ -73,8 +83,10 @@ jobs:
       - name: Upload built wheels (artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: wheels
+          # make the name unique per matrix entry
+          name: wheels-${{ matrix.os }}
           path: dist/*.whl
+          if-no-files-found: error
 
   sdist:
     name: Build sdist
@@ -102,15 +114,20 @@ jobs:
           path: dist/*.tar.gz
 
   publish:
-    name: Publish to PyPI
     needs: [build_wheels, sdist]
     runs-on: ubuntu-latest
     steps:
       - name: Download wheels
         uses: actions/download-artifact@v4
         with:
-          name: wheels
-          path: dist
+          pattern: wheels-*
+          merge-multiple: true    # puts everything under ./
+
+      - name: Move wheels into dist/
+        run: |
+          mkdir -p dist
+          shopt -s nullglob
+          mv ./*/*.whl dist/ || true
 
       - name: Download sdist
         uses: actions/download-artifact@v4
