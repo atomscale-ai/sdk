@@ -16,9 +16,10 @@ mod initialize;
 use initialize::{post_for_initialization, RHEEDStreamSettings};
 
 mod upload;
-use upload::{numpy_frames_to_flat, package_to_zarr_bytes};
-
-use crate::upload::{post_for_presigned, put_bytes_presigned, FrameChunkMetadata};
+use upload::{
+    numpy_frames_to_flat, package_to_zarr_bytes, post_for_presigned, put_bytes_presigned,
+    FrameChunkMetadata,
+};
 
 /// RHEEDStreamer(api_key: str, endpoint: Optional[str] = None)
 ///
@@ -29,10 +30,10 @@ use crate::upload::{post_for_presigned, put_bytes_presigned, FrameChunkMetadata}
 ///
 /// Typical usage:
 ///
-/// 1) **Instantiate** the streamer  
-/// 2) **initialize(...)** to create the remote data item and receive `data_id`  
-/// 3a) **run(data_id, frames_iter)** to stream by yielding frame chunks from a generator/iterator, **or**  
-/// 3b) **push(data_id, chunk_idx, frames)** repeatedly to send chunks from your own loop  
+/// 1) **Instantiate** the streamer
+/// 2) **initialize(...)** to create the remote data item and receive `data_id`
+/// 3a) **run(data_id, frames_iter)** to stream by yielding frame chunks from a generator/iterator, **or**
+/// 3b) **push(data_id, chunk_idx, frames)** repeatedly to send chunks from your own loop
 /// 4) **finalize(data_id)** to mark the stream complete on the server
 ///
 /// Notes
