@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Context};
 use chrono::{Local, Utc};
-use pyo3::exceptions::PyRuntimeError;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyIterator, PyModule};
 use reqwest::Client;
@@ -141,6 +141,14 @@ impl RHEEDStreamer {
         chunk_size: usize,
         stream_name: Option<String>,
     ) -> PyResult<String> {
+        // Guard: chunk_size must be >= ceil(2 * fps)
+        let min_chunk = (2.0 * fps).ceil() as usize;
+        if chunk_size < min_chunk {
+            return Err(PyValueError::new_err(format!(
+                "chunk_size must be at least 2×fps (>= {min_chunk}); got {chunk_size}"
+            )));
+        }
+
         // Default file name: "RHEED Stream @ #:##AM/PM"
         let default_name = format!("RHEED Stream @ {}", Local::now().format("%-I:%M%p"));
 
