@@ -27,8 +27,8 @@ jobs:
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
-        
-      - name: Install SSL 
+
+      - name: Install SSL
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update || true
