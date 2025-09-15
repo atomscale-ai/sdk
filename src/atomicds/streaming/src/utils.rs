@@ -1,5 +1,6 @@
 use anyhow::Result;
 use reqwest::Client;
+use serde_json::Value;
 use std::sync::OnceLock;
 use tracing_subscriber::{fmt, layer::SubscriberExt, reload, EnvFilter, Registry};
 
@@ -44,10 +45,10 @@ pub fn init_tracing_once(default_level: u8) {
     let _ = RELOAD.set(handle);
 }
 
-pub async fn generic_post(client: &Client, url: &str, api_key: &str) -> Result<String> {
+pub async fn generic_post(client: &Client, url: &str, api_key: &str) -> Result<Value> {
     let req = client.post(url).header("X-API-KEY", api_key);
 
-    let v: String = req.send().await?.error_for_status()?.json().await?;
+    let v: Value = req.send().await?.error_for_status()?.json().await?;
 
     Ok(v)
 }
