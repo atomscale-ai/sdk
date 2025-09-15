@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -15,15 +15,15 @@ class RHEEDStreamer:
     def __init__(
         self,
         api_key: str,
-        endpoint: Optional[str] = None,
-        verbosity: Optional[int] = None,
+        endpoint: str | None = None,
+        verbosity: int | None = None,
     ) -> None: ...
     def initialize(
         self,
         fps: float,
         rotations_per_min: float,
         chunk_size: int,
-        stream_name: Optional[str] = None,
+        stream_name: str | None = None,
     ) -> str: ...
     def run(
         self,
