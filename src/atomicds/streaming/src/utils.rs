@@ -1,3 +1,5 @@
+use anyhow::Result;
+use reqwest::Client;
 use std::sync::OnceLock;
 use tracing_subscriber::{fmt, layer::SubscriberExt, reload, EnvFilter, Registry};
 
@@ -40,4 +42,12 @@ pub fn init_tracing_once(default_level: u8) {
 
     let _ = tracing::subscriber::set_global_default(subscriber);
     let _ = RELOAD.set(handle);
+}
+
+pub async fn generic_post(client: &Client, url: &str, api_key: &str) -> Result<String> {
+    let req = client.post(url).header("X-API-KEY", api_key);
+
+    let v: String = req.send().await?.error_for_status()?.json().await?;
+
+    Ok(v)
 }
