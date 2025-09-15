@@ -1,1 +1,7 @@
 graft src/atomicds
+
+include src/atomicds/streaming/Cargo.toml
+recursive-include src/atomicds/streaming/src *.rs
+
+prune src/atomicds/streaming/target
+prune **/target

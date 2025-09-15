@@ -1,0 +1,27 @@
+[package]
+name = "rheed_stream"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "rheed_stream"
+crate-type = ["cdylib"]
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [
+  "env-filter",
+  "fmt",
+  "ansi",
+  "tracing-log",
+] }
+pyo3 = { version = "0.26", features = ["extension-module"] }
+numpy = "0.26"
+anyhow = "1"
+reqwest = { version = "0.12", features = ["rustls-tls", "json"] } # async only
+bytes = "1.6"
+zarrs = { version = "0.21", features = ["zstd"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+serde = "1"
+chrono = "0.4"

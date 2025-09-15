@@ -7,9 +7,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "atomicds"
-copyright = "2024, Atomic Data Sciences"
-author = "Atomic Data Sciences"
-release = "2024"
+copyright = "2025, Atomscale"
+author = "Atomscale"
+release = "2025"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -59,7 +59,7 @@ html_theme = "alabaster"
 html_theme_options = {
     "github_button": True,
     "github_type": "star&v=2",
-    "github_user": "artificial-atomic-intelligence",
+    "github_user": "atomic-data-sciences",
     "github_repo": "api-client",
     "github_banner": True,
 }
@@ -94,7 +94,7 @@ man_pages = [
     (
         master_doc,
         "atomicds",
-        "Atomic Data Sciences API Client Documentation",
+        "Atomscale API Client Documentation",
         [author],
         1,
     )
@@ -110,10 +110,10 @@ texinfo_documents = [
     (
         master_doc,
         "atomicds",
-        "Atomic Data Sciences API Client Documentation",
+        "Atomscale API Client Documentation",
         author,
         "atomicds",
-        "Atomic Data Sciences API.",
+        "Atomscale API.",
         "",
     ),
 ]
