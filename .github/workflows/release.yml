@@ -7,7 +7,7 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels (${ { matrix.os } })
+    name: Build wheels (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -27,6 +27,12 @@ jobs:
         uses: docker/setup-qemu-action@v3
         with:
           platforms: arm64
+        
+      - name: Install SSL pycurl and packages
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update || true
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev --fix-missing
 
       # Install Rust toolchain on host (macOS/Windows builds run on host)
       - name: Install Rust toolchain (host)
