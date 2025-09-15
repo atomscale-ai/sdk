@@ -63,6 +63,7 @@ where = ["src"]
 include = ["atomicds*"]
 
 [tool.setuptools-rust]
+debug = false
 # optional global defaults (e.g., debug = false)
 
 [[tool.setuptools-rust.ext-modules]]
