@@ -20,6 +20,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
+    "sphinx_autodoc_typehints",
 ]
 
 ## Include Python objects as they appear in source files
@@ -27,7 +28,16 @@ extensions = [
 autodoc_member_order = "bysource"
 ## Default flags used by autodoc directives
 autodoc_default_flags = ["members", "show-inheritance"]
-autoclass_content = "init"
+autoclass_content = "both"
+# Show type hints in the description block when available
+autodoc_typehints = "description"
+
+# sphinx-autodoc-typehints settings
+typehints_fully_qualified = False
+always_document_param_types = True
+typehints_use_signature = True
+typehints_use_signature_return = True
+simplify_optional_unions = True
 ## Generate autodoc stubs with summaries from code
 autosummary_generate = True
 
