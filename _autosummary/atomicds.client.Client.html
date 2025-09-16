@@ -39,13 +39,17 @@
 <dt class="sig sig-object py" id="atomicds.client.Client">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">atomicds.client.</span></span><span class="sig-name descname"><span class="pre">Client</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'https://api.atomicdatasciences.com/'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mute_bars</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/atomicds/client.html#Client"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#atomicds.client.Client" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseClient</span></code></p>
+<p>Atomic Data Sciences API client</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>api_key</strong> (<em>str</em><em> | </em><em>None</em>) – API key. Defaults to None which will try and pull from the ADS_API_KEY environment variable.</p></li>
-<li><p><strong>endpoint</strong> (<em>str</em>) – Root API endpoint. Will prioritize pulling from the ADS_API_ENDPOINT environment variable.
+<li><p><strong>api_key</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>endpoint</strong> (<em>str</em>)</p></li>
+<li><p><strong>mute_bars</strong> (<em>bool</em>)</p></li>
+<li><p><strong>api_key</strong> – API key. Defaults to None which will try and pull from the ADS_API_KEY environment variable.</p></li>
+<li><p><strong>endpoint</strong> – Root API endpoint. Will prioritize pulling from the ADS_API_ENDPOINT environment variable.
 If none provided it defaults to ‘<a class="reference external" href="https://api.atomicdatasciences.com/">https://api.atomicdatasciences.com/</a>’.</p></li>
-<li><p><strong>mute_bars</strong> (<em>bool</em>) – Whether to mute progress bars. Defaults to False.</p></li>
+<li><p><strong>mute_bars</strong> – Whether to mute progress bars. Defaults to False.</p></li>
 </ul>
 </dd>
 </dl>
@@ -205,8 +209,10 @@ Defaults to the current working directory.</p></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../modules.html">Project Modules</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="atomicds.client.html">atomicds.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomicds.results.html">atomicds.results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.streaming.rheed_stream.html">atomicds.streaming.rheed_stream</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../api/streaming.html">Streaming API</a></li>
 </ul>
 
 
