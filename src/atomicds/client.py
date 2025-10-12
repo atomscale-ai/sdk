@@ -27,14 +27,14 @@ class Client(BaseClient):
     def __init__(
         self,
         api_key: str | None = None,
-        endpoint: str = "https://api.atomicdatasciences.com/",
+        endpoint: str = "https://api.atomscale.ai/",
         mute_bars: bool = False,
     ):
         """
         Args:
             api_key (str | None): API key. Defaults to None which will try and pull from the ADS_API_KEY environment variable.
             endpoint (str): Root API endpoint. Will prioritize pulling from the ADS_API_ENDPOINT environment variable.
-                If none provided it defaults to 'https://api.atomicdatasciences.com/'.
+                If none provided it defaults to 'https://api.atomscale.ai/'.
             mute_bars (bool): Whether to mute progress bars. Defaults to False.
         """
         api_key = api_key or os.environ.get("ADS_API_KEY")
