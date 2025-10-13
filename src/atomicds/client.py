@@ -27,7 +27,7 @@ class Client(BaseClient):
     def __init__(
         self,
         api_key: str | None = None,
-        endpoint: str = "https://api.atomicdatasciences.com/",
+        endpoint: str = "https://api.atomscale.ai/",
         mute_bars: bool = False,
     ):
         """

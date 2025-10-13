@@ -45,7 +45,7 @@ use upload::{
 ///
 /// Args:
 ///     api_key (str): Your Atomscale API key.
-///     endpoint (Optional[str]): Base API URL. Defaults to `"https://api.atomicdatasciences.com"`.
+///     endpoint (Optional[str]): Base API URL. Defaults to `"https://api.atomscale.ai"`.
 ///
 /// Raises:
 ///     RuntimeError: If the HTTP client or async runtime cannot be constructed.
@@ -69,7 +69,7 @@ impl RHEEDStreamer {
     ///
     /// Args:
     ///     api_key (str): Your AtomScale API key.
-    ///     endpoint (Optional[str]): Base API URL. Defaults to `"https://api.atomicdatasciences.com"`.
+    ///     endpoint (Optional[str]): Base API URL. Defaults to `"https://api.atomscale.ai"`.
     ///
     /// Returns:
     ///     RHEEDStreamer: A configured streamer ready to be initialized and used.
@@ -93,7 +93,7 @@ impl RHEEDStreamer {
             .build()
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
-        let endpoint = endpoint.unwrap_or("https://api.atomicdatasciences.com".to_string());
+        let endpoint = endpoint.unwrap_or("https://api.atomscale.ai".to_string());
 
         debug!("[rheed_stream] init: base_url={}", endpoint);
 
