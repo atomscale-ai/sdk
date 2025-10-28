@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -26,7 +25,7 @@ extensions = [
 ]
 
 try:
-    import sphinx_autodoc_typehints  # noqa: F401
+    import sphinx_autodoc_typehints
 except ImportError:
     sphinx_autodoc_typehints = None
 else:

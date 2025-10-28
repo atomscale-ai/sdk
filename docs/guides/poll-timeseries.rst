@@ -21,6 +21,7 @@ Shared setup
    client = Client(api_key="YOUR_API_KEY")
    data_id = "YOUR_TIME_SERIES_DATA_ID"
 
+
    def latest_timestamp(df):
        if df.empty or "timestamp" not in df.columns:
            return None
@@ -59,9 +60,11 @@ It spawns a daemon thread and forwards each update to your callback.
 
    collected = []
 
+
    def on_result(result):
        print(f"Thread received {len(result)} rows")
        collected.append(result)
+
 
    stop_event = start_polling_thread(
        client,
@@ -88,6 +91,7 @@ Two helpers integrate with asyncio:
 
    import asyncio
 
+
    async def stream_updates():
        async for result in aiter_poll(
            client,
@@ -100,12 +104,14 @@ Two helpers integrate with asyncio:
            print(f"Async poll received {len(result)} rows")
            print(result.tail())
 
+
    asyncio.run(stream_updates())
 
 .. code-block:: python
 
    async def handle_async(result):
        print(f"Task handler received {len(result)} rows")
+
 
    async def main():
        task = start_polling_task(
@@ -118,5 +124,6 @@ Two helpers integrate with asyncio:
            on_result=handle_async,
        )
        await task
+
 
    asyncio.run(main())

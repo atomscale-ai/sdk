@@ -36,7 +36,7 @@ each chunk as soon as you receive it.
    import time
 
    fps = 120.0
-   chunk_size = 240          # ≥ 2 seconds of frames is recommended
+   chunk_size = 240  # ≥ 2 seconds of frames is recommended
    seconds_per_chunk = chunk_size / fps
 
    data_id = streamer.initialize(
@@ -47,9 +47,7 @@ each chunk as soon as you receive it.
    )
 
    for chunk_idx in range(5):
-       frames = np.random.randint(
-           0, 256, size=(chunk_size, 300, 500), dtype=np.uint8
-       )
+       frames = np.random.randint(0, 256, size=(chunk_size, 300, 500), dtype=np.uint8)
        streamer.push(data_id, chunk_idx, frames)
        time.sleep(seconds_per_chunk)
 
@@ -69,6 +67,7 @@ care of chunking, pacing, and uploading.
        for start in range(0, len(frames), chunk_size):
            yield frames[start : start + chunk_size]
            time.sleep(seconds_per_chunk)
+
 
    frames = np.random.randint(0, 256, size=(1200, 300, 500), dtype=np.uint8)
 
