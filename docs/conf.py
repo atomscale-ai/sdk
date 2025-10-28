@@ -1,10 +1,12 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+from __future__ import annotations
 
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+import sys
+from pathlib import Path
+
+# Ensure the package under ``src/`` is importable when building docs locally
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = PROJECT_ROOT / "src"
+sys.path.insert(0, str(SRC_DIR))
 
 project = "atomicds"
 copyright = "2025, Atomscale"
@@ -20,17 +22,28 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
     "sphinx.ext.autosummary",
-    "sphinx_autodoc_typehints",
 ]
+
+try:
+    import sphinx_autodoc_typehints
+except ImportError:
+    sphinx_autodoc_typehints = None
+else:
+    extensions.append("sphinx_autodoc_typehints")
 
 ## Include Python objects as they appear in source files
 ## Default: alphabetically ('alphabetical')
 autodoc_member_order = "bysource"
 ## Default flags used by autodoc directives
-autodoc_default_flags = ["members", "show-inheritance"]
+autodoc_default_options = {
+    "members": True,
+    "show-inheritance": True,
+    "special-members": "__call__",
+    "no-index": True,
+}
 autoclass_content = "both"
-# Show type hints in the description block when available
-autodoc_typehints = "description"
+# Show type hints in the signature only to avoid duplicate cross references
+autodoc_typehints = "none"
 
 # sphinx-autodoc-typehints settings
 typehints_fully_qualified = False

@@ -153,7 +153,8 @@ class Client(BaseClient):
             data_ids (str | list[str]): Data ID or list of data IDs from the data catalogue to obtain analyzed results for.
 
         Returns:
-            (list[RHEEDVideoResult | RHEEDVideoResult | XPSResult]): List of result objects
+            list[atomicds.results.RHEEDVideoResult | atomicds.results.RHEEDImageResult | atomicds.results.XPSResult]:
+                List of result objects
 
         """
         if isinstance(data_ids, str):
