@@ -1,0 +1,6 @@
+atomicds.core.utils.boxes\_overlap
+==================================
+
+.. currentmodule:: atomicds.core.utils
+
+.. autofunction:: boxes_overlap

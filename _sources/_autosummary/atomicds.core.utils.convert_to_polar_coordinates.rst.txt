@@ -1,0 +1,6 @@
+atomicds.core.utils.convert\_to\_polar\_coordinates
+===================================================
+
+.. currentmodule:: atomicds.core.utils
+
+.. autofunction:: convert_to_polar_coordinates

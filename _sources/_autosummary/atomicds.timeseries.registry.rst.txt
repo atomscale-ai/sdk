@@ -1,0 +1,30 @@
+﻿atomicds.timeseries.registry
+============================
+
+.. automodule:: atomicds.timeseries.registry
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      get_provider
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>atomicds.core.utils &#8212; atomicds 2025 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../../_static/documentation_options.js?v=cb975c41"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for atomicds.core.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">npt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rich.progress</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BarColumn</span><span class="p">,</span>
+    <span class="n">Progress</span><span class="p">,</span>
+    <span class="n">ProgressColumn</span><span class="p">,</span>
+    <span class="n">SpinnerColumn</span><span class="p">,</span>
+    <span class="n">TaskProgressColumn</span><span class="p">,</span>
+    <span class="n">TextColumn</span><span class="p">,</span>
+    <span class="n">TimeElapsedColumn</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rich.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">Text</span>
+
+
+<div class="viewcode-block" id="normalize_pixel_dimensions">
+<a class="viewcode-back" href="../../../_autosummary/atomicds.core.utils.normalize_pixel_dimensions.html#atomicds.core.utils.normalize_pixel_dimensions">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize_pixel_dimensions</span><span class="p">(</span>
+    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">image_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Rescale pixel dimensions to a new image shape.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        points (NDArray): Numpy array containing a list of points with columns width, height.</span>
+<span class="sd">        image_shape (tuple[int, int]): Image shape.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        NDArray: Numpy array containing the rescaled points.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">image_shape</span>
+
+    <span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">width</span>
+    <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">height</span>
+
+    <span class="k">return</span> <span class="n">points</span></div>
+
+
+
+<div class="viewcode-block" id="boxes_overlap">
+<a class="viewcode-back" href="../../../_autosummary/atomicds.core.utils.boxes_overlap.html#atomicds.core.utils.boxes_overlap">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">boxes_overlap</span><span class="p">(</span><span class="n">box1</span><span class="p">,</span> <span class="n">box2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if two bounding boxes overlap</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        box1 (list[float]): List of xmin, ymin, xmax, ymax coordinates defining first box</span>
+<span class="sd">        box2 (list[float]): List of xmin, ymin, xmax, ymax coordinates defining second box</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (bool): True if the boxes overlap</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Unpack coordinates</span>
+    <span class="n">xmin1</span><span class="p">,</span> <span class="n">ymin1</span><span class="p">,</span> <span class="n">xmax1</span><span class="p">,</span> <span class="n">ymax1</span> <span class="o">=</span> <span class="n">box1</span>
+    <span class="n">xmin2</span><span class="p">,</span> <span class="n">ymin2</span><span class="p">,</span> <span class="n">xmax2</span><span class="p">,</span> <span class="n">ymax2</span> <span class="o">=</span> <span class="n">box2</span>
+
+    <span class="c1"># Check for overlap</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="n">xmax1</span> <span class="o">&lt;</span> <span class="n">xmin2</span> <span class="ow">or</span> <span class="n">xmax2</span> <span class="o">&lt;</span> <span class="n">xmin1</span> <span class="ow">or</span> <span class="n">ymax1</span> <span class="o">&lt;</span> <span class="n">ymin2</span> <span class="ow">or</span> <span class="n">ymax2</span> <span class="o">&lt;</span> <span class="n">ymin1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="regions_horizontal_overlapping">
+<a class="viewcode-back" href="../../../_autosummary/atomicds.core.utils.regions_horizontal_overlapping.html#atomicds.core.utils.regions_horizontal_overlapping">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">regions_horizontal_overlapping</span><span class="p">(</span>
+    <span class="n">node_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">start_node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">end_node</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if two regions are horizontally overlapping&quot;&quot;&quot;</span>
+    <span class="n">start_node_row</span> <span class="o">=</span> <span class="n">node_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">node_df</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_node</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">end_node_row</span> <span class="o">=</span> <span class="n">node_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">node_df</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_node</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">left_node</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">start_node_row</span>
+        <span class="k">if</span> <span class="n">start_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">end_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
+        <span class="k">else</span> <span class="n">end_node_row</span>
+    <span class="p">)</span>
+    <span class="n">right_node</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">start_node_row</span>
+        <span class="k">if</span> <span class="n">start_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">end_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
+        <span class="k">else</span> <span class="n">end_node_row</span>
+    <span class="p">)</span>
+    <span class="n">left_node_max</span> <span class="o">=</span> <span class="n">left_node</span><span class="p">[</span><span class="s2">&quot;bbox_maxc&quot;</span><span class="p">]</span>
+    <span class="n">right_node_min</span> <span class="o">=</span> <span class="n">right_node</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">left_node_max</span> <span class="o">&gt;</span> <span class="n">right_node_min</span></div>
+
+
+
+<div class="viewcode-block" id="rescale_cartesian_coordinates">
+<a class="viewcode-back" href="../../../_autosummary/atomicds.core.utils.rescale_cartesian_coordinates.html#atomicds.core.utils.rescale_cartesian_coordinates">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">rescale_cartesian_coordinates</span><span class="p">(</span>
+    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Normalize radius in polar coordinates, then convert back to cartesian to get rescaled cartesian coordinates in image dimensions.</span>
+<span class="sd">    Args:</span>
+<span class="sd">        points (NDArray): Numpy array containing a list of points.</span>
+<span class="sd">        origin (tuple[int, int]): Origin point.</span>
+<span class="sd">        scale (float): Scaling number.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">        NDArray: Numpy array containing the rescaled points.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Convert the points to polar coordinates</span>
+    <span class="n">polar_coordinates</span> <span class="o">=</span> <span class="n">convert_to_polar_coordinates</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">origin</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
+
+    <span class="n">scaled_1</span> <span class="o">=</span> <span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="n">scaled_0</span> <span class="o">=</span> <span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">scaled_0</span><span class="p">,</span> <span class="n">scaled_1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="convert_to_polar_coordinates">
+<a class="viewcode-back" href="../../../_autosummary/atomicds.core.utils.convert_to_polar_coordinates.html#atomicds.core.utils.convert_to_polar_coordinates">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">convert_to_polar_coordinates</span><span class="p">(</span>
+    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert a set of 2D points to polar coordinates with radius and angle.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        points (NDArray): Numpy array containing a list of points.</span>
+<span class="sd">        origin (tuple[int, int]): Origin point.</span>
+<span class="sd">        scale (float): Scaling number.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Calculate the relative position of the points to the origin</span>
+    <span class="n">relative_points</span> <span class="o">=</span> <span class="n">points</span> <span class="o">-</span> <span class="n">origin</span>
+
+    <span class="c1"># Calculate the radius and angle of the points</span>
+    <span class="n">intermediate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">relative_points</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">intermediate</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span>
+    <span class="n">angle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">relative_points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">relative_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+
+    <span class="c1"># Stack the radius and angle into a single array</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">radius</span><span class="p">,</span> <span class="n">angle</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="generate_graph_from_nodes">
+<a class="viewcode-back" href="../../../_autosummary/atomicds.core.utils.generate_graph_from_nodes.html#atomicds.core.utils.generate_graph_from_nodes">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_graph_from_nodes</span><span class="p">(</span><span class="n">node_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Update a pattern graph with new node data from a DataFrame object&quot;&quot;&quot;</span>
+
+    <span class="n">pattern_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">node_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">node_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span>
+        <span class="c1"># Use all other columns as attributes</span>
+        <span class="n">attributes</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;node_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        <span class="n">pattern_graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="o">**</span><span class="n">attributes</span><span class="p">)</span>
+
+    <span class="n">edge_df</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">node_df</span><span class="p">[[</span><span class="s2">&quot;node_id&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_1&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_0&quot;</span><span class="p">]]</span>
+        <span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+            <span class="n">node_df</span><span class="p">[[</span><span class="s2">&quot;node_id&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_1&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_0&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">how</span><span class="o">=</span><span class="s2">&quot;cross&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;node_id_x&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;node_id_y&quot;</span><span class="p">]]</span>
+    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;node_id_x&quot;</span><span class="p">:</span> <span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;node_id_y&quot;</span><span class="p">:</span> <span class="s2">&quot;end_node&quot;</span><span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">regions_horizontal_overlapping</span><span class="p">(</span>
+                <span class="n">node_df</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;start_node&quot;</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;end_node&quot;</span><span class="p">]</span>
+            <span class="p">),</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_y&quot;</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="o">+</span> <span class="p">(</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_y&quot;</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="p">)</span>
+    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
+        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_y&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;vertical_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
+        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_y&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="p">[</span>
+        <span class="p">[</span>
+            <span class="s2">&quot;start_node&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;end_node&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;weight&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;horizontal_weight&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;vertical_weight&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span>
+        <span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;end_node&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">pattern_graph</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">edge_df</span><span class="p">[[</span><span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;end_node&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">pattern_graph</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_make_progress</span><span class="p">(</span><span class="n">mute</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">transient</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Progress</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    If `muted` is True return (nullcontext(), None),</span>
+<span class="sd">    else return (progress, progress).</span>
+
+<span class="sd">    Transient determines if it hides after completion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">mute</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Progress</span><span class="p">(</span><span class="n">disable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">PercentOrTotal</span><span class="p">(</span><span class="n">ProgressColumn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Render either % or completed/total depending on task flags.&quot;&quot;&quot;</span>
+
+        <span class="n">_percent</span> <span class="o">=</span> <span class="n">TaskProgressColumn</span><span class="p">()</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_percent&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>  <span class="c1"># 42.0</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_percent</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_total&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>  <span class="c1"># 12/37</span>
+                <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">completed</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">total</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+            <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># blank cell</span>
+
+    <span class="k">class</span><span class="w"> </span><span class="nc">MaybeSpinner</span><span class="p">(</span><span class="n">SpinnerColumn</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Show the spinner only when task.fields[&#39;show_spinner&#39;] is truthy.&quot;&quot;&quot;</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_spinner&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+            <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Progress</span><span class="p">(</span>
+        <span class="n">MaybeSpinner</span><span class="p">(),</span>
+        <span class="n">TextColumn</span><span class="p">(</span><span class="s2">&quot;[bold]</span><span class="si">{task.fields[pad]}{task.description}</span><span class="s2">&quot;</span><span class="p">),</span>
+        <span class="n">BarColumn</span><span class="p">(),</span>
+        <span class="n">PercentOrTotal</span><span class="p">(),</span>
+        <span class="n">TimeElapsedColumn</span><span class="p">(),</span>
+        <span class="n">transient</span><span class="o">=</span><span class="n">transient</span><span class="p">,</span>
+        <span class="n">refresh_per_second</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="normalize_path">
+<a class="viewcode-back" href="../../../_autosummary/atomicds.core.utils.normalize_path.html#atomicds.core.utils.normalize_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">normalize_path</span><span class="p">(</span><span class="n">path_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize a file path string for use with pathlib.</span>
+
+<span class="sd">    This will:</span>
+<span class="sd">      1. Remove control characters and convert “smart” quotes into plain quotes.</span>
+<span class="sd">      2. Strip leading/trailing whitespace and any surrounding quotes.</span>
+<span class="sd">      3. Expand user (~) and environment variables.</span>
+<span class="sd">      4. Normalize Unicode, unify separators, and collapse “..”/“.” segments.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path_str: Raw path string copied from Windows (may contain spaces,</span>
+<span class="sd">                  smart quotes, stray control chars, etc.)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A pathlib.Path pointing to the normalized path.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># 1. Drop control characters</span>
+    <span class="n">filtered</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ch</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">path_str</span> <span class="k">if</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">category</span><span class="p">(</span><span class="n">ch</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;C&quot;</span><span class="p">)</span>
+
+    <span class="c1"># 2. Convert smart quotes to plain ones</span>
+    <span class="n">smart_quotes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;</span><span class="se">\u201c</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u201d</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u2018</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u2019</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">}</span>
+    <span class="k">for</span> <span class="n">smart</span><span class="p">,</span> <span class="n">plain</span> <span class="ow">in</span> <span class="n">smart_quotes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">filtered</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">smart</span><span class="p">,</span> <span class="n">plain</span><span class="p">)</span>
+
+    <span class="c1"># 3. Trim whitespace and surrounding quotes</span>
+    <span class="n">filtered</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^[</span><span class="se">\&#39;</span><span class="s1">&quot;](.*)[</span><span class="se">\&#39;</span><span class="s1">&quot;]$&#39;</span><span class="p">,</span> <span class="n">filtered</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+        <span class="n">filtered</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># 4. Expand ~ and env vars</span>
+    <span class="n">expanded</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">filtered</span><span class="p">))</span>  <span class="c1"># noqa: PTH111</span>
+
+    <span class="c1"># 5. Normalize Unicode and separators</span>
+    <span class="n">normalized_unicode</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s2">&quot;NFC&quot;</span><span class="p">,</span> <span class="n">expanded</span><span class="p">)</span>
+    <span class="n">unified_sep</span> <span class="o">=</span> <span class="n">normalized_unicode</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
+
+    <span class="c1"># 6. Collapse redundant segments</span>
+    <span class="n">final_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">unified_sep</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">final_path</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">atomicds</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=atomic-data-sciences&repo=api-client&type=star&v=2&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/index.html">User Guides</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Project Modules</a></li>
+</ul>
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Atomscale.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/atomic-data-sciences/api-client" class="github">
+        <img src="../../../_static/github-banner.svg" alt="Fork me on GitHub" class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

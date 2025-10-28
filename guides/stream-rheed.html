@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Stream RHEED Video &#8212; atomicds 2025 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <script src="../_static/documentation_options.js?v=cb975c41"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Poll Time Series Updates" href="poll-timeseries.html" />
+    <link rel="prev" title="Inspect Analysis Results" href="inspect-results.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="stream-rheed-video">
+<h1>Stream RHEED Video<a class="headerlink" href="#stream-rheed-video" title="Link to this heading">¶</a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">rheed_streaming.ipynb</span></code> demonstrates both push (callback) and pull (generator)
+streaming with <code class="xref py py-class docutils literal notranslate"><span class="pre">atomicds.streaming.rheed_stream.RHEEDStreamer</span></code>. This
+guide condenses the notebook into a quick reference.</p>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code> installed</p></li>
+<li><p>RHEED frames as <code class="docutils literal notranslate"><span class="pre">uint8</span></code> arrays shaped <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">H,</span> <span class="pre">W)</span></code> or <code class="docutils literal notranslate"><span class="pre">(H,</span> <span class="pre">W)</span></code></p></li>
+<li><p>A stable clock so you can honour the capture cadence</p></li>
+</ul>
+</section>
+<section id="create-a-streamer">
+<h2>Create a streamer<a class="headerlink" href="#create-a-streamer" title="Link to this heading">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.streaming.rheed_stream</span><span class="w"> </span><span class="kn">import</span> <span class="n">RHEEDStreamer</span>
+
+<span class="n">streamer</span> <span class="o">=</span> <span class="n">RHEEDStreamer</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;YOUR_API_KEY&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Optional keyword arguments tune chunking and logging. For example,
+<code class="docutils literal notranslate"><span class="pre">verbosity=4</span></code> emits detailed progress, and <code class="docutils literal notranslate"><span class="pre">max_workers</span></code> caps concurrency.</p>
+</section>
+<section id="callback-push-mode">
+<h2>Callback / push mode<a class="headerlink" href="#callback-push-mode" title="Link to this heading">¶</a></h2>
+<p>Use this variant when the acquisition SDK hands you chunks in real time. Push
+each chunk as soon as you receive it.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="n">fps</span> <span class="o">=</span> <span class="mf">120.0</span>
+<span class="n">chunk_size</span> <span class="o">=</span> <span class="mi">240</span>  <span class="c1"># ≥ 2 seconds of frames is recommended</span>
+<span class="n">seconds_per_chunk</span> <span class="o">=</span> <span class="n">chunk_size</span> <span class="o">/</span> <span class="n">fps</span>
+
+<span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
+    <span class="n">fps</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span>
+    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>  <span class="c1"># set to 0.0 for stationary</span>
+    <span class="n">chunk_size</span><span class="o">=</span><span class="n">chunk_size</span><span class="p">,</span>
+    <span class="n">stream_name</span><span class="o">=</span><span class="s2">&quot;Demo (callback mode)&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">for</span> <span class="n">chunk_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+    <span class="n">streamer</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">data_id</span><span class="p">,</span> <span class="n">chunk_idx</span><span class="p">,</span> <span class="n">frames</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">seconds_per_chunk</span><span class="p">)</span>
+
+<span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>  <span class="c1"># let in-flight uploads finish</span>
+<span class="n">streamer</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="generator-pull-mode">
+<h2>Generator / pull mode<a class="headerlink" href="#generator-pull-mode" title="Link to this heading">¶</a></h2>
+<p>Use this form when frames are already buffered and you want the helper to take
+care of chunking, pacing, and uploading.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">frame_chunks</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">):</span>
+    <span class="n">seconds_per_chunk</span> <span class="o">=</span> <span class="n">chunk_size</span> <span class="o">/</span> <span class="n">fps</span>
+    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">),</span> <span class="n">chunk_size</span><span class="p">):</span>
+        <span class="k">yield</span> <span class="n">frames</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">]</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">seconds_per_chunk</span><span class="p">)</span>
+
+
+<span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">1200</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+
+<span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
+    <span class="n">fps</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
+    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">stream_name</span><span class="o">=</span><span class="s2">&quot;Demo (generator mode)&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">streamer</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">data_id</span><span class="p">,</span> <span class="n">frame_chunks</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mf">10.0</span><span class="p">))</span>
+<span class="n">streamer</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="tips">
+<h2>Tips<a class="headerlink" href="#tips" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Maintain the original capture cadence so the server can keep up.</p></li>
+<li><p>Make each chunk cover at least two seconds of frames.</p></li>
+<li><p>Call <code class="xref py py-meth docutils literal notranslate"><span class="pre">finalize()</span></code> even if the upload fails part-way; it lets the pipeline
+clean up gracefully.</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">atomicds</a></h1>
+
+
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=atomic-data-sciences&repo=api-client&type=star&v=2&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">User Guides</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upload-data.html">Upload Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="search-data.html">Search the Catalogue</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inspect-results.html">Inspect Analysis Results</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Stream RHEED Video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="poll-timeseries.html">Poll Time Series Updates</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">Project Modules</a></li>
+</ul>
+
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Atomscale.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/guides/stream-rheed.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/atomic-data-sciences/api-client" class="github">
+        <img src="../_static/github-banner.svg" alt="Fork me on GitHub" class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

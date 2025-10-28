@@ -1,0 +1,6 @@
+atomicds.core.utils.normalize\_path
+===================================
+
+.. currentmodule:: atomicds.core.utils
+
+.. autofunction:: normalize_path

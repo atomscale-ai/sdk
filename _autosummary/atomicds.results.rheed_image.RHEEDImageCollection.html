@@ -36,14 +36,14 @@
   <section id="atomicds-results-rheed-image-rheedimagecollection">
 <h1>atomicds.results.rheed_image.RHEEDImageCollection<a class="headerlink" href="#atomicds-results-rheed-image-rheedimagecollection" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">atomicds.results.rheed_image.</span></span><span class="sig-name descname"><span class="pre">RHEEDImageCollection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rheed_images</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="atomicds.results.rheed_image.RHEEDImageResult.html#atomicds.results.rheed_image.RHEEDImageResult" title="atomicds.results.rheed_image.RHEEDImageResult"><span class="pre">RHEEDImageResult</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/atomicds/results/rheed_image.html#RHEEDImageCollection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">atomicds.results.rheed_image.</span></span><span class="sig-name descname"><span class="pre">RHEEDImageCollection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rheed_images</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">RHEEDImageResult</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/atomicds/results/rheed_image.html#RHEEDImageCollection"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MSONable</span></code></p>
 <p>Collection of RHEED images</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>rheed_images</strong> (<em>list</em><em>[</em><a class="reference internal" href="atomicds.results.rheed_image.RHEEDImageResult.html#atomicds.results.rheed_image.RHEEDImageResult" title="atomicds.results.rheed_image.RHEEDImageResult"><em>RHEEDImageResult</em></a><em>]</em>) – List of RHEEDImageResult objects.</p></li>
+<li><p><strong>rheed_images</strong> (<em>list</em><em>[</em><em>RHEEDImageResult</em><em>]</em>) – List of RHEEDImageResult objects.</p></li>
 <li><p><strong>extra_data</strong> (<em>list</em><em>[</em><em>dict</em><em>] </em><em>| </em><em>None</em>) – List of dictionaries containing field names and values of extra data to be included in the DataFrame object.
 Defaults to None.</p></li>
 <li><p><strong>sort_key</strong> (<em>str</em><em> | </em><em>None</em>) – Key used to sort the data with.</p></li>
@@ -51,13 +51,13 @@ Defaults to None.</p></li>
 </dd>
 </dl>
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rheed_images</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><a class="reference internal" href="atomicds.results.rheed_image.RHEEDImageResult.html#atomicds.results.rheed_image.RHEEDImageResult" title="atomicds.results.rheed_image.RHEEDImageResult"><span class="pre">RHEEDImageResult</span></a><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/atomicds/results/rheed_image.html#RHEEDImageCollection.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.__init__" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rheed_images</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">RHEEDImageResult</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sort_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/atomicds/results/rheed_image.html#RHEEDImageCollection.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Collection of RHEED images</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>rheed_images</strong> (<em>list</em><em>[</em><a class="reference internal" href="atomicds.results.rheed_image.RHEEDImageResult.html#atomicds.results.rheed_image.RHEEDImageResult" title="atomicds.results.rheed_image.RHEEDImageResult"><em>RHEEDImageResult</em></a><em>]</em>) – List of RHEEDImageResult objects.</p></li>
+<li><p><strong>rheed_images</strong> (<em>list</em><em>[</em><em>RHEEDImageResult</em><em>]</em>) – List of RHEEDImageResult objects.</p></li>
 <li><p><strong>extra_data</strong> (<em>list</em><em>[</em><em>dict</em><em>] </em><em>| </em><em>None</em>) – List of dictionaries containing field names and values of extra data to be included in the DataFrame object.
 Defaults to None.</p></li>
 <li><p><strong>sort_key</strong> (<em>str</em><em> | </em><em>None</em>) – Key used to sort the data with.</p></li>
@@ -69,37 +69,37 @@ Defaults to None.</p></li>
 <p class="rubric">Methods</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.__init__" title="atomicds.results.rheed_image.RHEEDImageCollection.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(rheed_images[, extra_data, sort_key])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code>(rheed_images[, extra_data, sort_key])</p></td>
 <td><p>Collection of RHEED images</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.align_fingerprints" title="atomicds.results.rheed_image.RHEEDImageCollection.align_fingerprints"><code class="xref py py-obj docutils literal notranslate"><span class="pre">align_fingerprints</span></code></a>([node_df, inplace, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">align_fingerprints</span></code>([node_df, inplace, ...])</p></td>
 <td><p>Align a collection of RHEED fingerprints by relabeling the nodes to connect the same scattering features across RHEED patterns, based on relative position to the center feature.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.as_dict" title="atomicds.results.rheed_image.RHEEDImageCollection.as_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">as_dict</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">as_dict</span></code>()</p></td>
 <td><p>A JSON serializable dict representation of an object.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.from_dict" title="atomicds.results.rheed_image.RHEEDImageCollection.from_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_dict</span></code></a>(d)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_dict</span></code>(d)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.get_pattern_dataframe" title="atomicds.results.rheed_image.RHEEDImageCollection.get_pattern_dataframe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pattern_dataframe</span></code></a>([streamline, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pattern_dataframe</span></code>([streamline, ...])</p></td>
 <td><p>Featurize the RHEED image collection into a dataframe of node features and edge features.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.load" title="atomicds.results.rheed_image.RHEEDImageCollection.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(file_path)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(file_path)</p></td>
 <td><p>Loads a class from a provided json file.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.save" title="atomicds.results.rheed_image.RHEEDImageCollection.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(json_path[, mkdir, json_kwargs, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code>(json_path[, mkdir, json_kwargs, ...])</p></td>
 <td><p>Utility that uses the standard tools of MSONable to convert the class to json format, but also save it to disk.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.to_json" title="atomicds.results.rheed_image.RHEEDImageCollection.to_json"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_json</span></code></a>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_json</span></code>()</p></td>
 <td><p>Returns a json string representation of the MSONable object.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.unsafe_hash" title="atomicds.results.rheed_image.RHEEDImageCollection.unsafe_hash"><code class="xref py py-obj docutils literal notranslate"><span class="pre">unsafe_hash</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">unsafe_hash</span></code>()</p></td>
 <td><p>Returns an hash of the current object.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.validate_monty_v1" title="atomicds.results.rheed_image.RHEEDImageCollection.validate_monty_v1"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_monty_v1</span></code></a>(_MSONable__input_value)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_monty_v1</span></code>(_MSONable__input_value)</p></td>
 <td><p>Pydantic validator with correct signature for pydantic v1.x</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection.validate_monty_v2" title="atomicds.results.rheed_image.RHEEDImageCollection.validate_monty_v2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_monty_v2</span></code></a>(_MSONable__input_value, _)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_monty_v2</span></code>(_MSONable__input_value, _)</p></td>
 <td><p>Pydantic validator with correct signature for pydantic v2.x</p></td>
 </tr>
 </tbody>
@@ -122,8 +122,8 @@ Defaults to None.</p></li>
 </tbody>
 </table>
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.align_fingerprints">
-<span class="sig-name descname"><span class="pre">align_fingerprints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#atomicds.results.rheed_image.RHEEDImageCollection" title="atomicds.results.rheed_image.RHEEDImageCollection"><span class="pre">RHEEDImageCollection</span></a></span></span><a class="reference internal" href="../_modules/atomicds/results/rheed_image.html#RHEEDImageCollection.align_fingerprints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.align_fingerprints" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">align_fingerprints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">node_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">search_range</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">RHEEDImageCollection</span></span></span><a class="reference internal" href="../_modules/atomicds/results/rheed_image.html#RHEEDImageCollection.align_fingerprints"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Align a collection of RHEED fingerprints by relabeling the nodes to connect the same scattering
 features across RHEED patterns, based on relative position to the center feature.</p>
 <dl class="field-list simple">
@@ -131,7 +131,7 @@ features across RHEED patterns, based on relative position to the center feature
 <dd class="field-odd"><p>Pandas DataFrame object with aligned RHEED fingerprint data</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>(tuple[DataFrame, list[<a class="reference internal" href="atomicds.results.rheed_image.RHEEDImageResult.html#atomicds.results.rheed_image.RHEEDImageResult" title="atomicds.results.rheed_image.RHEEDImageResult">RHEEDImageResult</a>])</p>
+<dd class="field-even"><p>(tuple[DataFrame, list[RHEEDImageResult])</p>
 </dd>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -143,8 +143,8 @@ features across RHEED patterns, based on relative position to the center feature
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.get_pattern_dataframe">
-<span class="sig-name descname"><span class="pre">get_pattern_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">streamline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symmetrize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_as_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/atomicds/results/rheed_image.html#RHEEDImageCollection.get_pattern_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.get_pattern_dataframe" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_pattern_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">streamline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symmetrize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_as_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/atomicds/results/rheed_image.html#RHEEDImageCollection.get_pattern_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Featurize the RHEED image collection into a dataframe of node features and edge features.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -166,8 +166,8 @@ obtaining the DataFrame representation. Defaults to False.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.as_dict">
-<span class="sig-name descname"><span class="pre">as_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.as_dict" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">as_dict</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span></dt>
 <dd><p>A JSON serializable dict representation of an object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -177,8 +177,8 @@ obtaining the DataFrame representation. Defaults to False.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.from_dict">
-<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.from_dict" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span></dt>
 <dd><dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>d</strong> – Dict representation.</p>
@@ -190,8 +190,8 @@ obtaining the DataFrame representation. Defaults to False.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.load">
-<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.load" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Loads a class from a provided json file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -207,8 +207,8 @@ obtaining the DataFrame representation. Defaults to False.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.save">
-<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">json_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mkdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">json_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pickle_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.save" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">json_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mkdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">json_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pickle_kwargs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strict</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Utility that uses the standard tools of MSONable to convert the
 class to json format, but also save it to disk. In addition, this
 method intelligently uses pickle to individually pickle class objects
@@ -237,8 +237,8 @@ directories.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.to_json">
-<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.to_json" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">to_json</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span></dt>
 <dd><p>Returns a json string representation of the MSONable object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -248,22 +248,22 @@ directories.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.unsafe_hash">
-<span class="sig-name descname"><span class="pre">unsafe_hash</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.unsafe_hash" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">unsafe_hash</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span></dt>
 <dd><p>Returns an hash of the current object. This uses a generic but low
 performance method of converting the object to a dictionary, flattening
 any nested keys, and then performing a hash on the resulting object</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.validate_monty_v1">
-<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">validate_monty_v1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_MSONable__input_value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.validate_monty_v1" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">validate_monty_v1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_MSONable__input_value</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Pydantic validator with correct signature for pydantic v1.x</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="atomicds.results.rheed_image.RHEEDImageCollection.validate_monty_v2">
-<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">validate_monty_v2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_MSONable__input_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#atomicds.results.rheed_image.RHEEDImageCollection.validate_monty_v2" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">validate_monty_v2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_MSONable__input_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_</span></span></em><span class="sig-paren">)</span></dt>
 <dd><p>Pydantic validator with correct signature for pydantic v2.x</p>
 </dd></dl>
 
@@ -296,13 +296,20 @@ any nested keys, and then performing a hash on the resulting object</p>
 
 <h3>Navigation</h3>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../guides/index.html">User Guides</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../modules.html">Project Modules</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="atomicds.client.html">atomicds.client</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="atomicds.results.html">atomicds.results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.core.client.html">atomicds.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.core.utils.html">atomicds.core.utils</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="atomicds.results.rheed_image.html">atomicds.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.results.rheed_video.html">atomicds.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.results.xps.html">atomicds.results.xps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomicds.streaming.rheed_stream.html">atomicds.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.timeseries.provider.html">atomicds.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.timeseries.polling.html">atomicds.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.timeseries.registry.html">atomicds.timeseries.registry</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../api/streaming.html">Streaming API</a></li>
 </ul>
 
 

@@ -33,16 +33,34 @@
 
           <div class="body" role="main">
             
-  <section id="module-atomicds.streaming.rheed_stream">
-<span id="atomicds-streaming-rheed-stream"></span><h1>atomicds.streaming.rheed_stream<a class="headerlink" href="#module-atomicds.streaming.rheed_stream" title="Link to this heading">¶</a></h1>
+  <section id="atomicds-streaming-rheed-stream">
+<h1>atomicds.streaming.rheed_stream<a class="headerlink" href="#atomicds-streaming-rheed-stream" title="Link to this heading">¶</a></h1>
 <p class="rubric">Classes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="../api/streaming.html#atomicds.streaming.rheed_stream.RHEEDStreamer" title="atomicds.streaming.rheed_stream.RHEEDStreamer"><code class="xref py py-obj docutils literal notranslate"><span class="pre">RHEEDStreamer</span></code></a>(api_key[, endpoint, verbosity])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">RHEEDStreamer</span></code>(api_key[, endpoint, verbosity])</p></td>
 <td><p>High-performance RHEED frame streaming client.</p></td>
 </tr>
 </tbody>
 </table>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">atomicds.streaming.rheed_stream.</span></span><span class="sig-name descname"><span class="pre">RHEEDStreamer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">api_key</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoint</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbosity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/atomicds/streaming/rheed_stream.html#RHEEDStreamer"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>High-performance RHEED frame streaming client.</p>
+<p>Bridges Python to a Rust/PyO3 backend for efficient, concurrent packaging
+and upload of uint8 grayscale frames to the Atomscale platform.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>api_key</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>)</p></li>
+<li><p><strong>endpoint</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>)</p></li>
+<li><p><strong>verbosity</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 
 
@@ -70,13 +88,20 @@
 
 <h3>Navigation</h3>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../guides/index.html">User Guides</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../modules.html">Project Modules</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="atomicds.client.html">atomicds.client</a></li>
-<li class="toctree-l2"><a class="reference internal" href="atomicds.results.html">atomicds.results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.core.client.html">atomicds.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.core.utils.html">atomicds.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.results.rheed_image.html">atomicds.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.results.rheed_video.html">atomicds.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.results.xps.html">atomicds.results.xps</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">atomicds.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.timeseries.provider.html">atomicds.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.timeseries.polling.html">atomicds.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomicds.timeseries.registry.html">atomicds.timeseries.registry</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../api/streaming.html">Streaming API</a></li>
 </ul>
 
 
