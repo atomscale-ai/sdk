@@ -1,28 +1,25 @@
-Welcome to the **atomicds** code documentation!
-===============================================
-**atomicds** contains the core client implementation for the Atomscale API client.
+atomicds API Client
+===================
 
-This is intended to be barebones documentation for the client classes and their methods.
-For more comprehensive documentation `see the main updated documentation <https://docs.atomscale.ai/>`_.
+``atomicds`` is the Python SDK for the Atomscale platform. Use these docs to
+install the client, move data, and integrate streaming or polling workflows.
+The material is split into:
 
-Support
--------
+* Task-focused guides that mirror the published notebooks.
+* Auto-generated API references pulled directly from the source.
 
-If you are having issues, please let us know through `github <https://github.com/atomic-data-sciences/api-client>`_ or through emailing support@atomscale.ai.
-
-Contents
---------
+If you need help from a human, open an issue on
+`GitHub <https://github.com/atomic-data-sciences/api-client>`_ or email
+support@atomscale.ai.
 
 .. toctree::
    :maxdepth: 2
 
+   guides/index
    modules
-   api/streaming
-
-
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
