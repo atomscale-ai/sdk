@@ -3,7 +3,13 @@ Stream RHEED Video
 
 ``rheed_streaming.ipynb`` demonstrates both push (callback) and pull (generator)
 streaming with :class:`atomicds.streaming.rheed_stream.RHEEDStreamer`. This
-guide condenses the notebook into a quick reference.
+guide condenses the notebook into a quick reference and explains when to choose
+each style:
+
+- **Callback / push mode** – the camera or SDK hands you fresh frames and you
+  upload each chunk immediately.
+- **Generator / pull mode** – you already have frames buffered (from disk,
+  memory, or a simulated source) and want the helper to pace the upload for you.
 
 Prerequisites
 -------------
@@ -23,12 +29,16 @@ Create a streamer
 
 Optional keyword arguments tune chunking and logging. For example,
 ``verbosity=4`` emits detailed progress, and ``max_workers`` caps concurrency.
+If you already know the sample name, pass it to :meth:`initialize` so the data
+links to the right physical sample (names are matched case-insensitively or
+created on the fly).
 
 Callback / push mode
 --------------------
 
-Use this variant when the acquisition SDK hands you chunks in real time. Push
-each chunk as soon as you receive it.
+Use this variant when frames arrive live from the instrument. The outer loop is
+your acquisition callback: once a chunk is ready, send it to the API and wait
+just long enough to match the capture cadence.
 
 .. code-block:: python
 
@@ -44,6 +54,7 @@ each chunk as soon as you receive it.
        rotations_per_min=15.0,  # set to 0.0 for stationary
        chunk_size=chunk_size,
        stream_name="Demo (callback mode)",
+       physical_sample="Demo wafer",
    )
 
    for chunk_idx in range(5):
@@ -57,8 +68,9 @@ each chunk as soon as you receive it.
 Generator / pull mode
 ---------------------
 
-Use this form when frames are already buffered and you want the helper to take
-care of chunking, pacing, and uploading.
+Use this form when frames are already buffered (for example, saved by the
+instrument or simulated offline). Provide an iterator that yields chunks and
+the helper will take care of pacing and retry logic.
 
 .. code-block:: python
 
@@ -76,6 +88,7 @@ care of chunking, pacing, and uploading.
        rotations_per_min=0.0,
        chunk_size=20,
        stream_name="Demo (generator mode)",
+       physical_sample="Demo wafer",
    )
 
    streamer.run(data_id, frame_chunks(frames, chunk_size=20, fps=10.0))
@@ -88,3 +101,4 @@ Tips
 - Make each chunk cover at least two seconds of frames.
 - Call :meth:`finalize` even if the upload fails part-way; it lets the pipeline
   clean up gracefully.
+- Use distinct ``stream_name`` values while testing so you can find runs later.
