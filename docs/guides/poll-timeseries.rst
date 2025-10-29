@@ -3,7 +3,16 @@ Poll Time Series Updates
 
 ``timeseries_polling.ipynb`` shows how to stay current with streaming RHEED
 analysis. This guide summarises the four helper entry points in
-:mod:`atomicds.timeseries.polling`.
+:mod:`atomicds.timeseries.polling` and explains which "mode" to pick:
+
+- **Manual loop** with :func:`iter_poll` – ideal for scripts that can block
+  until each poll finishes.
+- **Background thread** with :func:`start_polling_thread` – keeps polling while
+  your main thread keeps working.
+- **Async iterator** with :func:`aiter_poll` – awaits each update inside an
+  async function.
+- **Async background task** with :func:`start_polling_task` – fire-and-forget
+  inside an asyncio application.
 
 Shared setup
 ------------
@@ -30,9 +39,11 @@ Shared setup
 Synchronous polling
 -------------------
 
-Loop over :func:`iter_poll` to fetch fresh rows on a fixed cadence. Use
-``distinct_by`` to avoid duplicates, ``max_polls`` to stop automatically, and
-``fire_immediately=False`` to skip the first immediate request.
+Loop over :func:`iter_poll` to fetch fresh rows on a fixed cadence. The helper
+waits ``interval`` seconds between polls so a simple ``for`` loop is enough to
+keep the script going. Use ``distinct_by`` to avoid duplicates,
+``max_polls`` to stop automatically, and ``fire_immediately=False`` to skip the
+first immediate request if you only want timed polls.
 
 .. code-block:: python
 
@@ -53,8 +64,10 @@ Loop over :func:`iter_poll` to fetch fresh rows on a fixed cadence. Use
 Background thread helper
 ------------------------
 
-Use :func:`start_polling_thread` if polling should continue in the background.
-It spawns a daemon thread and forwards each update to your callback.
+Use :func:`start_polling_thread` when you want updates but cannot block the
+main thread (for example, inside a GUI or acquisition loop). The helper spawns
+a daemon thread, starts polling immediately, and forwards each update to your
+callback. Call ``stop_event.set()`` to shut it down cleanly.
 
 .. code-block:: python
 
@@ -83,9 +96,10 @@ Async utilities
 
 Two helpers integrate with asyncio:
 
-* :func:`aiter_poll` yields results without blocking the event loop.
-* :func:`start_polling_task` creates a background task that invokes an
-  (optional) async handler for each result.
+* :func:`aiter_poll` yields results without blocking the event loop, so you can
+  ``async for`` over updates.
+* :func:`start_polling_task` creates a background task that awaits the poller
+  in parallel and invokes an (optional) async handler for each result.
 
 .. code-block:: python
 
