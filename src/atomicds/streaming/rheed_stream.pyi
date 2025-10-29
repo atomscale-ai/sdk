@@ -24,6 +24,7 @@ class RHEEDStreamer:
         rotations_per_min: float,
         chunk_size: int,
         stream_name: str | None = None,
+        physical_sample: str | None = None,
     ) -> str: ...
     def run(
         self,

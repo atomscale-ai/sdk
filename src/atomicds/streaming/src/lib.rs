@@ -13,7 +13,7 @@ mod utils;
 use utils::{generic_post, init_tracing_once};
 
 mod initialize;
-use initialize::{post_for_initialization, RHEEDStreamSettings};
+use initialize::{ensure_physical_sample_link, post_for_initialization, RHEEDStreamSettings};
 
 mod upload;
 use upload::{
@@ -109,7 +109,7 @@ impl RHEEDStreamer {
     }
 
     ////Initialize stream
-    /// initialize(self, stream_name: Optional[str] = None, fps: float, rotations_per_min: float, chunk_size: int) -> str
+    /// initialize(self, stream_name: Optional[str] = None, fps: float, rotations_per_min: float, chunk_size: int, physical_sample: Optional[str] = None) -> str
     ///
     /// Creates a new **remote data item** for this stream and returns its `data_id`.
     /// Also captures runtime configuration used for subsequent chunk uploads.
@@ -126,20 +126,24 @@ impl RHEEDStreamer {
     ///     fps (float): Capture rate in frames per second.
     ///     rotations_per_min (float): Wafer/crystal rotations per minute; use `0.0` for stationary operation.
     ///     chunk_size (int): The **intended** number of frames per chunk you will send with `run(...)` or `push(...)`.
+    ///     physical_sample (Optional[str]): Name of a physical sample to associate with the data item; matched case-insensitively or created if missing.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
     ///     RuntimeError: If the initialization POST fails.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None))]
-    #[pyo3(text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None)")]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None))]
+    #[pyo3(
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None)"
+    )]
     fn initialize(
         &mut self,
         fps: f64,
         rotations_per_min: f64,
         chunk_size: usize,
         stream_name: Option<String>,
+        physical_sample: Option<String>,
     ) -> PyResult<String> {
         // Guard: chunk_size must be >= ceil(2 * fps)
         let min_chunk = (2.0 * fps).ceil() as usize;
@@ -156,6 +160,10 @@ impl RHEEDStreamer {
         let stream_name = stream_name
             .filter(|s| !s.trim().is_empty())
             .unwrap_or(default_name);
+
+        let physical_sample = physical_sample
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
 
         let fpr = (fps * 60.0) / rotations_per_min;
 
@@ -175,6 +183,19 @@ impl RHEEDStreamer {
             .rt
             .block_on(init_fut)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+
+        if let Some(sample_name) = physical_sample {
+            let physical_sample_fut = ensure_physical_sample_link(
+                &self.client,
+                &base_endpoint,
+                &self.api_key,
+                &data_id,
+                &sample_name,
+            );
+            self.rt
+                .block_on(physical_sample_fut)
+                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        }
 
         self.fps = Some(fps);
         self.rotating = Some(rotations_per_min > 0.0);
