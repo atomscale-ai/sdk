@@ -37,7 +37,17 @@
 <h1>Poll Time Series Updates<a class="headerlink" href="#poll-time-series-updates" title="Link to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">timeseries_polling.ipynb</span></code> shows how to stay current with streaming RHEED
 analysis. This guide summarises the four helper entry points in
-<code class="xref py py-mod docutils literal notranslate"><span class="pre">atomicds.timeseries.polling</span></code>.</p>
+<code class="xref py py-mod docutils literal notranslate"><span class="pre">atomicds.timeseries.polling</span></code> and explains which “mode” to pick:</p>
+<ul class="simple">
+<li><p><strong>Manual loop</strong> with <code class="xref py py-func docutils literal notranslate"><span class="pre">iter_poll()</span></code> – ideal for scripts that can block
+until each poll finishes.</p></li>
+<li><p><strong>Background thread</strong> with <code class="xref py py-func docutils literal notranslate"><span class="pre">start_polling_thread()</span></code> – keeps polling while
+your main thread keeps working.</p></li>
+<li><p><strong>Async iterator</strong> with <code class="xref py py-func docutils literal notranslate"><span class="pre">aiter_poll()</span></code> – awaits each update inside an
+async function.</p></li>
+<li><p><strong>Async background task</strong> with <code class="xref py py-func docutils literal notranslate"><span class="pre">start_polling_task()</span></code> – fire-and-forget
+inside an asyncio application.</p></li>
+</ul>
 <section id="shared-setup">
 <h2>Shared setup<a class="headerlink" href="#shared-setup" title="Link to this heading">¶</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
@@ -61,9 +71,11 @@ analysis. This guide summarises the four helper entry points in
 </section>
 <section id="synchronous-polling">
 <h2>Synchronous polling<a class="headerlink" href="#synchronous-polling" title="Link to this heading">¶</a></h2>
-<p>Loop over <code class="xref py py-func docutils literal notranslate"><span class="pre">iter_poll()</span></code> to fetch fresh rows on a fixed cadence. Use
-<code class="docutils literal notranslate"><span class="pre">distinct_by</span></code> to avoid duplicates, <code class="docutils literal notranslate"><span class="pre">max_polls</span></code> to stop automatically, and
-<code class="docutils literal notranslate"><span class="pre">fire_immediately=False</span></code> to skip the first immediate request.</p>
+<p>Loop over <code class="xref py py-func docutils literal notranslate"><span class="pre">iter_poll()</span></code> to fetch fresh rows on a fixed cadence. The helper
+waits <code class="docutils literal notranslate"><span class="pre">interval</span></code> seconds between polls so a simple <code class="docutils literal notranslate"><span class="pre">for</span></code> loop is enough to
+keep the script going. Use <code class="docutils literal notranslate"><span class="pre">distinct_by</span></code> to avoid duplicates,
+<code class="docutils literal notranslate"><span class="pre">max_polls</span></code> to stop automatically, and <code class="docutils literal notranslate"><span class="pre">fire_immediately=False</span></code> to skip the
+first immediate request if you only want timed polls.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
     <span class="n">iter_poll</span><span class="p">(</span>
         <span class="n">client</span><span class="p">,</span>
@@ -82,8 +94,10 @@ analysis. This guide summarises the four helper entry points in
 </section>
 <section id="background-thread-helper">
 <h2>Background thread helper<a class="headerlink" href="#background-thread-helper" title="Link to this heading">¶</a></h2>
-<p>Use <code class="xref py py-func docutils literal notranslate"><span class="pre">start_polling_thread()</span></code> if polling should continue in the background.
-It spawns a daemon thread and forwards each update to your callback.</p>
+<p>Use <code class="xref py py-func docutils literal notranslate"><span class="pre">start_polling_thread()</span></code> when you want updates but cannot block the
+main thread (for example, inside a GUI or acquisition loop). The helper spawns
+a daemon thread, starts polling immediately, and forwards each update to your
+callback. Call <code class="docutils literal notranslate"><span class="pre">stop_event.set()</span></code> to shut it down cleanly.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">collected</span> <span class="o">=</span> <span class="p">[]</span>
 
 
@@ -110,9 +124,10 @@ It spawns a daemon thread and forwards each update to your callback.</p>
 <h2>Async utilities<a class="headerlink" href="#async-utilities" title="Link to this heading">¶</a></h2>
 <p>Two helpers integrate with asyncio:</p>
 <ul class="simple">
-<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">aiter_poll()</span></code> yields results without blocking the event loop.</p></li>
-<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">start_polling_task()</span></code> creates a background task that invokes an
-(optional) async handler for each result.</p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">aiter_poll()</span></code> yields results without blocking the event loop, so you can
+<code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">for</span></code> over updates.</p></li>
+<li><p><code class="xref py py-func docutils literal notranslate"><span class="pre">start_polling_task()</span></code> creates a background task that awaits the poller
+in parallel and invokes an (optional) async handler for each result.</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 

@@ -37,7 +37,14 @@
 <h1>Stream RHEED Video<a class="headerlink" href="#stream-rheed-video" title="Link to this heading">¶</a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">rheed_streaming.ipynb</span></code> demonstrates both push (callback) and pull (generator)
 streaming with <code class="xref py py-class docutils literal notranslate"><span class="pre">atomicds.streaming.rheed_stream.RHEEDStreamer</span></code>. This
-guide condenses the notebook into a quick reference.</p>
+guide condenses the notebook into a quick reference and explains when to choose
+each style:</p>
+<ul class="simple">
+<li><p><strong>Callback / push mode</strong> – the camera or SDK hands you fresh frames and you
+upload each chunk immediately.</p></li>
+<li><p><strong>Generator / pull mode</strong> – you already have frames buffered (from disk,
+memory, or a simulated source) and want the helper to pace the upload for you.</p></li>
+</ul>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
 <ul class="simple">
@@ -54,12 +61,16 @@ guide condenses the notebook into a quick reference.</p>
 </pre></div>
 </div>
 <p>Optional keyword arguments tune chunking and logging. For example,
-<code class="docutils literal notranslate"><span class="pre">verbosity=4</span></code> emits detailed progress, and <code class="docutils literal notranslate"><span class="pre">max_workers</span></code> caps concurrency.</p>
+<code class="docutils literal notranslate"><span class="pre">verbosity=4</span></code> emits detailed progress, and <code class="docutils literal notranslate"><span class="pre">max_workers</span></code> caps concurrency.
+If you already know the sample name, pass it to <code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code> so the data
+links to the right physical sample (names are matched case-insensitively or
+created on the fly).</p>
 </section>
 <section id="callback-push-mode">
 <h2>Callback / push mode<a class="headerlink" href="#callback-push-mode" title="Link to this heading">¶</a></h2>
-<p>Use this variant when the acquisition SDK hands you chunks in real time. Push
-each chunk as soon as you receive it.</p>
+<p>Use this variant when frames arrive live from the instrument. The outer loop is
+your acquisition callback: once a chunk is ready, send it to the API and wait
+just long enough to match the capture cadence.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 
@@ -72,6 +83,7 @@ each chunk as soon as you receive it.</p>
     <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>  <span class="c1"># set to 0.0 for stationary</span>
     <span class="n">chunk_size</span><span class="o">=</span><span class="n">chunk_size</span><span class="p">,</span>
     <span class="n">stream_name</span><span class="o">=</span><span class="s2">&quot;Demo (callback mode)&quot;</span><span class="p">,</span>
+    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">&quot;Demo wafer&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="k">for</span> <span class="n">chunk_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
@@ -86,8 +98,9 @@ each chunk as soon as you receive it.</p>
 </section>
 <section id="generator-pull-mode">
 <h2>Generator / pull mode<a class="headerlink" href="#generator-pull-mode" title="Link to this heading">¶</a></h2>
-<p>Use this form when frames are already buffered and you want the helper to take
-care of chunking, pacing, and uploading.</p>
+<p>Use this form when frames are already buffered (for example, saved by the
+instrument or simulated offline). Provide an iterator that yields chunks and
+the helper will take care of pacing and retry logic.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">frame_chunks</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">):</span>
     <span class="n">seconds_per_chunk</span> <span class="o">=</span> <span class="n">chunk_size</span> <span class="o">/</span> <span class="n">fps</span>
     <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">),</span> <span class="n">chunk_size</span><span class="p">):</span>
@@ -102,6 +115,7 @@ care of chunking, pacing, and uploading.</p>
     <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
     <span class="n">chunk_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
     <span class="n">stream_name</span><span class="o">=</span><span class="s2">&quot;Demo (generator mode)&quot;</span><span class="p">,</span>
+    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">&quot;Demo wafer&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">streamer</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">data_id</span><span class="p">,</span> <span class="n">frame_chunks</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mf">10.0</span><span class="p">))</span>
@@ -116,6 +130,7 @@ care of chunking, pacing, and uploading.</p>
 <li><p>Make each chunk cover at least two seconds of frames.</p></li>
 <li><p>Call <code class="xref py py-meth docutils literal notranslate"><span class="pre">finalize()</span></code> even if the upload fails part-way; it lets the pipeline
 clean up gracefully.</p></li>
+<li><p>Use distinct <code class="docutils literal notranslate"><span class="pre">stream_name</span></code> values while testing so you can find runs later.</p></li>
 </ul>
 </section>
 </section>
