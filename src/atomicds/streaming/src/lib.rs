@@ -4,10 +4,14 @@ use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyIterator, PyModule};
 use reqwest::Client;
+use std::cmp::max;
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
-use tracing::debug;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
+use tracing::{debug, warn};
 
 mod utils;
 use utils::{generic_post, init_tracing_once};
@@ -55,6 +59,8 @@ pub struct RHEEDStreamer {
     endpoint: String,
     client: Client,
     rt: Runtime,
+    handles: Arc<Mutex<Vec<JoinHandle<anyhow::Result<()>>>>>,
+    semaphore: Arc<Semaphore>,
 
     rotating: Option<bool>,
     fps: Option<f64>,
@@ -85,6 +91,7 @@ impl RHEEDStreamer {
 
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
+            .pool_idle_timeout(Some(std::time::Duration::from_secs(30)))
             .build()
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
@@ -95,13 +102,25 @@ impl RHEEDStreamer {
 
         let endpoint = endpoint.unwrap_or("https://api.atomscale.ai".to_string());
 
-        debug!("[rheed_stream] init: base_url={}", endpoint);
+        let concurrency_limit = thread::available_parallelism()
+            .map(|n| n.get() * 2)
+            .unwrap_or(8);
+        let concurrency_limit = max(4, concurrency_limit);
+        let semaphore = Arc::new(Semaphore::new(concurrency_limit));
+        let handles = Arc::new(Mutex::new(Vec::new()));
+
+        debug!(
+            "[rheed_stream] init: base_url={}, concurrency_limit={}",
+            endpoint, concurrency_limit
+        );
 
         Ok(Self {
             api_key,
             endpoint,
             client,
             rt,
+            handles,
+            semaphore,
             rotating: None,
             chunk_size: None,
             fps: None,
@@ -273,7 +292,15 @@ impl RHEEDStreamer {
             };
 
             // Spawn via private helper
-            let handle = self.spawn_chunk_upload(idx, flat, n, h, w, metadata);
+            let handle = self.spawn_chunk_upload(
+                idx,
+                flat,
+                n,
+                h,
+                w,
+                metadata,
+                Some(self.semaphore.clone()),
+            );
             handles.push(handle);
         }
 
@@ -355,7 +382,19 @@ impl RHEEDStreamer {
         };
 
         // Spawn via private helper; detach by dropping the handle
-        self.spawn_chunk_upload(chunk_idx, flat, n, h, w, metadata);
+        self.reap_finished()
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+
+        let handle = self.spawn_chunk_upload(
+            chunk_idx,
+            flat,
+            n,
+            h,
+            w,
+            metadata,
+            Some(self.semaphore.clone()),
+        );
+        self.push_handle(handle);
         Ok(())
     }
 
@@ -391,6 +430,9 @@ impl RHEEDStreamer {
     #[pyo3(signature = (data_id))]
     #[pyo3(text_signature = "(data_id)")]
     fn finalize(&mut self, data_id: String) -> PyResult<()> {
+        self.wait_for_all_handles()
+            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+
         let base_endpoint = self.endpoint.clone();
         let post_url = format!("{base_endpoint}/rheed/stream/{data_id}/end");
         let final_fut = generic_post(&self.client, &post_url, &self.api_key);
@@ -427,6 +469,54 @@ impl RHEEDStreamer {
         ))
     }
 
+    fn push_handle(&self, handle: JoinHandle<anyhow::Result<()>>) {
+        let mut guard = self.handles.lock().unwrap();
+        guard.push(handle);
+    }
+
+    fn reap_finished(&self) -> anyhow::Result<()> {
+        let mut finished = Vec::new();
+        {
+            let mut guard = self.handles.lock().unwrap();
+            let mut still = Vec::with_capacity(guard.len());
+            for handle in guard.drain(..) {
+                if handle.is_finished() {
+                    finished.push(handle);
+                } else {
+                    still.push(handle);
+                }
+            }
+            *guard = still;
+        }
+
+        for handle in finished {
+            match self.rt.block_on(async { handle.await }) {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => return Err(e),
+                Err(e) => return Err(anyhow!("task join error: {e}")),
+            }
+        }
+
+        Ok(())
+    }
+
+    fn wait_for_all_handles(&self) -> anyhow::Result<()> {
+        let handles = {
+            let mut guard = self.handles.lock().unwrap();
+            guard.drain(..).collect::<Vec<_>>()
+        };
+
+        for handle in handles {
+            match self.rt.block_on(async { handle.await }) {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => return Err(e),
+                Err(e) => return Err(anyhow!("task join error: {e}")),
+            }
+        }
+
+        Ok(())
+    }
+
     /// spawn_chunk_upload(self, chunk_idx: int, flat: bytes, n: int, h: int, w: int, metadata: FrameChunkMetadata) -> asyncio.Task
     ///
     /// Internal helper: packages a prepared chunk to Zarr and uploads via a presigned URL.
@@ -439,6 +529,7 @@ impl RHEEDStreamer {
         h: usize,
         w: usize,
         metadata: FrameChunkMetadata,
+        semaphore: Option<Arc<Semaphore>>,
     ) -> JoinHandle<anyhow::Result<()>> {
         let client = self.client.clone();
         let api_key = self.api_key.clone();
@@ -447,6 +538,7 @@ impl RHEEDStreamer {
             self.endpoint
         );
         let zarr_shard_key = format!("frames.zarr/frames/c/{chunk_idx}/0/0");
+        let semaphore_clone = semaphore.clone();
 
         debug!(
             "[rheed_stream] spawn#{chunk_idx}: queued (flat={} bytes, dims={n}x{h}x{w})",
@@ -454,6 +546,15 @@ impl RHEEDStreamer {
         );
 
         self.rt.spawn(async move {
+            let _permit: Option<OwnedSemaphorePermit> = match semaphore_clone {
+                Some(sema) => Some(
+                    sema.acquire_owned()
+                        .await
+                        .map_err(|e| anyhow!("semaphore acquire error: {e}"))?,
+                ),
+                None => None,
+            };
+
             debug!("[rheed_stream] spawn#{chunk_idx}: requesting presign + packaging…");
 
             let url_fut =
@@ -496,6 +597,16 @@ impl RHEEDStreamer {
 
             Ok(())
         })
+    }
+}
+
+impl Drop for RHEEDStreamer {
+    fn drop(&mut self) {
+        if let Err(e) = self.wait_for_all_handles() {
+            warn!(
+                "[rheed_stream] drop: failed to await outstanding tasks cleanly: {e}"
+            );
+        }
     }
 }
 
