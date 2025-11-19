@@ -14,7 +14,7 @@
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="atomicds.timeseries.provider.TimeseriesProvider" href="atomicds.timeseries.provider.TimeseriesProvider.html" />
+    <link rel="next" title="atomicds.timeseries.provider.extend_with_statistics" href="atomicds.timeseries.provider.extend_with_statistics.html" />
     <link rel="prev" title="atomicds.streaming.rheed_stream.RHEEDStreamer" href="atomicds.streaming.rheed_stream.RHEEDStreamer.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -35,6 +35,14 @@
             
   <section id="atomicds-timeseries-provider">
 <h1>atomicds.timeseries.provider<a class="headerlink" href="#atomicds-timeseries-provider" title="Link to this heading">¶</a></h1>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">extend_with_statistics</span></code>(rename_map)</p></td>
+<td><p>Add suffix-based statistical labels to a rename map.</p></td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Classes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -43,6 +51,20 @@
 </tr>
 </tbody>
 </table>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">atomicds.timeseries.provider.</span></span><span class="sig-name descname"><span class="pre">extend_with_statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rename_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/atomicds/timeseries/provider.html#extend_with_statistics"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Add suffix-based statistical labels to a rename map.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>rename_map</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span></p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py class">
 <dt class="sig sig-object py">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">atomicds.timeseries.provider.</span></span><span class="sig-name descname"><span class="pre">TimeseriesProvider</span></span><a class="reference internal" href="../_modules/atomicds/timeseries/provider.html#TimeseriesProvider"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>

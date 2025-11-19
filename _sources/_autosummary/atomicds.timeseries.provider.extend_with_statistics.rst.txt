@@ -1,0 +1,6 @@
+atomicds.timeseries.provider.extend\_with\_statistics
+=====================================================
+
+.. currentmodule:: atomicds.timeseries.provider
+
+.. autofunction:: extend_with_statistics
