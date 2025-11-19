@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from typing import Any, ClassVar, Generic, TypeVar
 
 from pandas import DataFrame
@@ -8,6 +9,22 @@ from pandas import DataFrame
 from atomicds.core import BaseClient
 
 R = TypeVar("R")  # the result type this provider returns
+
+
+_STAT_SUFFIX_LABELS: Mapping[str, str] = {
+    "_z_score": "Z Score",
+    "_ema_z_score": "EMA Z Score",
+    "_anomaly_probability": "Anomaly Probability",
+}
+
+
+def extend_with_statistics(rename_map: Mapping[str, str]) -> dict[str, str]:
+    """Add suffix-based statistical labels to a rename map."""
+    extended = dict(rename_map)
+    for source_name, label in rename_map.items():
+        for suffix, suffix_label in _STAT_SUFFIX_LABELS.items():
+            extended[f"{source_name}{suffix}"] = f"{label} {suffix_label}"
+    return extended
 
 
 class TimeseriesProvider(ABC, Generic[R]):
