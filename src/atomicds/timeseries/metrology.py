@@ -7,22 +7,24 @@ from pandas import DataFrame
 
 from atomicds.core import BaseClient
 from atomicds.results.metrology import MetrologyResult
-from atomicds.timeseries.provider import TimeseriesProvider
+from atomicds.timeseries.provider import TimeseriesProvider, extend_with_statistics
 
 
 class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
     TYPE = "metrology"
 
-    RENAME_MAP: Mapping[str, str] = {
-        "relative_time_seconds": "Time",
-        "frame_number": "Frame Number",
-        "unix_timestamp_ms": "UNIX Timestamp",
-        "ratio_pyrometer": "Ratio Pyrometer",
-        "sc_pyrometer": "SC Pyrometer",
-        "decay_constant_minutes": "Decay Constant",
-        "median_period": "Median Period",
-        "median_period_seconds": "Median Period",
-    }
+    RENAME_MAP: Mapping[str, str] = extend_with_statistics(
+        {
+            "relative_time_seconds": "Time",
+            "frame_number": "Frame Number",
+            "unix_timestamp_ms": "UNIX Timestamp",
+            "ratio_pyrometer": "Ratio Pyrometer",
+            "sc_pyrometer": "SC Pyrometer",
+            "decay_constant_minutes": "Decay Constant",
+            "median_period": "Median Period",
+            "median_period_seconds": "Median Period",
+        }
+    )
     INDEX_COLS: Sequence[str] = ["Frame Number"]
 
     def fetch_raw(self, client: BaseClient, data_id: str) -> Any:
