@@ -174,7 +174,35 @@ class Client(BaseClient):
             drop_cols = [col for col in columns_to_drop if col in catalogue.columns]
             catalogue = catalogue.drop(columns=drop_cols)
 
-        return catalogue.rename(columns=column_mapping)
+        catalogue = catalogue.rename(columns=column_mapping)
+
+        desired_order = [
+            "Data ID",
+            "File Name",
+            "Type",
+            "Status",
+            "File Type",
+            "Instrument Source",
+            "Sample Name",
+            "Physical Sample ID",
+            "Physical Sample Name",
+            "Project ID",
+            "Project Name",
+            "Growth Length",
+            "Upload Datetime",
+            "Last Accessed Datetime",
+            "Sample Notes",
+            "Sample Notes Last Updated",
+            "File Metadata",
+            "Tags",
+            "Owner",
+            "Workspaces",
+        ]
+        ordered_cols = [
+            col for col in desired_order if col in catalogue.columns
+        ] + [col for col in catalogue.columns if col not in desired_order]
+
+        return catalogue[ordered_cols]
 
     def get(
         self, data_ids: str | list[str]
@@ -222,14 +250,141 @@ class Client(BaseClient):
         data = self._get(sub_url="physical_samples/")
         if data is None:
             return DataFrame(None)
-        return DataFrame(data)
+        samples = DataFrame(data)
+
+        if "projects" in samples.columns:
+            samples["project_id"] = samples["projects"].apply(
+                lambda projects: (projects[0].get("id") if projects else None)
+            )
+            samples["project_name"] = samples["projects"].apply(
+                lambda projects: (projects[0].get("name") if projects else None)
+            )
+
+        if "detail_notes" in samples.columns:
+            samples["detail_note_content"] = samples["detail_notes"].apply(
+                lambda note: note.get("content") if isinstance(note, dict) else None
+            )
+            samples["detail_note_last_updated"] = samples["detail_notes"].apply(
+                lambda note: note.get("last_updated") if isinstance(note, dict) else None
+            )
+            samples["detail_note_last_updated"] = samples["detail_note_last_updated"].apply(
+                lambda v: None if (pd.isna(v) or v == "NaT") else v
+            )
+
+        if "target_material" in samples.columns:
+            samples["target_material"] = samples["target_material"].apply(
+                lambda tm: {k: tm.get(k) for k in ("substrate", "sample_name") if isinstance(tm, dict) and k in tm}
+                if isinstance(tm, dict)
+                else tm
+            )
+
+        columns_to_drop = [
+            "sample_id",
+            "detail_notes_id",
+            "user_id",
+            "growth_instrument_id",
+            "version",
+            "owner_id",
+            "projects",
+            "detail_notes",
+        ]
+
+        column_mapping = {
+            "physical_sample_metadata": "Sample Metadata",
+            "name": "Physical Sample Name",
+            "last_updated": "Last Updated",
+            "created_datetime": "Created Datetime",
+            "id": "Physical Sample ID",
+            "owner_name": "Owner",
+            "target_material": "Target Material",
+            "growth_instrument": "Growth Instrument",
+            "num_data_items": "Data Items",
+            "project_id": "Project ID",
+            "project_name": "Project Name",
+            "detail_note_content": "Sample Notes",
+            "detail_note_last_updated": "Sample Notes Last Updated",
+        }
+
+        if len(samples):
+            drop_cols = [col for col in columns_to_drop if col in samples.columns]
+            samples = samples.drop(columns=drop_cols)
+
+        samples = samples.rename(columns=column_mapping)
+
+        desired_order = [
+            "Physical Sample ID",
+            "Physical Sample Name",
+            "Project ID",
+            "Project Name",
+            "Target Material",
+            "Sample Metadata",
+            "Sample Notes",
+            "Sample Notes Last Updated",
+            "Growth Instrument",
+            "Data Items",
+            "Created Datetime",
+            "Last Updated",
+            "Owner",
+        ]
+        ordered_cols = [
+            col for col in desired_order if col in samples.columns
+        ] + [col for col in samples.columns if col not in desired_order]
+
+        return samples[ordered_cols]
 
     def list_projects(self) -> DataFrame:
         """List projects available to the user."""
         data = self._get(sub_url="projects/")
         if data is None:
             return DataFrame(None)
-        return DataFrame(data)
+        projects = DataFrame(data)
+
+        if "detail_note" in projects.columns:
+            projects["detail_note_content"] = projects["detail_note"].apply(
+                lambda note: note.get("content") if isinstance(note, dict) else None
+            )
+            projects["detail_note_last_updated"] = projects["detail_note"].apply(
+                lambda note: note.get("last_updated") if isinstance(note, dict) else None
+            )
+            projects["detail_note_last_updated"] = projects["detail_note_last_updated"].apply(
+                lambda v: None if (pd.isna(v) or v == "NaT") else v
+            )
+
+        columns_to_drop = [
+            "owner_id",
+            "detail_note",
+        ]
+
+        column_mapping = {
+            "id": "Project ID",
+            "last_updated": "Last Updated",
+            "name": "Project Name",
+            "physical_sample_count": "Physical Sample Count",
+            "owner_name": "Owner",
+            "detail_note_content": "Project Notes",
+            "detail_note_last_updated": "Project Notes Last Updated",
+        }
+
+        if len(projects):
+            drop_cols = [col for col in columns_to_drop if col in projects.columns]
+            projects = projects.drop(columns=drop_cols)
+
+        projects = projects.rename(columns=column_mapping)
+
+        desired_order = [
+            "Project ID",
+            "Project Name",
+            "Physical Sample Count",
+            "Project Notes",
+            "Project Notes Last Updated",
+            "Last Updated",
+            "Owner",
+        ]
+        ordered_cols = [
+            col for col in desired_order if col in projects.columns
+        ] + [col for col in projects.columns if col not in desired_order]
+
+        return projects[ordered_cols]
 
     def get_sample(
         self,
