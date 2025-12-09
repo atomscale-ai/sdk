@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, BinaryIO, Literal
 
+import pandas as pd
 from pandas import DataFrame
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
@@ -16,6 +17,8 @@ from atomicds.results import (
     XPSResult,
     _get_rheed_image_result,
 )
+from atomicds.results.group import PhysicalSampleResult, ProjectResult
+from atomicds.timeseries.align import align_timeseries
 from atomicds.timeseries.registry import get_provider
 
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
@@ -52,6 +55,8 @@ class Client(BaseClient):
         keywords: str | list[str] | None = None,
         include_organization_data: bool = True,
         data_ids: str | list[str] | None = None,
+        physical_sample_ids: str | list[str] | None = None,
+        project_ids: str | list[str] | None = None,
         data_type: Literal[
             "rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"
         ] = "all",
@@ -78,6 +83,8 @@ class Client(BaseClient):
             include_organization_data (bool): Whether to include catalogue entries from other users in
                 your organization. Defaults to True.
             data_ids (str | list[str] | None): Data ID or list of data IDs. Defaults to None.
+            physical_sample_ids (str | list[str] | None): Physical sample ID or list of IDs. Defaults to None.
+            project_ids (str | list[str] | None): Project ID or list of IDs. Defaults to None.
             data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"]): Type of data. Defaults to "all".
             status (Literal["success", "pending", "error", "running", "all"]): Analyzed status of the data. Defaults to "all".
             growth_length (tuple[int | None, int | None]): Minimum and maximum values of the growth length in seconds.
@@ -95,6 +102,8 @@ class Client(BaseClient):
             "keywords": keywords,
             "include_organization_data": include_organization_data,
             "data_ids": data_ids,
+            "physical_sample_ids": physical_sample_ids,
+            "project_ids": project_ids,
             "data_type": None if data_type == "all" else data_type,
             "status": status,
             "growth_length_min": growth_length[0],
@@ -184,6 +193,139 @@ class Client(BaseClient):
                 progress,
                 progress_description="Obtaining data results",
             )
+
+    def list_physical_samples(self) -> DataFrame:
+        """List physical samples available to the user."""
+        data = self._get(sub_url="physical_samples/")
+        if data is None:
+            return DataFrame(None)
+        return DataFrame(data)
+
+    def list_projects(self) -> DataFrame:
+        """List projects available to the user."""
+        data = self._get(sub_url="projects/")
+        if data is None:
+            return DataFrame(None)
+        return DataFrame(data)
+
+    def get_sample(
+        self,
+        physical_sample_id: str,
+        *,
+        include_organization_data: bool = True,
+        align: bool | str = False,
+        resample: str | None = None,
+    ) -> PhysicalSampleResult:
+        """Get all data for a physical sample.
+
+        Args:
+            physical_sample_id: Identifier of the physical sample.
+            include_organization_data: Whether to include organization data. Defaults to True.
+            align: Whether to align timeseries data. If truthy, an aligned DataFrame is returned.
+            resample: Optional pandas resample rule applied after alignment.
+        """
+        entries: list[dict] = self._get(  # type: ignore  # noqa: PGH003
+            sub_url="data_entries/",
+            params={
+                "physical_sample_ids": [physical_sample_id],
+                "include_organization_data": include_organization_data,
+            },
+        )
+        data_ids = [e["data_id"] for e in entries] if entries else []
+        results = self.get(data_ids=data_ids) if data_ids else []
+
+        join_how = "outer"
+        if isinstance(align, str):
+            join_how = align
+
+        ts_aligned = (
+            align_timeseries(results, how=join_how, resample=resample)
+            if align
+            else None
+        )
+
+        non_timeseries = [
+            r
+            for r in results
+            if not hasattr(r, "timeseries_data") or r.timeseries_data is None
+        ]
+        sample_name = entries[0].get("physical_sample_name") if entries else None
+        return PhysicalSampleResult(
+            physical_sample_id=physical_sample_id,
+            physical_sample_name=sample_name,
+            data_results=results,
+            aligned_timeseries=ts_aligned,
+            non_timeseries=non_timeseries,
+        )
+
+    def get_project(
+        self,
+        project_id: str,
+        *,
+        include_organization_data: bool = True,
+        align: bool | str = False,
+        resample: str | None = None,
+    ) -> ProjectResult:
+        """Get all data grouped by physical sample for a project.
+
+        Args:
+            project_id: Identifier of the project.
+            include_organization_data: Whether to include organization data. Defaults to True.
+            align: Whether to align timeseries at the project level. Defaults to False.
+            resample: Optional pandas resample rule applied after alignment.
+        """
+        entries: list[dict] = self._get(  # type: ignore  # noqa: PGH003
+            sub_url="data_entries/",
+            params={
+                "project_ids": [project_id],
+                "include_organization_data": include_organization_data,
+            },
+        )
+        if not entries:
+            return ProjectResult(project_id, None, [], None)
+
+        sample_ids = {e.get("physical_sample_id") for e in entries if e.get("physical_sample_id")}
+        sample_results: list[PhysicalSampleResult] = []
+        for sid in sample_ids:
+            if not sid:
+                continue
+            sample_results.append(
+                self.get_sample(
+                    sid,
+                    include_organization_data=include_organization_data,
+                    align=align,
+                    resample=resample,
+                )
+            )
+
+        project_aligned = None
+        if align:
+            frames = []
+            for sample in sample_results:
+                if sample.aligned_timeseries is None:
+                    continue
+                renamed = sample.aligned_timeseries.copy()
+                renamed.columns = pd.MultiIndex.from_tuples(
+                    [
+                        (sample.physical_sample_id,) + tuple(col)
+                        if isinstance(col, tuple)
+                        else (sample.physical_sample_id, col)
+                        for col in renamed.columns
+                    ]
+                )
+                frames.append(renamed)
+            if frames:
+                project_aligned = frames[0]
+                for frame in frames[1:]:
+                    project_aligned = project_aligned.join(frame, how="outer")
+
+        project_name = entries[0].get("project_name")
+        return ProjectResult(
+            project_id=project_id,
+            project_name=project_name,
+            samples=sample_results,
+            aligned_timeseries=project_aligned,
+        )
 
     def _get_result_data(
         self,
