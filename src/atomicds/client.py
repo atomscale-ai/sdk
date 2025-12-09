@@ -30,18 +30,21 @@ class Client(BaseClient):
     def __init__(
         self,
         api_key: str | None = None,
-        endpoint: str = "https://api.atomscale.ai/",
+        endpoint: str | None = "https://api.atomscale.ai/",
         mute_bars: bool = False,
     ):
         """
         Args:
-            api_key (str | None): API key. Defaults to None which will try and pull from the ADS_API_KEY environment variable.
-            endpoint (str): Root API endpoint. Will prioritize pulling from the ADS_API_ENDPOINT environment variable.
-                If none provided it defaults to 'https://api.atomicdatasciences.com/'.
+            api_key (str | None): API key. Explicit value takes precedence; if None, falls back to ADS_API_KEY environment variable.
+            endpoint (str): Root API endpoint. Explicit value takes precedence; if None, falls back to ADS_API_ENDPOINT environment variable,
+                defaulting to 'https://api.atomscale.ai/' if not set.
             mute_bars (bool): Whether to mute progress bars. Defaults to False.
         """
-        api_key = api_key or os.environ.get("ADS_API_KEY")
-        endpoint = os.environ.get("ADS_API_ENDPOINT") or endpoint
+        if api_key is None:
+            api_key = os.environ.get("ADS_API_KEY")
+
+        if endpoint is None:
+            endpoint = os.environ.get("ADS_API_ENDPOINT") or "https://api.atomscale.ai/"
 
         if api_key is None:
             raise ValueError("No valid ADS API key supplied")
@@ -137,6 +140,8 @@ class Client(BaseClient):
             "tags": "Tags",
             "name": "Owner",
             "workspaces": "Workspaces",
+            "project_ids": "Project ID",
+            "project_names": "Project Name",
         }
 
         columns_to_drop = [
@@ -145,11 +150,29 @@ class Client(BaseClient):
             "sample_id",
             "processed_file_type",
             "bucket_file_name",
+            "projects",
         ]
         catalogue = DataFrame(data)
 
+        if "projects" in catalogue.columns:
+            catalogue["project_ids"] = catalogue["projects"].apply(
+                lambda projects: (projects[0].get("id") if projects else None)
+            )
+            catalogue["project_names"] = catalogue["projects"].apply(
+                lambda projects: (projects[0].get("name") if projects else None)
+            )
+
         if len(catalogue):
-            catalogue = catalogue.drop(columns=columns_to_drop)
+            if "detail_note_last_updated" in catalogue.columns:
+                catalogue["detail_note_last_updated"] = catalogue[
+                    "detail_note_last_updated"
+                ].apply(
+                    lambda v: None
+                    if (pd.isna(v) or v == "NaT")
+                    else v
+                )
+            drop_cols = [col for col in columns_to_drop if col in catalogue.columns]
+            catalogue = catalogue.drop(columns=drop_cols)
 
         return catalogue.rename(columns=column_mapping)
 
