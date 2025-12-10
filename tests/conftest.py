@@ -23,3 +23,7 @@ class ResultIDs:
     rheed_stationary = ""
     rheed_rotating = ""
     xps = ""
+    optical = ""
+    metrology = ""
+    photoluminescence = ""
+    raman = ""

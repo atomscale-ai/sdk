@@ -104,20 +104,55 @@ def test_last_accessed_datetime_search(client: Client):
 
 @pytest.mark.order(1)
 def test_get(client: Client):
-    data_types = ["rheed_image", "rheed_stationary", "rheed_rotating", "xps"]
+    data_type_aliases = {
+        "rheed_image": ["rheed_image"],
+        "rheed_stationary": ["rheed_stationary"],
+        "rheed_rotating": ["rheed_rotating"],
+        "xps": ["xps"],
+        "optical": ["optical"],
+        "metrology": ["metrology", "recipe"],
+        "photoluminescence": ["photoluminescence", "pl"],
+        "raman": ["raman"],
+    }
+    required_types = {
+        "rheed_image",
+        "rheed_stationary",
+        "rheed_rotating",
+        "xps",
+        "photoluminescence",
+        "raman",
+    }
     data_ids = []
 
-    for data_type in data_types:
-        data = client.search(data_type=data_type, include_organization_data=False)  # type: ignore
-        data_id = data["Data ID"].values[0] if len(data["Data ID"].values) else None
-        data_ids.append(data_id)
+    for result_attr, aliases in data_type_aliases.items():
+        data_id = None
+        for alias in aliases:
+            for include_org in (False, True):
+                try:
+                    data = client.search(  # type: ignore[arg-type]
+                        data_type=alias, include_organization_data=include_org
+                    )
+                except ClientError:
+                    continue
 
-        setattr(ResultIDs, data_type, data_id)
+                data_id_values = data["Data ID"].dropna().values
+                if len(data_id_values):
+                    data_id = data_id_values[0]
+                    break
+            if data_id:
+                break
+
+        setattr(ResultIDs, result_attr, data_id or "")
+        if data_id:
+            data_ids.append(data_id)
+        elif result_attr in required_types:
+            pytest.fail(f"No data_id found for required data type '{result_attr}'")
 
     results = client.get(data_ids=data_ids)
-    data_types = set([type(result) for result in results])
+    data_types = {type(result) for result in results}
 
-    assert len(data_types) == 3
+    assert len(results) == len(data_ids)
+    assert len(data_types) >= 3
 
 
 def test_list_physical_samples(client: Client):
