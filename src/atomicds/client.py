@@ -15,6 +15,8 @@ from atomicds.results import (
     RHEEDImageResult,
     RHEEDVideoResult,
     XPSResult,
+    PhotoluminescenceResult,
+    RamanResult,
     _get_rheed_image_result,
 )
 from atomicds.results.group import PhysicalSampleResult, ProjectResult
@@ -61,7 +63,15 @@ class Client(BaseClient):
         physical_sample_ids: str | list[str] | None = None,
         project_ids: str | list[str] | None = None,
         data_type: Literal[
-            "rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"
+            "rheed_image",
+            "rheed_stationary",
+            "rheed_rotating",
+            "xps",
+            "photoluminescence",
+            "pl",
+            "raman",
+            "recipe",
+            "all",
         ] = "all",
         status: Literal[
             "success",
@@ -88,7 +98,7 @@ class Client(BaseClient):
             data_ids (str | list[str] | None): Data ID or list of data IDs. Defaults to None.
             physical_sample_ids (str | list[str] | None): Physical sample ID or list of IDs. Defaults to None.
             project_ids (str | list[str] | None): Project ID or list of IDs. Defaults to None.
-            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"]): Type of data. Defaults to "all".
+            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "photoluminescence", "raman", "all"]): Type of data. Defaults to "all".
             status (Literal["success", "pending", "error", "running", "all"]): Analyzed status of the data. Defaults to "all".
             growth_length (tuple[int | None, int | None]): Minimum and maximum values of the growth length in seconds.
                 Defaults to (None, None) which will include all non-video data.
@@ -166,11 +176,7 @@ class Client(BaseClient):
             if "detail_note_last_updated" in catalogue.columns:
                 catalogue["detail_note_last_updated"] = catalogue[
                     "detail_note_last_updated"
-                ].apply(
-                    lambda v: None
-                    if (pd.isna(v) or v == "NaT")
-                    else v
-                )
+                ].apply(lambda v: None if (pd.isna(v) or v == "NaT") else v)
             drop_cols = [col for col in columns_to_drop if col in catalogue.columns]
             catalogue = catalogue.drop(columns=drop_cols)
 
@@ -198,15 +204,21 @@ class Client(BaseClient):
             "Owner",
             "Workspaces",
         ]
-        ordered_cols = [
-            col for col in desired_order if col in catalogue.columns
-        ] + [col for col in catalogue.columns if col not in desired_order]
+        ordered_cols = [col for col in desired_order if col in catalogue.columns] + [
+            col for col in catalogue.columns if col not in desired_order
+        ]
 
         return catalogue[ordered_cols]
 
     def get(
         self, data_ids: str | list[str]
-    ) -> list[RHEEDVideoResult | RHEEDImageResult | XPSResult]:
+    ) -> list[
+        RHEEDVideoResult
+        | RHEEDImageResult
+        | XPSResult
+        | PhotoluminescenceResult
+        | RamanResult
+    ]:
         """Get analyzed data results
 
         Args:
@@ -220,13 +232,26 @@ class Client(BaseClient):
         if isinstance(data_ids, str):
             data_ids = [data_ids]
 
-        data: list[dict] = self._get(  # type: ignore  # noqa: PGH003
-            sub_url="data_entries/",
-            params={
-                "data_ids": data_ids,
-                "include_organization_data": True,
-            },
-        )
+        # Chunk requests to avoid overly long query strings
+        data: list[dict] = []
+        chunk_size = 100
+        chunks = [
+            data_ids[i : i + chunk_size]  # type: ignore[index]
+            for i in range(0, len(data_ids), chunk_size)
+        ]
+
+        for chunk in chunks:
+            chunk_data: list[dict] | dict | None = self._get(  # type: ignore[assignment] # noqa: PGH003
+                sub_url="data_entries/",
+                params={
+                    "data_ids": chunk,
+                    "include_organization_data": True,
+                },
+            )
+            if chunk_data:
+                data.extend(
+                    chunk_data if isinstance(chunk_data, list) else [chunk_data]
+                )
 
         kwargs_list = []
         for entry in data:
@@ -265,15 +290,21 @@ class Client(BaseClient):
                 lambda note: note.get("content") if isinstance(note, dict) else None
             )
             samples["detail_note_last_updated"] = samples["detail_notes"].apply(
-                lambda note: note.get("last_updated") if isinstance(note, dict) else None
+                lambda note: note.get("last_updated")
+                if isinstance(note, dict)
+                else None
             )
-            samples["detail_note_last_updated"] = samples["detail_note_last_updated"].apply(
-                lambda v: None if (pd.isna(v) or v == "NaT") else v
-            )
+            samples["detail_note_last_updated"] = samples[
+                "detail_note_last_updated"
+            ].apply(lambda v: None if (pd.isna(v) or v == "NaT") else v)
 
         if "target_material" in samples.columns:
             samples["target_material"] = samples["target_material"].apply(
-                lambda tm: {k: tm.get(k) for k in ("substrate", "sample_name") if isinstance(tm, dict) and k in tm}
+                lambda tm: {
+                    k: tm.get(k)
+                    for k in ("substrate", "sample_name")
+                    if isinstance(tm, dict) and k in tm
+                }
                 if isinstance(tm, dict)
                 else tm
             )
@@ -326,9 +357,9 @@ class Client(BaseClient):
             "Last Updated",
             "Owner",
         ]
-        ordered_cols = [
-            col for col in desired_order if col in samples.columns
-        ] + [col for col in samples.columns if col not in desired_order]
+        ordered_cols = [col for col in desired_order if col in samples.columns] + [
+            col for col in samples.columns if col not in desired_order
+        ]
 
         return samples[ordered_cols]
 
@@ -344,11 +375,13 @@ class Client(BaseClient):
                 lambda note: note.get("content") if isinstance(note, dict) else None
             )
             projects["detail_note_last_updated"] = projects["detail_note"].apply(
-                lambda note: note.get("last_updated") if isinstance(note, dict) else None
+                lambda note: note.get("last_updated")
+                if isinstance(note, dict)
+                else None
             )
-            projects["detail_note_last_updated"] = projects["detail_note_last_updated"].apply(
-                lambda v: None if (pd.isna(v) or v == "NaT") else v
-            )
+            projects["detail_note_last_updated"] = projects[
+                "detail_note_last_updated"
+            ].apply(lambda v: None if (pd.isna(v) or v == "NaT") else v)
 
         columns_to_drop = [
             "owner_id",
@@ -380,13 +413,13 @@ class Client(BaseClient):
             "Last Updated",
             "Owner",
         ]
-        ordered_cols = [
-            col for col in desired_order if col in projects.columns
-        ] + [col for col in projects.columns if col not in desired_order]
+        ordered_cols = [col for col in desired_order if col in projects.columns] + [
+            col for col in projects.columns if col not in desired_order
+        ]
 
         return projects[ordered_cols]
 
-    def get_sample(
+    def get_physical_sample(
         self,
         physical_sample_id: str,
         *,
@@ -402,16 +435,26 @@ class Client(BaseClient):
             align: Whether to align timeseries data. If truthy, an aligned DataFrame is returned.
             resample: Optional pandas resample rule applied after alignment.
         """
-        entries: list[dict] = self._get(  # type: ignore  # noqa: PGH003
+        physical_samples: list[dict] | None = self._get(  # type: ignore  # noqa: PGH003
+            sub_url="physical_samples/",
+            params={"physical_sample_id": physical_sample_id},
+        )
+        if physical_samples and not isinstance(physical_samples, list):
+            physical_samples = [physical_samples]
+
+        entries: list[dict] | None = self._get(  # type: ignore  # noqa: PGH003
             sub_url="data_entries/",
             params={
                 "physical_sample_ids": [physical_sample_id],
                 "include_organization_data": include_organization_data,
             },
         )
-        data_ids = [e["data_id"] for e in entries] if entries else []
-        results = self.get(data_ids=data_ids) if data_ids else []
+        if entries and not isinstance(entries, list):
+            entries = [entries]
 
+        data_ids = [e["data_id"] for e in entries] if entries else []
+
+        results = self.get(data_ids=data_ids) if data_ids else []
         join_how = "outer"
         if isinstance(align, str):
             join_how = align
@@ -427,9 +470,16 @@ class Client(BaseClient):
             for r in results
             if not hasattr(r, "timeseries_data") or r.timeseries_data is None
         ]
-        sample_name = entries[0].get("physical_sample_name") if entries else None
+        sample_name = (
+            physical_samples[0].get("name")
+            if physical_samples
+            else entries[0].get("physical_sample_name")
+            if entries
+            else None
+        )
+        sample_id = physical_sample_id
         return PhysicalSampleResult(
-            physical_sample_id=physical_sample_id,
+            physical_sample_id=sample_id,
             physical_sample_name=sample_name,
             data_results=results,
             aligned_timeseries=ts_aligned,
@@ -452,23 +502,20 @@ class Client(BaseClient):
             align: Whether to align timeseries at the project level. Defaults to False.
             resample: Optional pandas resample rule applied after alignment.
         """
-        entries: list[dict] = self._get(  # type: ignore  # noqa: PGH003
-            sub_url="data_entries/",
-            params={
-                "project_ids": [project_id],
-                "include_organization_data": include_organization_data,
-            },
+        # Get physical samples associated with the project, then fetch data per sample.
+        project_samples: list[dict] = (
+            self._get(sub_url=f"projects/{project_id}/physical_samples") or []
         )
-        if not entries:
+        if not project_samples:
             return ProjectResult(project_id, None, [], None)
 
-        sample_ids = {e.get("physical_sample_id") for e in entries if e.get("physical_sample_id")}
         sample_results: list[PhysicalSampleResult] = []
-        for sid in sample_ids:
+        for sample in project_samples:
+            sid = sample.get("id")
             if not sid:
                 continue
             sample_results.append(
-                self.get_sample(
+                self.get_physical_sample(
                     sid,
                     include_organization_data=include_organization_data,
                     align=align,
@@ -497,7 +544,7 @@ class Client(BaseClient):
                 for frame in frames[1:]:
                     project_aligned = project_aligned.join(frame, how="outer")
 
-        project_name = entries[0].get("project_name")
+        project_name = None
         return ProjectResult(
             project_id=project_id,
             project_name=project_name,
@@ -510,14 +557,25 @@ class Client(BaseClient):
         data_id: str,
         data_type: Literal[
             "xps",
+            "photoluminescence",
+            "pl",
+            "raman",
             "rheed_image",
             "rheed_stationary",
             "rheed_rotating",
             "rheed_xscan",
             "metrology",
+            "recipe",
             "optical",
         ],
-    ) -> RHEEDVideoResult | RHEEDImageResult | XPSResult | None:
+    ) -> (
+        RHEEDVideoResult
+        | RHEEDImageResult
+        | XPSResult
+        | PhotoluminescenceResult
+        | RamanResult
+        | None
+    ):
         if data_type == "xps":
             result: dict = self._get(sub_url=f"xps/{data_id}")  # type: ignore  # noqa: PGH003
 
@@ -531,6 +589,35 @@ class Client(BaseClient):
                 elements_manually_set=bool(result["set_elements"]),
             )
 
+        if data_type in ("photoluminescence", "pl"):
+            result = (
+                self._get(  # type: ignore  # noqa: PGH003
+                    sub_url=f"photoluminescence/{data_id}"
+                )
+                or {}
+            )
+            return PhotoluminescenceResult(
+                data_id=data_id,
+                photoluminescence_id=result.get(
+                    "photoluminescence_id", result.get("id")
+                ),
+                energies=result.get("energies", []),
+                intensities=result.get("intensities", []),
+                detected_peaks=result.get("detected_peaks", {}),
+                last_updated=result.get("last_updated"),
+            )
+
+        if data_type == "raman":
+            result = self._get(sub_url=f"raman/{data_id}") or {}  # type: ignore  # noqa: PGH003
+            return RamanResult(
+                data_id=data_id,
+                raman_id=result.get("raman_id", result.get("id")),
+                raman_shift=result.get("energies", result.get("wavenumbers", [])),
+                intensities=result.get("intensities", []),
+                detected_peaks=result.get("detected_peaks", {}),
+                last_updated=result.get("last_updated"),
+            )
+
         if data_type == "rheed_image":
             return _get_rheed_image_result(self, data_id)
 
@@ -539,9 +626,17 @@ class Client(BaseClient):
             "rheed_rotating",
             "rheed_xscan",
             "metrology",
+            "recipe",
             "optical",
         ]:
-            timeseries_type = "rheed" if "rheed" in data_type else data_type
+            # recipe timeseries are served from the metrology endpoint; reuse that provider.
+            timeseries_type = (
+                "rheed"
+                if "rheed" in data_type
+                else "metrology"
+                if data_type == "recipe"
+                else data_type
+            )
             provider = get_provider(timeseries_type)
 
             # Get timeseries data
