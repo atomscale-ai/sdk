@@ -1,10 +1,13 @@
-from pandas import DataFrame
-import pytest
-from atomicds import Client
 from datetime import datetime
 from pathlib import Path
 from unittest import mock
 from urllib.parse import urljoin
+
+import pytest
+from pandas import DataFrame
+
+from atomicds import Client
+from atomicds.core import ClientError
 from .conftest import ResultIDs
 
 
@@ -115,6 +118,61 @@ def test_get(client: Client):
     data_types = set([type(result) for result in results])
 
     assert len(data_types) == 3
+
+
+def test_list_physical_samples(client: Client):
+    samples = client.list_physical_samples()
+
+    assert isinstance(samples, DataFrame)
+    if len(samples):
+        assert samples["Physical Sample ID"].notna().any()
+
+
+def test_list_projects(client: Client):
+    projects = client.list_projects()
+
+    assert isinstance(projects, DataFrame)
+    if len(projects):
+        assert projects["Project ID"].notna().any()
+
+
+def test_get_physical_sample(client: Client):
+    samples = client.list_physical_samples()
+    if not len(samples):
+        pytest.skip("No physical samples available")
+
+    sample_id = samples["Physical Sample ID"].dropna().iloc[0]
+    result = client.get_physical_sample(
+        sample_id, include_organization_data=False, align=False
+    )
+
+    assert result.physical_sample_id == sample_id
+    assert isinstance(result.data_results, list)
+
+
+def test_get_project(client: Client):
+    projects = client.list_projects()
+    if not len(projects):
+        pytest.skip("No projects available")
+
+    project_id = projects["Project ID"].dropna().iloc[0]
+    project = client.get_project(project_id, include_organization_data=False, align=False)
+
+    assert project.project_id == project_id
+    assert hasattr(project, "samples")
+
+
+def test_upload_rejects_missing_file(tmp_path):
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    missing_file = tmp_path / "nope.dat"
+
+    with pytest.raises(ClientError, match="does not exist"):
+        client.upload(files=[str(missing_file)])
+
+
+def test_download_videos_missing_metadata(client: Client, tmp_path):
+    with pytest.raises(ClientError, match="No processed data found"):
+        client.download_videos(data_ids="missing-id", dest_dir=tmp_path)
 
 
 # @pytest.mark.order(2)
