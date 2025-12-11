@@ -23,7 +23,7 @@ __path__ = getattr(_atomscale, "__path__", [])
 __version__ = getattr(_atomscale, "__version__", None)
 
 if _atomscale.__spec__:
-    __spec__ = importlib.util.spec_from_loader(
+    __spec__ = importlib.util.spec_from_loader(  # type: ignore[assignment]
         __name__,
         loader=None,
         origin=_atomscale.__spec__.origin,
