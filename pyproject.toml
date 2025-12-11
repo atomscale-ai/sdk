@@ -37,7 +37,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://www.atomscale.ai"
-Documentation = "https://atomic-data-sciences.github.io/api-client"
+Documentation = "https://atomscale-ai.github.io/sdk"
 
 [tool.setuptools_scm]
 
@@ -48,6 +48,7 @@ dev = [
   "pytest-cov",
   "pytest-order",
   "pytest-dependency",
+  "pytest-asyncio",
   "ruff",
   "mypy",
   "types-requests",
