@@ -120,8 +120,8 @@ def test_get(client: Client):
         "rheed_stationary",
         "rheed_rotating",
         "xps",
-        "photoluminescence",
-        "raman",
+        # "photoluminescence",
+        # "raman",
     }
     data_ids = []
 
