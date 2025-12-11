@@ -34,6 +34,7 @@
             
   <section id="atomicds-api-client">
 <h1>atomicds API Client<a class="headerlink" href="#atomicds-api-client" title="Link to this heading">¶</a></h1>
+<p><a class="reference external" href="https://github.com/atomscale-ai/sdk/actions?query=workflow%3A%22Testing%22"><img alt="Testing status" src="https://github.com/atomscale-ai/sdk/workflows/Testing/badge.svg" /></a> <a class="reference external" href="https://github.com/atomscale-ai/sdk/releases/"><img alt="Latest tag" src="https://img.shields.io/github/tag/atomscale-ai/sdk?include_prereleases=&amp;sort=semver&amp;color=blue" /></a> <img alt="Supported Python versions" src="https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python&amp;logoColor=white" /> <a class="reference external" href="https://github.com/atomscale-ai/sdk/blob/main/LICENSE"><img alt="License: GPLv3" src="https://img.shields.io/badge/License-GPLv3-blue" /></a></p>
 <p><code class="docutils literal notranslate"><span class="pre">atomicds</span></code> is the Python SDK for the Atomscale platform. Use these docs to
 install the client, move data, and integrate streaming or polling workflows.
 The material is split into:</p>
@@ -42,8 +43,26 @@ The material is split into:</p>
 <li><p>Auto-generated API references pulled directly from the source.</p></li>
 </ul>
 <p>If you need help from a human, open an issue on
-<a class="reference external" href="https://github.com/atomic-data-sciences/api-client">GitHub</a> or email
+<a class="reference external" href="https://github.com/atomscale-ai/sdk">GitHub</a> or email
 <a class="reference external" href="mailto:support&#37;&#52;&#48;atomscale&#46;ai">support<span>&#64;</span>atomscale<span>&#46;</span>ai</a>.</p>
+<section id="features">
+<h2>Features<a class="headerlink" href="#features" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Unified <code class="xref py py-class docutils literal notranslate"><span class="pre">atomicds.client.Client</span></code> for uploads, catalogue search, and downloads.</p></li>
+<li><p>Streaming helpers for live RHEED capture via push or generator-style interfaces.</p></li>
+<li><p>Fine-grained search filters for IDs, data types, lifecycle states, and time bounds.</p></li>
+<li><p>Rich result objects exposing timeseries, diffraction graphs, and processed videos.</p></li>
+<li><p>Polling utilities for synchronous, threaded, or async consumption of updates.</p></li>
+</ul>
+</section>
+<section id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>atomicds
+</pre></div>
+</div>
+<p>Set the <code class="docutils literal notranslate"><span class="pre">AS_API_KEY</span></code> and (optional) <code class="docutils literal notranslate"><span class="pre">AS_API_ENDPOINT</span></code> environment variables
+before creating a <code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code>, or pass them directly when
+constructing the client in your scripts.</p>
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="guides/index.html">User Guides</a><ul>
@@ -70,6 +89,7 @@ The material is split into:</p>
 </li>
 </ul>
 </div>
+</section>
 <section id="indices-and-tables">
 <h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">¶</a></h2>
 <ul class="simple">
@@ -90,6 +110,8 @@ The material is split into:</p>
 <h1 class="logo"><a href="#">atomicds</a></h1>
 
 
+
+<p class="blurb">Python SDK</p>
 
 
 

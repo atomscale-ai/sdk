@@ -40,26 +40,26 @@ for calling the Atomscale API.</p>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p>Python 3.9 or newer</p></li>
+<li><p>Python 3.10 or newer</p></li>
 <li><p>An active Atomscale account</p></li>
 <li><p>An API key from the Atomscale web app (Profile → Account Management)</p></li>
 </ul>
 </section>
 <section id="install-the-client">
 <h2>Install the client<a class="headerlink" href="#install-the-client" title="Link to this heading">¶</a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>atomicds
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>atomicds
 </pre></div>
 </div>
 </section>
 <section id="create-a-client">
 <h2>Create a client<a class="headerlink" href="#create-a-client" title="Link to this heading">¶</a></h2>
-<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">atomicds.client.Client</span></code> reads <code class="docutils literal notranslate"><span class="pre">ADS_API_KEY</span></code> and
-<code class="docutils literal notranslate"><span class="pre">ADS_API_ENDPOINT</span></code> from the environment. Export the variables, or pass values
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">atomicds.client.Client</span></code> reads <code class="docutils literal notranslate"><span class="pre">AS_API_KEY</span></code> and
+<code class="docutils literal notranslate"><span class="pre">AS_API_ENDPOINT</span></code> from the environment. Export the variables, or pass values
 explicitly if you prefer.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
 
-<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;ADS_API_KEY&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;YOUR_API_KEY&quot;</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;AS_API_KEY&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;YOUR_API_KEY&quot;</span>
 
 <span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">()</span>
 </pre></div>
@@ -92,6 +92,8 @@ explicitly if you prefer.</p>
 <h1 class="logo"><a href="../index.html">atomicds</a></h1>
 
 
+
+<p class="blurb">Python SDK</p>
 
 
 

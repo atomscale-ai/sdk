@@ -39,16 +39,22 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">BinaryIO</span><span class="p">,</span> <span class="n">Literal</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseClient</span><span class="p">,</span> <span class="n">ClientError</span><span class="p">,</span> <span class="n">_FileSlice</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.core.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">_make_progress</span><span class="p">,</span> <span class="n">normalize_path</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.results</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">PhotoluminescenceResult</span><span class="p">,</span>
+    <span class="n">RamanResult</span><span class="p">,</span>
     <span class="n">RHEEDImageResult</span><span class="p">,</span>
     <span class="n">RHEEDVideoResult</span><span class="p">,</span>
+    <span class="n">UnknownResult</span><span class="p">,</span>
     <span class="n">XPSResult</span><span class="p">,</span>
     <span class="n">_get_rheed_image_result</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.results.group</span><span class="w"> </span><span class="kn">import</span> <span class="n">PhysicalSampleResult</span><span class="p">,</span> <span class="n">ProjectResult</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.timeseries.align</span><span class="w"> </span><span class="kn">import</span> <span class="n">align_timeseries</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">atomicds.timeseries.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_provider</span>
 
 <span class="n">TimeseriesDomain</span> <span class="o">=</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;rheed&quot;</span><span class="p">,</span> <span class="s2">&quot;optical&quot;</span><span class="p">,</span> <span class="s2">&quot;metrology&quot;</span><span class="p">]</span>
@@ -64,18 +70,22 @@
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;https://api.atomscale.ai/&quot;</span><span class="p">,</span>
+        <span class="n">endpoint</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">mute_bars</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Args:</span>
-<span class="sd">            api_key (str | None): API key. Defaults to None which will try and pull from the ADS_API_KEY environment variable.</span>
-<span class="sd">            endpoint (str): Root API endpoint. Will prioritize pulling from the ADS_API_ENDPOINT environment variable.</span>
-<span class="sd">                If none provided it defaults to &#39;https://api.atomicdatasciences.com/&#39;.</span>
+<span class="sd">            api_key (str | None): API key. Explicit value takes precedence; if None, falls back to AS_API_KEY environment variable.</span>
+<span class="sd">            endpoint (str): Root API endpoint. Explicit value takes precedence; if None, falls back to AS_API_ENDPOINT environment variable,</span>
+<span class="sd">                defaulting to &#39;https://api.atomscale.ai/&#39; if not set.</span>
 <span class="sd">            mute_bars (bool): Whether to mute progress bars. Defaults to False.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">api_key</span> <span class="o">=</span> <span class="n">api_key</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ADS_API_KEY&quot;</span><span class="p">)</span>
-        <span class="n">endpoint</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ADS_API_ENDPOINT&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">endpoint</span>
+
+        <span class="k">if</span> <span class="n">api_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">api_key</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;AS_API_KEY&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">endpoint</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">endpoint</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;AS_API_ENDPOINT&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;https://api.atomscale.ai/&quot;</span>
 
         <span class="k">if</span> <span class="n">api_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No valid ADS API key supplied&quot;</span><span class="p">)</span>
@@ -92,8 +102,18 @@
         <span class="n">keywords</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">include_organization_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">data_ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">physical_sample_ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">project_ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">data_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
-            <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span> <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span> <span class="s2">&quot;xps&quot;</span><span class="p">,</span> <span class="s2">&quot;all&quot;</span>
+            <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;xps&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;photoluminescence&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pl&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;raman&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;all&quot;</span><span class="p">,</span>
         <span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;all&quot;</span><span class="p">,</span>
         <span class="n">status</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
             <span class="s2">&quot;success&quot;</span><span class="p">,</span>
@@ -118,7 +138,9 @@
 <span class="sd">            include_organization_data (bool): Whether to include catalogue entries from other users in</span>
 <span class="sd">                your organization. Defaults to True.</span>
 <span class="sd">            data_ids (str | list[str] | None): Data ID or list of data IDs. Defaults to None.</span>
-<span class="sd">            data_type (Literal[&quot;rheed_image&quot;, &quot;rheed_stationary&quot;, &quot;rheed_rotating&quot;, &quot;xps&quot;, &quot;all&quot;]): Type of data. Defaults to &quot;all&quot;.</span>
+<span class="sd">            physical_sample_ids (str | list[str] | None): Physical sample ID or list of IDs. Defaults to None.</span>
+<span class="sd">            project_ids (str | list[str] | None): Project ID or list of IDs. Defaults to None.</span>
+<span class="sd">            data_type (Literal[&quot;rheed_image&quot;, &quot;rheed_stationary&quot;, &quot;rheed_rotating&quot;, &quot;xps&quot;, &quot;photoluminescence&quot;, &quot;raman&quot;, &quot;all&quot;]): Type of data. Defaults to &quot;all&quot;.</span>
 <span class="sd">            status (Literal[&quot;success&quot;, &quot;pending&quot;, &quot;error&quot;, &quot;running&quot;, &quot;all&quot;]): Analyzed status of the data. Defaults to &quot;all&quot;.</span>
 <span class="sd">            growth_length (tuple[int | None, int | None]): Minimum and maximum values of the growth length in seconds.</span>
 <span class="sd">                Defaults to (None, None) which will include all non-video data.</span>
@@ -135,6 +157,8 @@
             <span class="s2">&quot;keywords&quot;</span><span class="p">:</span> <span class="n">keywords</span><span class="p">,</span>
             <span class="s2">&quot;include_organization_data&quot;</span><span class="p">:</span> <span class="n">include_organization_data</span><span class="p">,</span>
             <span class="s2">&quot;data_ids&quot;</span><span class="p">:</span> <span class="n">data_ids</span><span class="p">,</span>
+            <span class="s2">&quot;physical_sample_ids&quot;</span><span class="p">:</span> <span class="n">physical_sample_ids</span><span class="p">,</span>
+            <span class="s2">&quot;project_ids&quot;</span><span class="p">:</span> <span class="n">project_ids</span><span class="p">,</span>
             <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;all&quot;</span> <span class="k">else</span> <span class="n">data_type</span><span class="p">,</span>
             <span class="s2">&quot;status&quot;</span><span class="p">:</span> <span class="n">status</span><span class="p">,</span>
             <span class="s2">&quot;growth_length_min&quot;</span><span class="p">:</span> <span class="n">growth_length</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
@@ -168,6 +192,8 @@
             <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="s2">&quot;Tags&quot;</span><span class="p">,</span>
             <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Owner&quot;</span><span class="p">,</span>
             <span class="s2">&quot;workspaces&quot;</span><span class="p">:</span> <span class="s2">&quot;Workspaces&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;project_ids&quot;</span><span class="p">:</span> <span class="s2">&quot;Project ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;project_names&quot;</span><span class="p">:</span> <span class="s2">&quot;Project Name&quot;</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="n">columns_to_drop</span> <span class="o">=</span> <span class="p">[</span>
@@ -176,20 +202,69 @@
             <span class="s2">&quot;sample_id&quot;</span><span class="p">,</span>
             <span class="s2">&quot;processed_file_type&quot;</span><span class="p">,</span>
             <span class="s2">&quot;bucket_file_name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;projects&quot;</span><span class="p">,</span>
         <span class="p">]</span>
         <span class="n">catalogue</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">catalogue</span><span class="p">):</span>
-            <span class="n">catalogue</span> <span class="o">=</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns_to_drop</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;projects&quot;</span> <span class="ow">in</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">catalogue</span><span class="p">[</span><span class="s2">&quot;project_ids&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">catalogue</span><span class="p">[</span><span class="s2">&quot;projects&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">projects</span><span class="p">:</span> <span class="p">(</span><span class="n">projects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">projects</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">catalogue</span><span class="p">[</span><span class="s2">&quot;project_names&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">catalogue</span><span class="p">[</span><span class="s2">&quot;projects&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">projects</span><span class="p">:</span> <span class="p">(</span><span class="n">projects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">projects</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">column_mapping</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">catalogue</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s2">&quot;detail_note_last_updated&quot;</span> <span class="ow">in</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">catalogue</span><span class="p">[</span><span class="s2">&quot;detail_note_last_updated&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">catalogue</span><span class="p">[</span>
+                    <span class="s2">&quot;detail_note_last_updated&quot;</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">or</span> <span class="n">v</span> <span class="o">==</span> <span class="s2">&quot;NaT&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">v</span><span class="p">)</span>
+            <span class="n">drop_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns_to_drop</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+            <span class="n">catalogue</span> <span class="o">=</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">drop_cols</span><span class="p">)</span>
+
+        <span class="n">catalogue</span> <span class="o">=</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">column_mapping</span><span class="p">)</span>
+
+        <span class="n">desired_order</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;Data ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;File Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Type&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Status&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;File Type&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Instrument Source&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Sample Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Physical Sample ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Physical Sample Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Project ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Project Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Growth Length&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Upload Datetime&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Last Accessed Datetime&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Sample Notes&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Sample Notes Last Updated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;File Metadata&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Tags&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Owner&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Workspaces&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">ordered_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">desired_order</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span>
+            <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">catalogue</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">desired_order</span>
+        <span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">catalogue</span><span class="p">[</span><span class="n">ordered_cols</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="Client.get">
 <a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.get">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">data_ids</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">RHEEDVideoResult</span> <span class="o">|</span> <span class="n">RHEEDImageResult</span> <span class="o">|</span> <span class="n">XPSResult</span><span class="p">]:</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span>
+        <span class="n">RHEEDVideoResult</span>
+        <span class="o">|</span> <span class="n">RHEEDImageResult</span>
+        <span class="o">|</span> <span class="n">XPSResult</span>
+        <span class="o">|</span> <span class="n">PhotoluminescenceResult</span>
+        <span class="o">|</span> <span class="n">RamanResult</span>
+        <span class="o">|</span> <span class="n">UnknownResult</span>
+    <span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get analyzed data results</span>
 
 <span class="sd">        Args:</span>
@@ -203,19 +278,38 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data_ids</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="n">data_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_ids</span><span class="p">]</span>
 
-        <span class="n">data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-            <span class="n">sub_url</span><span class="o">=</span><span class="s2">&quot;data_entries/&quot;</span><span class="p">,</span>
-            <span class="n">params</span><span class="o">=</span><span class="p">{</span>
-                <span class="s2">&quot;data_ids&quot;</span><span class="p">:</span> <span class="n">data_ids</span><span class="p">,</span>
-                <span class="s2">&quot;include_organization_data&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-            <span class="p">},</span>
-        <span class="p">)</span>
+        <span class="c1"># Chunk requests to avoid overly long query strings</span>
+        <span class="n">data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">chunk_size</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="n">chunks</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">data_ids</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">]</span>  <span class="c1"># type: ignore[index]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_ids</span><span class="p">),</span> <span class="n">chunk_size</span><span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">chunks</span><span class="p">:</span>
+            <span class="n">chunk_data</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore[assignment]</span>
+                <span class="n">sub_url</span><span class="o">=</span><span class="s2">&quot;data_entries/&quot;</span><span class="p">,</span>
+                <span class="n">params</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">&quot;data_ids&quot;</span><span class="p">:</span> <span class="n">chunk</span><span class="p">,</span>
+                    <span class="s2">&quot;include_organization_data&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="p">},</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">chunk_data</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                    <span class="n">chunk_data</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chunk_data</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="k">else</span> <span class="p">[</span><span class="n">chunk_data</span><span class="p">]</span>
+                <span class="p">)</span>
 
         <span class="n">kwargs_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
             <span class="n">data_id</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;data_id&quot;</span><span class="p">]</span>
             <span class="n">data_type</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="s2">&quot;char_source_type&quot;</span><span class="p">]</span>
-            <span class="n">kwargs_list</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;data_id&quot;</span><span class="p">:</span> <span class="n">data_id</span><span class="p">,</span> <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="n">data_type</span><span class="p">})</span>
+            <span class="n">kwargs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;data_id&quot;</span><span class="p">:</span> <span class="n">data_id</span><span class="p">,</span>
+                    <span class="s2">&quot;data_type&quot;</span><span class="p">:</span> <span class="n">data_type</span><span class="p">,</span>
+                    <span class="s2">&quot;catalogue_entry&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
 
         <span class="c1"># sort by submission order; this is important to match external labels</span>
         <span class="n">kwargs_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">kwargs_list</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">data_ids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="s2">&quot;data_id&quot;</span><span class="p">]))</span>
@@ -229,19 +323,326 @@
             <span class="p">)</span></div>
 
 
+<div class="viewcode-block" id="Client.list_physical_samples">
+<a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.list_physical_samples">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_physical_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List physical samples available to the user.&quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="s2">&quot;physical_samples/&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">DataFrame</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;projects&quot;</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;project_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;projects&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">projects</span><span class="p">:</span> <span class="p">(</span><span class="n">projects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">projects</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;project_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;projects&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">projects</span><span class="p">:</span> <span class="p">(</span><span class="n">projects</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">projects</span> <span class="k">else</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;detail_notes&quot;</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;detail_note_content&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;detail_notes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">note</span><span class="p">:</span> <span class="n">note</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+            <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;detail_note_last_updated&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;detail_notes&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">note</span><span class="p">:</span> <span class="n">note</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;last_updated&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+            <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;detail_note_last_updated&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span>
+                <span class="s2">&quot;detail_note_last_updated&quot;</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">or</span> <span class="n">v</span> <span class="o">==</span> <span class="s2">&quot;NaT&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">v</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;target_material&quot;</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;target_material&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">samples</span><span class="p">[</span><span class="s2">&quot;target_material&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">tm</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="n">k</span><span class="p">:</span> <span class="n">tm</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;substrate&quot;</span><span class="p">,</span> <span class="s2">&quot;sample_name&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tm</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">tm</span>
+                <span class="p">}</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tm</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                <span class="k">else</span> <span class="n">tm</span>
+            <span class="p">)</span>
+
+        <span class="n">columns_to_drop</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;sample_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detail_notes_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;user_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;growth_instrument_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;owner_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;projects&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detail_notes&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="n">column_mapping</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;physical_sample_metadata&quot;</span><span class="p">:</span> <span class="s2">&quot;Sample Metadata&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Physical Sample Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;last_updated&quot;</span><span class="p">:</span> <span class="s2">&quot;Last Updated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;created_datetime&quot;</span><span class="p">:</span> <span class="s2">&quot;Created Datetime&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;Physical Sample ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;owner_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Owner&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;target_material&quot;</span><span class="p">:</span> <span class="s2">&quot;Target Material&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;growth_instrument&quot;</span><span class="p">:</span> <span class="s2">&quot;Growth Instrument&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;num_data_items&quot;</span><span class="p">:</span> <span class="s2">&quot;Data Items&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;project_id&quot;</span><span class="p">:</span> <span class="s2">&quot;Project ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;project_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Project Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detail_note_content&quot;</span><span class="p">:</span> <span class="s2">&quot;Sample Notes&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detail_note_last_updated&quot;</span><span class="p">:</span> <span class="s2">&quot;Sample Notes Last Updated&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">samples</span><span class="p">):</span>
+            <span class="n">drop_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns_to_drop</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+            <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">drop_cols</span><span class="p">)</span>
+
+        <span class="n">samples</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">column_mapping</span><span class="p">)</span>
+
+        <span class="n">desired_order</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;Physical Sample ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Physical Sample Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Project ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Project Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Target Material&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Sample Metadata&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Sample Notes&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Sample Notes Last Updated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Growth Instrument&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Data Items&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Created Datetime&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Last Updated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Owner&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">ordered_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">desired_order</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span>
+            <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">desired_order</span>
+        <span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">samples</span><span class="p">[</span><span class="n">ordered_cols</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Client.list_projects">
+<a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.list_projects">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list_projects</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;List projects available to the user.&quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="s2">&quot;projects/&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">DataFrame</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">projects</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;detail_note&quot;</span> <span class="ow">in</span> <span class="n">projects</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">projects</span><span class="p">[</span><span class="s2">&quot;detail_note_content&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">projects</span><span class="p">[</span><span class="s2">&quot;detail_note&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">note</span><span class="p">:</span> <span class="n">note</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;content&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+            <span class="n">projects</span><span class="p">[</span><span class="s2">&quot;detail_note_last_updated&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">projects</span><span class="p">[</span><span class="s2">&quot;detail_note&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">note</span><span class="p">:</span> <span class="n">note</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;last_updated&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">note</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+            <span class="n">projects</span><span class="p">[</span><span class="s2">&quot;detail_note_last_updated&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">projects</span><span class="p">[</span>
+                <span class="s2">&quot;detail_note_last_updated&quot;</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="kc">None</span> <span class="k">if</span> <span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="ow">or</span> <span class="n">v</span> <span class="o">==</span> <span class="s2">&quot;NaT&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">v</span><span class="p">)</span>
+
+        <span class="n">columns_to_drop</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;owner_id&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detail_note&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="n">column_mapping</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;Project ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;last_updated&quot;</span><span class="p">:</span> <span class="s2">&quot;Last Updated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Project Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;physical_sample_count&quot;</span><span class="p">:</span> <span class="s2">&quot;Physical Sample Count&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;owner_name&quot;</span><span class="p">:</span> <span class="s2">&quot;Owner&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detail_note_content&quot;</span><span class="p">:</span> <span class="s2">&quot;Project Notes&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;detail_note_last_updated&quot;</span><span class="p">:</span> <span class="s2">&quot;Project Notes Last Updated&quot;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">projects</span><span class="p">):</span>
+            <span class="n">drop_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">columns_to_drop</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">projects</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+            <span class="n">projects</span> <span class="o">=</span> <span class="n">projects</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">drop_cols</span><span class="p">)</span>
+
+        <span class="n">projects</span> <span class="o">=</span> <span class="n">projects</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">column_mapping</span><span class="p">)</span>
+
+        <span class="n">desired_order</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;Project ID&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Project Name&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Physical Sample Count&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Project Notes&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Project Notes Last Updated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Last Updated&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Owner&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+        <span class="n">ordered_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">desired_order</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">projects</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span>
+            <span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">projects</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">desired_order</span>
+        <span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">projects</span><span class="p">[</span><span class="n">ordered_cols</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="Client.get_physical_sample">
+<a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.get_physical_sample">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_physical_sample</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">physical_sample_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">include_organization_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">align</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">resample</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PhysicalSampleResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all data for a physical sample.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            physical_sample_id: Identifier of the physical sample.</span>
+<span class="sd">            include_organization_data: Whether to include organization data. Defaults to True.</span>
+<span class="sd">            align: Whether to align timeseries data. If truthy, an aligned DataFrame is returned.</span>
+<span class="sd">            resample: Optional pandas resample rule applied after alignment.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">physical_samples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+            <span class="n">sub_url</span><span class="o">=</span><span class="s2">&quot;physical_samples/&quot;</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;physical_sample_id&quot;</span><span class="p">:</span> <span class="n">physical_sample_id</span><span class="p">},</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">physical_samples</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">physical_samples</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">physical_samples</span> <span class="o">=</span> <span class="p">[</span><span class="n">physical_samples</span><span class="p">]</span>
+
+        <span class="n">entries</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+            <span class="n">sub_url</span><span class="o">=</span><span class="s2">&quot;data_entries/&quot;</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;physical_sample_ids&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">physical_sample_id</span><span class="p">],</span>
+                <span class="s2">&quot;include_organization_data&quot;</span><span class="p">:</span> <span class="n">include_organization_data</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">entries</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">entries</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">entries</span> <span class="o">=</span> <span class="p">[</span><span class="n">entries</span><span class="p">]</span>
+
+        <span class="n">data_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="p">[</span><span class="s2">&quot;data_id&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">entries</span><span class="p">]</span> <span class="k">if</span> <span class="n">entries</span> <span class="k">else</span> <span class="p">[]</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">data_ids</span><span class="o">=</span><span class="n">data_ids</span><span class="p">)</span> <span class="k">if</span> <span class="n">data_ids</span> <span class="k">else</span> <span class="p">[]</span>
+        <span class="n">join_how</span> <span class="o">=</span> <span class="s2">&quot;outer&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">align</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">join_how</span> <span class="o">=</span> <span class="n">align</span>
+
+        <span class="n">ts_aligned</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">align_timeseries</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="n">join_how</span><span class="p">,</span> <span class="n">resample</span><span class="o">=</span><span class="n">resample</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">align</span>
+            <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+
+        <span class="n">non_timeseries</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">r</span>
+            <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="s2">&quot;timeseries_data&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">r</span><span class="o">.</span><span class="n">timeseries_data</span> <span class="ow">is</span> <span class="kc">None</span>
+        <span class="p">]</span>
+        <span class="n">sample_name</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">physical_samples</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">physical_samples</span>
+            <span class="k">else</span> <span class="n">entries</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;physical_sample_name&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">entries</span>
+            <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+        <span class="n">sample_id</span> <span class="o">=</span> <span class="n">physical_sample_id</span>
+        <span class="k">return</span> <span class="n">PhysicalSampleResult</span><span class="p">(</span>
+            <span class="n">physical_sample_id</span><span class="o">=</span><span class="n">sample_id</span><span class="p">,</span>
+            <span class="n">physical_sample_name</span><span class="o">=</span><span class="n">sample_name</span><span class="p">,</span>
+            <span class="n">data_results</span><span class="o">=</span><span class="n">results</span><span class="p">,</span>
+            <span class="n">aligned_timeseries</span><span class="o">=</span><span class="n">ts_aligned</span><span class="p">,</span>
+            <span class="n">non_timeseries</span><span class="o">=</span><span class="n">non_timeseries</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Client.get_project">
+<a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.get_project">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_project</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">project_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
+        <span class="n">include_organization_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">align</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">resample</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ProjectResult</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all data grouped by physical sample for a project.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            project_id: Identifier of the project.</span>
+<span class="sd">            include_organization_data: Whether to include organization data. Defaults to True.</span>
+<span class="sd">            align: Whether to align timeseries at the project level. Defaults to False.</span>
+<span class="sd">            resample: Optional pandas resample rule applied after alignment.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Get physical samples associated with the project, then fetch data per sample.</span>
+        <span class="n">project_samples</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;projects/</span><span class="si">{</span><span class="n">project_id</span><span class="si">}</span><span class="s2">/physical_samples&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">project_samples</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ProjectResult</span><span class="p">(</span><span class="n">project_id</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">[],</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="n">sample_results</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">PhysicalSampleResult</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">project_samples</span><span class="p">:</span>
+            <span class="n">sid</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">sid</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">sample_results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_physical_sample</span><span class="p">(</span>
+                    <span class="n">sid</span><span class="p">,</span>
+                    <span class="n">include_organization_data</span><span class="o">=</span><span class="n">include_organization_data</span><span class="p">,</span>
+                    <span class="n">align</span><span class="o">=</span><span class="n">align</span><span class="p">,</span>
+                    <span class="n">resample</span><span class="o">=</span><span class="n">resample</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">project_aligned</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">align</span><span class="p">:</span>
+            <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">sample_results</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">sample</span><span class="o">.</span><span class="n">aligned_timeseries</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">renamed</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">aligned_timeseries</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">renamed</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">MultiIndex</span><span class="o">.</span><span class="n">from_tuples</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">physical_sample_id</span><span class="p">,</span> <span class="o">*</span><span class="nb">tuple</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span>
+                        <span class="k">else</span> <span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">physical_sample_id</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">renamed</span><span class="o">.</span><span class="n">columns</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+                <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">renamed</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">frames</span><span class="p">:</span>
+                <span class="n">project_aligned</span> <span class="o">=</span> <span class="n">frames</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">frame</span> <span class="ow">in</span> <span class="n">frames</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                    <span class="n">project_aligned</span> <span class="o">=</span> <span class="n">project_aligned</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s2">&quot;outer&quot;</span><span class="p">)</span>
+
+        <span class="n">project_name</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">ProjectResult</span><span class="p">(</span>
+            <span class="n">project_id</span><span class="o">=</span><span class="n">project_id</span><span class="p">,</span>
+            <span class="n">project_name</span><span class="o">=</span><span class="n">project_name</span><span class="p">,</span>
+            <span class="n">samples</span><span class="o">=</span><span class="n">sample_results</span><span class="p">,</span>
+            <span class="n">aligned_timeseries</span><span class="o">=</span><span class="n">project_aligned</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_get_result_data</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">data_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span>
             <span class="s2">&quot;xps&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;photoluminescence&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pl&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;raman&quot;</span><span class="p">,</span>
             <span class="s2">&quot;rheed_image&quot;</span><span class="p">,</span>
             <span class="s2">&quot;rheed_stationary&quot;</span><span class="p">,</span>
             <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span>
             <span class="s2">&quot;rheed_xscan&quot;</span><span class="p">,</span>
             <span class="s2">&quot;metrology&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
             <span class="s2">&quot;optical&quot;</span><span class="p">,</span>
         <span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RHEEDVideoResult</span> <span class="o">|</span> <span class="n">RHEEDImageResult</span> <span class="o">|</span> <span class="n">XPSResult</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">catalogue_entry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span>
+        <span class="n">RHEEDVideoResult</span>
+        <span class="o">|</span> <span class="n">RHEEDImageResult</span>
+        <span class="o">|</span> <span class="n">XPSResult</span>
+        <span class="o">|</span> <span class="n">PhotoluminescenceResult</span>
+        <span class="o">|</span> <span class="n">RamanResult</span>
+        <span class="o">|</span> <span class="n">UnknownResult</span>
+        <span class="o">|</span> <span class="kc">None</span>
+    <span class="p">):</span>
         <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;xps&quot;</span><span class="p">:</span>
             <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;xps/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
 
@@ -255,6 +656,35 @@
                 <span class="n">elements_manually_set</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;set_elements&quot;</span><span class="p">]),</span>
             <span class="p">)</span>
 
+        <span class="k">if</span> <span class="n">data_type</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;photoluminescence&quot;</span><span class="p">,</span> <span class="s2">&quot;pl&quot;</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+                    <span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;photoluminescence/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="ow">or</span> <span class="p">{}</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">PhotoluminescenceResult</span><span class="p">(</span>
+                <span class="n">data_id</span><span class="o">=</span><span class="n">data_id</span><span class="p">,</span>
+                <span class="n">photoluminescence_id</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                    <span class="s2">&quot;photoluminescence_id&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span>
+                <span class="p">),</span>
+                <span class="n">energies</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;energies&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+                <span class="n">intensities</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;intensities&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+                <span class="n">detected_peaks</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;detected_peaks&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+                <span class="n">last_updated</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;last_updated&quot;</span><span class="p">),</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;raman&quot;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;raman/</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{}</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+            <span class="k">return</span> <span class="n">RamanResult</span><span class="p">(</span>
+                <span class="n">data_id</span><span class="o">=</span><span class="n">data_id</span><span class="p">,</span>
+                <span class="n">raman_id</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;raman_id&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)),</span>
+                <span class="n">raman_shift</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;energies&quot;</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;wavenumbers&quot;</span><span class="p">,</span> <span class="p">[])),</span>
+                <span class="n">intensities</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;intensities&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+                <span class="n">detected_peaks</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;detected_peaks&quot;</span><span class="p">,</span> <span class="p">{}),</span>
+                <span class="n">last_updated</span><span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;last_updated&quot;</span><span class="p">),</span>
+            <span class="p">)</span>
+
         <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;rheed_image&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">_get_rheed_image_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">)</span>
 
@@ -263,9 +693,17 @@
             <span class="s2">&quot;rheed_rotating&quot;</span><span class="p">,</span>
             <span class="s2">&quot;rheed_xscan&quot;</span><span class="p">,</span>
             <span class="s2">&quot;metrology&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;recipe&quot;</span><span class="p">,</span>
             <span class="s2">&quot;optical&quot;</span><span class="p">,</span>
         <span class="p">]:</span>
-            <span class="n">timeseries_type</span> <span class="o">=</span> <span class="s2">&quot;rheed&quot;</span> <span class="k">if</span> <span class="s2">&quot;rheed&quot;</span> <span class="ow">in</span> <span class="n">data_type</span> <span class="k">else</span> <span class="n">data_type</span>
+            <span class="c1"># recipe timeseries are served from the metrology endpoint; reuse that provider.</span>
+            <span class="n">timeseries_type</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;rheed&quot;</span>
+                <span class="k">if</span> <span class="s2">&quot;rheed&quot;</span> <span class="ow">in</span> <span class="n">data_type</span>
+                <span class="k">else</span> <span class="s2">&quot;metrology&quot;</span>
+                <span class="k">if</span> <span class="n">data_type</span> <span class="o">==</span> <span class="s2">&quot;recipe&quot;</span>
+                <span class="k">else</span> <span class="n">data_type</span>
+            <span class="p">)</span>
             <span class="n">provider</span> <span class="o">=</span> <span class="n">get_provider</span><span class="p">(</span><span class="n">timeseries_type</span><span class="p">)</span>
 
             <span class="c1"># Get timeseries data</span>
@@ -274,7 +712,12 @@
 
             <span class="k">return</span> <span class="n">provider</span><span class="o">.</span><span class="n">build_result</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">data_type</span><span class="p">,</span> <span class="n">ts_df</span><span class="p">)</span>
 
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Data type must be supported&quot;</span><span class="p">)</span>
+        <span class="c1"># Fallback for unknown/unsupported data types</span>
+        <span class="k">return</span> <span class="n">UnknownResult</span><span class="p">(</span>
+            <span class="n">data_id</span><span class="o">=</span><span class="n">data_id</span><span class="p">,</span>
+            <span class="n">data_type</span><span class="o">=</span><span class="n">data_type</span><span class="p">,</span>
+            <span class="n">catalogue_entry</span><span class="o">=</span><span class="n">catalogue_entry</span><span class="p">,</span>
+        <span class="p">)</span>
 
 <div class="viewcode-block" id="Client.upload">
 <a class="viewcode-back" href="../../_autosummary/atomicds.client.Client.html#atomicds.client.Client.upload">[docs]</a>
@@ -547,6 +990,8 @@
 <h1 class="logo"><a href="../../index.html">atomicds</a></h1>
 
 
+
+<p class="blurb">Python SDK</p>
 
 
 

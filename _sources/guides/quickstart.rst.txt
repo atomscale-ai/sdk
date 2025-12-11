@@ -7,7 +7,7 @@ for calling the Atomscale API.
 Prerequisites
 -------------
 
-- Python 3.9 or newer
+- Python 3.10 or newer
 - An active Atomscale account
 - An API key from the Atomscale web app (Profile → Account Management)
 
@@ -16,13 +16,13 @@ Install the client
 
 .. code-block:: bash
 
-   python -m pip install atomicds
+   pip install atomicds
 
 Create a client
 ---------------
 
-The :class:`atomicds.client.Client` reads ``ADS_API_KEY`` and
-``ADS_API_ENDPOINT`` from the environment. Export the variables, or pass values
+The :class:`atomicds.client.Client` reads ``AS_API_KEY`` and
+``AS_API_ENDPOINT`` from the environment. Export the variables, or pass values
 explicitly if you prefer.
 
 .. code-block:: python
@@ -30,7 +30,7 @@ explicitly if you prefer.
    import os
    from atomicds.client import Client
 
-   os.environ["ADS_API_KEY"] = "YOUR_API_KEY"
+   os.environ["AS_API_KEY"] = "YOUR_API_KEY"
 
    client = Client()
 
