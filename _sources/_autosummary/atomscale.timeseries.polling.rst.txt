@@ -1,0 +1,33 @@
+﻿atomscale.timeseries.polling
+============================
+
+.. automodule:: atomscale.timeseries.polling
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      aiter_poll
+      iter_poll
+      start_polling_task
+      start_polling_thread
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

@@ -1,0 +1,39 @@
+atomscale.client.Client
+=======================
+
+.. currentmodule:: atomscale.client
+
+.. autoclass:: Client
+   :members:
+   :show-inheritance:
+   :inherited-members:
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Client.__init__
+      ~Client.download_videos
+      ~Client.get
+      ~Client.get_physical_sample
+      ~Client.get_project
+      ~Client.list_physical_samples
+      ~Client.list_projects
+      ~Client.search
+      ~Client.upload
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Client.session
+   
+   

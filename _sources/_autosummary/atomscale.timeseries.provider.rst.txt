@@ -1,0 +1,38 @@
+﻿atomscale.timeseries.provider
+=============================
+
+.. automodule:: atomscale.timeseries.provider
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      extend_with_statistics
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:
+      :template: custom-class-template.rst
+   
+      TimeseriesProvider
+   
+   
+
+   
+   
+   
+
+
+

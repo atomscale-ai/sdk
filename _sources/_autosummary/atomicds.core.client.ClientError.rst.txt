@@ -1,6 +1,0 @@
-atomicds.core.client.ClientError
-================================
-
-.. currentmodule:: atomicds.core.client
-
-.. autoexception:: ClientError

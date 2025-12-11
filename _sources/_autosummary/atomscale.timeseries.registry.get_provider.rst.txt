@@ -1,0 +1,6 @@
+atomscale.timeseries.registry.get\_provider
+===========================================
+
+.. currentmodule:: atomscale.timeseries.registry
+
+.. autofunction:: get_provider

@@ -1,0 +1,6 @@
+atomscale.core.utils.convert\_to\_polar\_coordinates
+====================================================
+
+.. currentmodule:: atomscale.core.utils
+
+.. autofunction:: convert_to_polar_coordinates

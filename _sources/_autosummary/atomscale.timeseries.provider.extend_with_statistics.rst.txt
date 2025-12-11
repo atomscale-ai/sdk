@@ -1,0 +1,6 @@
+atomscale.timeseries.provider.extend\_with\_statistics
+======================================================
+
+.. currentmodule:: atomscale.timeseries.provider
+
+.. autofunction:: extend_with_statistics

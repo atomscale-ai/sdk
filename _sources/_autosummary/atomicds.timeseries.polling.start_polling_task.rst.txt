@@ -1,6 +1,0 @@
-atomicds.timeseries.polling.start\_polling\_task
-================================================
-
-.. currentmodule:: atomicds.timeseries.polling
-
-.. autofunction:: start_polling_task

@@ -1,0 +1,38 @@
+﻿atomscale.core.client
+=====================
+
+.. automodule:: atomscale.core.client
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:
+      :template: custom-class-template.rst
+   
+      BaseClient
+   
+   
+
+   
+   
+   .. rubric:: Exceptions
+
+   .. autosummary::
+      :toctree:
+   
+      ClientError
+   
+   
+
+
+

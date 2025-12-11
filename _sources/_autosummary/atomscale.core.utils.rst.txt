@@ -1,0 +1,36 @@
+﻿atomscale.core.utils
+====================
+
+.. automodule:: atomscale.core.utils
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      boxes_overlap
+      convert_to_polar_coordinates
+      generate_graph_from_nodes
+      normalize_path
+      normalize_pixel_dimensions
+      regions_horizontal_overlapping
+      rescale_cartesian_coordinates
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+

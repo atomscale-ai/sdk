@@ -1,0 +1,6 @@
+atomscale.core.utils.normalize\_pixel\_dimensions
+=================================================
+
+.. currentmodule:: atomscale.core.utils
+
+.. autofunction:: normalize_pixel_dimensions

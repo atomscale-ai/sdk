@@ -1,0 +1,6 @@
+atomscale.core.client.ClientError
+=================================
+
+.. currentmodule:: atomscale.core.client
+
+.. autoexception:: ClientError

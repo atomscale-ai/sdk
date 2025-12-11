@@ -1,6 +1,0 @@
-atomicds.core.utils.normalize\_pixel\_dimensions
-================================================
-
-.. currentmodule:: atomicds.core.utils
-
-.. autofunction:: normalize_pixel_dimensions

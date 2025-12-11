@@ -1,0 +1,6 @@
+atomscale.core.utils.regions\_horizontal\_overlapping
+=====================================================
+
+.. currentmodule:: atomscale.core.utils
+
+.. autofunction:: regions_horizontal_overlapping

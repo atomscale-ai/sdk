@@ -1,0 +1,6 @@
+atomscale.timeseries.polling.aiter\_poll
+========================================
+
+.. currentmodule:: atomscale.timeseries.polling
+
+.. autofunction:: aiter_poll

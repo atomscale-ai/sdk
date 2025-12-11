@@ -1,0 +1,6 @@
+atomscale.core.utils.boxes\_overlap
+===================================
+
+.. currentmodule:: atomscale.core.utils
+
+.. autofunction:: boxes_overlap

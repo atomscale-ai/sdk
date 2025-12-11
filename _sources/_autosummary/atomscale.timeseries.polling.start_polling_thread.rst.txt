@@ -1,0 +1,6 @@
+atomscale.timeseries.polling.start\_polling\_thread
+===================================================
+
+.. currentmodule:: atomscale.timeseries.polling
+
+.. autofunction:: start_polling_thread

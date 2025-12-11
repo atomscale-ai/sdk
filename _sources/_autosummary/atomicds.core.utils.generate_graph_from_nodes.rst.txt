@@ -1,6 +1,0 @@
-atomicds.core.utils.generate\_graph\_from\_nodes
-================================================
-
-.. currentmodule:: atomicds.core.utils
-
-.. autofunction:: generate_graph_from_nodes

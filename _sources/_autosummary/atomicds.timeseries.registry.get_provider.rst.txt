@@ -1,6 +1,0 @@
-atomicds.timeseries.registry.get\_provider
-==========================================
-
-.. currentmodule:: atomicds.timeseries.registry
-
-.. autofunction:: get_provider

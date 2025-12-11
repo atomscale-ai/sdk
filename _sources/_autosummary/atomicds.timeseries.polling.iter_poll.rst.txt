@@ -1,6 +1,0 @@
-atomicds.timeseries.polling.iter\_poll
-======================================
-
-.. currentmodule:: atomicds.timeseries.polling
-
-.. autofunction:: iter_poll

@@ -1,6 +1,0 @@
-atomicds.core.utils.rescale\_cartesian\_coordinates
-===================================================
-
-.. currentmodule:: atomicds.core.utils
-
-.. autofunction:: rescale_cartesian_coordinates

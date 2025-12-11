@@ -1,6 +1,0 @@
-atomicds.core.utils.regions\_horizontal\_overlapping
-====================================================
-
-.. currentmodule:: atomicds.core.utils
-
-.. autofunction:: regions_horizontal_overlapping
