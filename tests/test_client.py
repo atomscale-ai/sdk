@@ -132,13 +132,16 @@ def test_get(client: Client):
                     data = client.search(  # type: ignore[arg-type]
                         data_type=alias, include_organization_data=include_org
                     )
+
                 except ClientError:
                     continue
 
-                data_id_values = data["Data ID"].dropna().values
+                data_id_values = data["Data ID"].dropna().values if len(data) else []
+
                 if len(data_id_values):
                     data_id = data_id_values[0]
                     break
+
             if data_id:
                 break
 
@@ -150,7 +153,6 @@ def test_get(client: Client):
 
     results = client.get(data_ids=data_ids)
     data_types = {type(result) for result in results}
-
     assert len(results) == len(data_ids)
     assert len(data_types) >= 3
 
