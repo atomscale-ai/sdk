@@ -30,5 +30,5 @@ def test_data_structure(result: XPSResult):
     assert isinstance(result.intensities, list)
     assert len(result.binding_energies) == len(result.intensities)
     assert isinstance(result.predicted_composition, dict)
-    assert isinstance(result.detected_peaks, dict)
+    assert isinstance(result.detected_peaks, list)
     assert isinstance(result.elements_manually_set, bool)
