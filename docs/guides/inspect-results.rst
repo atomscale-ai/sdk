@@ -2,7 +2,7 @@ Inspect Analysis Results
 ========================
 
 ``general_use.ipynb`` demonstrates how to work with objects returned by
-:meth:`atomicds.client.Client.get`. This guide walks through the same workflow
+:meth:`atomscale.client.Client.get`. This guide walks through the same workflow
 in a linear format.
 
 Fetch analysed items
@@ -10,7 +10,7 @@ Fetch analysed items
 
 .. code-block:: python
 
-   from atomicds.client import Client
+   from atomscale.client import Client
 
    client = Client(api_key="YOUR_API_KEY")
    search_results = client.search(keywords="demo", data_type="rheed_stationary")
@@ -18,8 +18,8 @@ Fetch analysed items
    analysed = client.get(search_results["Data ID"].to_list())
 
 Each item in ``analysed`` is a subclass of
-:class:`atomicds.results.RHEEDVideoResult` or
-:class:`atomicds.results.RHEEDImageResult`, depending on the source data.
+:class:`atomscale.results.RHEEDVideoResult` or
+:class:`atomscale.results.RHEEDImageResult`, depending on the source data.
 
 Inspect time series data
 ------------------------

@@ -6,7 +6,7 @@ from typing import Any, ClassVar, Generic, TypeVar
 
 from pandas import DataFrame
 
-from atomicds.core import BaseClient
+from atomscale.core import BaseClient
 
 R = TypeVar("R")  # the result type this provider returns
 

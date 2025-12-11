@@ -9,8 +9,8 @@ import pytest
 
 
 from .conftest import ResultIDs
-from atomicds import Client
-from atomicds.timeseries.polling import (
+from atomscale import Client
+from atomscale.timeseries.polling import (
     _drift_corrected_sleep,
     aiter_poll,
     iter_poll,
@@ -101,7 +101,7 @@ def test_iter_poll_yields_max_polls(
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = SeqProvider([{"i": 1}, {"i": 2}, {"i": 3}])
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     results = list(iter_poll(client, data_id, interval=0.01, max_polls=3))
@@ -115,7 +115,7 @@ def test_iter_poll_dedupes_by_key(
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = SeqProvider([{"rev": 1}, {"rev": 1}, {"rev": 2}])
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     results = list(
@@ -136,7 +136,7 @@ def test_iter_poll_until_predicate(
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = SeqProvider([{"status": "ok"}, {"status": "done"}, {"status": "ok"}])
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     results = list(
@@ -157,7 +157,7 @@ def test_iter_poll_on_error_and_continue(
     provider = FlakyThenOKProvider()
     errors: List[BaseException] = []
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     results = list(
@@ -191,7 +191,7 @@ def test_iter_poll_jitter_uses_interval_bound(
 
     provider = SeqProvider([{"x": 1}, {"x": 2}])
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     it = iter_poll(
@@ -215,7 +215,7 @@ def test_iter_poll_with_fixture_result_payload(
         [{"rev": 1, "payload": result}, {"rev": 2, "payload": result}]
     )
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     out = list(
@@ -242,7 +242,7 @@ async def test_aiter_poll_yields_max_polls(
 
     provider = SeqProvider([{"i": 1}, {"i": 2}, {"i": 3}])
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     got: List[int] = []
@@ -263,7 +263,7 @@ async def test_aiter_poll_dedupes(
 
     provider = SeqProvider([{"rev": 1}, {"rev": 1}, {"rev": 2}])
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     got: List[int] = []
@@ -290,7 +290,7 @@ async def test_aiter_poll_on_error_and_continue(
     provider = FlakyThenOKProvider()
     errors: List[BaseException] = []
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     got: List[int] = []
@@ -320,7 +320,7 @@ async def test_start_polling_task_awaits_on_result(
 
     provider = SeqProvider([{"n": 1}, {"n": 2}, {"n": 3}])
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     seen: List[int] = []
@@ -350,7 +350,7 @@ def test_start_polling_thread_stops_with_event(
 
     provider = SeqProvider([{"n": 1}, {"n": 2}, {"n": 3}, {"n": 4}, {"n": 5}])
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider
+        "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
     seen: List[int] = []
@@ -381,7 +381,7 @@ def test_iter_poll_fire_immediately_smoke(
 
     # True
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider1
+        "atomscale.timeseries.polling.get_provider", lambda name: provider1
     )
     out1 = list(
         iter_poll(client, data_id, interval=0.01, max_polls=1, fire_immediately=True)
@@ -390,7 +390,7 @@ def test_iter_poll_fire_immediately_smoke(
 
     # False
     monkeypatch.setattr(
-        "atomicds.timeseries.polling.get_provider", lambda name: provider2
+        "atomscale.timeseries.polling.get_provider", lambda name: provider2
     )
     out2 = list(
         iter_poll(client, data_id, interval=0.01, max_polls=1, fire_immediately=False)

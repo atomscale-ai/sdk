@@ -1,7 +1,7 @@
 import pytest
-from atomicds import Client
-from atomicds.results import MetrologyResult
-from atomicds.timeseries.metrology import MetrologyProvider
+from atomscale import Client
+from atomscale.results import MetrologyResult
+from atomscale.timeseries.metrology import MetrologyProvider
 from pandas import DataFrame
 
 from .conftest import ResultIDs

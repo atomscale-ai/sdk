@@ -21,7 +21,7 @@ Start the upload
 
 .. code-block:: python
 
-   from atomicds.client import Client
+   from atomscale.client import Client
 
    client = Client(api_key="YOUR_API_KEY")
    job = client.upload(files=files)

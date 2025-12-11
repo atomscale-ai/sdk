@@ -1,6 +1,6 @@
 import pytest
-from atomicds import Client
-from atomicds.results import XPSResult
+from atomscale import Client
+from atomscale.results import XPSResult
 from matplotlib.figure import Figure
 
 from .conftest import ResultIDs

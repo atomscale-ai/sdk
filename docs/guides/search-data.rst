@@ -1,7 +1,7 @@
 Search the Catalogue
 ====================
 
-Use :meth:`atomicds.client.Client.search` to locate uploaded data. The examples
+Use :meth:`atomscale.client.Client.search` to locate uploaded data. The examples
 below mirror ``general_use.ipynb`` and add a few extra filters you can combine.
 
 Basic search
@@ -9,7 +9,7 @@ Basic search
 
 .. code-block:: python
 
-   from atomicds.client import Client
+   from atomscale.client import Client
 
    client = Client(api_key="YOUR_API_KEY")
 
@@ -64,5 +64,5 @@ upload timestamp, or last-accessed timestamp. Use ``None`` for an open bound.
 Next steps
 ----------
 
-Pass the ``Data ID`` column to :meth:`atomicds.client.Client.get` to fetch
+Pass the ``Data ID`` column to :meth:`atomscale.client.Client.get` to fetch
 analysis artefacts. See :doc:`inspect-results` for a hands-on tour.

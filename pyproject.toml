@@ -3,8 +3,8 @@ requires = ["setuptools", "setuptools-scm", "setuptools-rust", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "atomicds"
-description = "API client for Atomscale."
+name = "atomscale"
+description = "Python SDK for Atomscale."
 dynamic = ["version"]
 readme = "README.md"
 license = { text = "GPL-3.0-only" }
@@ -61,20 +61,20 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["atomicds*"]
+include = ["atomscale*", "atomicds"]
 
 [tool.setuptools-rust]
 debug = false
 # optional global defaults (e.g., debug = false)
 
 [[tool.setuptools-rust.ext-modules]]
-target = "atomicds.streaming.rheed_stream"
-path = "src/atomicds/streaming/Cargo.toml"
+target = "atomscale.streaming.rheed_stream"
+path = "src/atomscale/streaming/Cargo.toml"
 binding = "PyO3"
 
 
 [tool.pyright]
-include = ["atomicds"]
+include = ["atomscale", "atomicds"]
 exclude = ["**/__pycache__"]
 
 [tool.pytest.ini_options]
@@ -153,7 +153,7 @@ exclude = []
 lint.flake8-unused-arguments.ignore-variadic-names = true
 extend-exclude = ["tests"]
 lint.pydocstyle.convention = "google"
-lint.isort.known-first-party = ["atomicds"]
+lint.isort.known-first-party = ["atomscale"]
 
 [tool.docformatter]
 pre-summary-newline = true

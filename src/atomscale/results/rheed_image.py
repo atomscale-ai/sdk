@@ -15,7 +15,7 @@ from PIL import ImageDraw
 from PIL.Image import Image
 from pycocotools import mask as mask_util
 
-from atomicds.core import BaseClient, boxes_overlap, generate_graph_from_nodes
+from atomscale.core import BaseClient, boxes_overlap, generate_graph_from_nodes
 
 tp.quiet()
 # test comment

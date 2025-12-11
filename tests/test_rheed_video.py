@@ -1,7 +1,7 @@
 import pytest
-from atomicds import Client
+from atomscale import Client
 from .conftest import ResultIDs
-from atomicds.results import RHEEDVideoResult
+from atomscale.results import RHEEDVideoResult
 from pandas import DataFrame
 
 

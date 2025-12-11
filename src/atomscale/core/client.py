@@ -6,7 +6,7 @@ import platform
 import sys
 from collections.abc import Callable  # type: ignore[ruleName]
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Literal
 from urllib.parse import urljoin
 
@@ -15,7 +15,10 @@ from requests.adapters import HTTPAdapter
 from rich.progress import Progress
 from urllib3.util.retry import Retry
 
-__version__ = version("atomicds")
+try:
+    __version__ = version("atomscale")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
 
 
 class BaseClient:
@@ -239,12 +242,12 @@ class BaseClient:
         session.headers = {"X-API-KEY": api_key}
 
         # User agent information
-        atomicds_info = "atomicds/" + __version__
+        atomscale_info = "atomscale/" + __version__
         python_info = f"Python/{sys.version.split()[0]}"
         platform_info = f"{platform.system()}/{platform.release()}"
         session.headers[
             "user-agent"
-        ] = f"{atomicds_info} ({python_info} {platform_info})"
+        ] = f"{atomscale_info} ({python_info} {platform_info})"
 
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3

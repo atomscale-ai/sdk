@@ -1,7 +1,7 @@
 import pytest
-from atomicds import Client
-from atomicds.results import OpticalResult
-from atomicds.timeseries.optical import OpticalProvider
+from atomscale import Client
+from atomscale.results import OpticalResult
+from atomscale.timeseries.optical import OpticalProvider
 from pandas import DataFrame
 from PIL.Image import Image
 

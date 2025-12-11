@@ -7,9 +7,9 @@ from typing import Any
 from pandas import DataFrame
 from PIL import Image
 
-from atomicds.core import BaseClient
-from atomicds.results.optical import OpticalImageResult, OpticalResult
-from atomicds.timeseries.provider import TimeseriesProvider, extend_with_statistics
+from atomscale.core import BaseClient
+from atomscale.results.optical import OpticalImageResult, OpticalResult
+from atomscale.timeseries.provider import TimeseriesProvider, extend_with_statistics
 
 
 class OpticalProvider(TimeseriesProvider):

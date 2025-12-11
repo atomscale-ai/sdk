@@ -6,9 +6,9 @@ from urllib.parse import urljoin
 import pytest
 from pandas import DataFrame
 
-from atomicds import Client
-from atomicds.results import UnknownResult
-from atomicds.core import ClientError
+from atomscale import Client
+from atomscale.results import UnknownResult
+from atomscale.core import ClientError
 from .conftest import ResultIDs
 
 

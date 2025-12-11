@@ -1,7 +1,7 @@
 User Guides
 ===========
 
-Concise walkthroughs for the most common `atomicds` tasks. Each guide covers a
+Concise walkthroughs for the most common `atomscale` tasks. Each guide covers a
 single workflow so you can jump straight to what you need.
 
 .. toctree::
