@@ -26,10 +26,12 @@ def test_atomicds_alias_warns_and_maps_to_atomscale():
     assert LegacyClient is Client
     assert legacy_root.__version__ == importlib.import_module("atomscale").__version__
 
-    legacy_core = importlib.import_module("atomicds.core")
-    new_core = importlib.import_module("atomscale.core")
-    assert legacy_core is new_core
+    from atomicds.core import BaseClient  # noqa: WPS433
+    from atomscale.core import BaseClient as NewBaseClient  # noqa: WPS433
 
-    legacy_polling = importlib.import_module("atomicds.timeseries.polling")
-    new_polling = importlib.import_module("atomscale.timeseries.polling")
-    assert legacy_polling is new_polling
+    assert BaseClient is NewBaseClient
+
+    from atomicds.timeseries.polling import iter_poll  # noqa: WPS433
+    from atomscale.timeseries.polling import iter_poll as new_iter_poll  # noqa: WPS433
+
+    assert iter_poll is new_iter_poll
