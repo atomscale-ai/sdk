@@ -24,9 +24,6 @@ class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
             "median_period": "Median Period",
             "median_period_seconds": "Median Period",
             "decay_fit": "Decay Fit",
-            "decay_fit_z_score": "Decay Fit Z score",
-            "decay_fit_ema_z_score": "Decay Fit EMA Z score",
-            "decay_fit_anomaly_probability": "Decay Fit Anomaly Probability",
         }
     )
     INDEX_COLS: Sequence[str] = ["Frame Number"]
