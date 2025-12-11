@@ -1,4 +1,4 @@
-# API Client for Atomscale
+# Python SDK for Atomscale
 
 [![Testing](https://github.com/atomscale-ai/sdk/workflows/Testing/badge.svg)](https://github.com/atomscale-ai/sdk/actions?query=workflow:"Testing")
 [![GitHub tag](https://img.shields.io/github/tag/atomscale-ai/sdk?include_prereleases=&sort=semver&color=blue)](https://github.com/atomscale-ai/sdk/releases/)
