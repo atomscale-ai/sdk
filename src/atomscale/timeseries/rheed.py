@@ -6,7 +6,11 @@ from typing import Any
 from pandas import DataFrame, concat
 
 from atomscale.core import BaseClient
-from atomscale.results import RHEEDImageResult, RHEEDVideoResult, _get_rheed_image_result
+from atomscale.results import (
+    RHEEDImageResult,
+    RHEEDVideoResult,
+    _get_rheed_image_result,
+)
 from atomscale.timeseries.provider import TimeseriesProvider
 
 

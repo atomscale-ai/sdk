@@ -18,7 +18,7 @@ warnings.warn(_DEPRECATION_MESSAGE, DeprecationWarning, stacklevel=2)
 
 # Load the real package and mirror its attributes.
 _atomscale = importlib.import_module("atomscale")
-__all__ = getattr(_atomscale, "__all__", [])
+__all__ = getattr(_atomscale, "__all__", [])  # noqa: PLE0605
 __path__ = getattr(_atomscale, "__path__", [])
 __version__ = getattr(_atomscale, "__version__", None)
 
@@ -46,7 +46,7 @@ def __dir__() -> list[str]:
 class _AtomicdsAliasFinder(importlib.abc.MetaPathFinder, importlib.abc.Loader):
     """Redirect ``atomicds.*`` imports to ``atomscale.*``."""
 
-    def find_spec(self, fullname: str, path=None, target=None):
+    def find_spec(self, fullname: str, path=None, target=None):  # noqa: ARG002
         if not fullname.startswith("atomicds."):
             return None
 
@@ -60,7 +60,10 @@ class _AtomicdsAliasFinder(importlib.abc.MetaPathFinder, importlib.abc.Loader):
             fullname, self, origin=target_spec.origin, is_package=is_package
         )
 
-    def create_module(self, spec):  # pragma: no cover - default module creation is fine
+    def create_module(
+        self,
+        spec,  # noqa: ARG002
+    ):  # pragma: no cover - default module creation is fine
         return None
 
     def exec_module(self, module):
