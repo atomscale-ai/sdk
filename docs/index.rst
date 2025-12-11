@@ -1,16 +1,16 @@
 atomicds API Client
 ===================
 
-.. |testing-badge| image:: https://github.com/artificial-atomic-intelligence/api-client/workflows/Testing/badge.svg
-   :target: https://github.com/artificial-atomic-intelligence/api-client/actions?query=workflow%3A%22Testing%22
+.. |testing-badge| image:: https://github.com/atomscale-ai/sdk/workflows/Testing/badge.svg
+   :target: https://github.com/atomscale-ai/sdk/actions?query=workflow%3A%22Testing%22
    :alt: Testing status
-.. |tag-badge| image:: https://img.shields.io/github/tag/artificial-atomic-intelligence/api-client?include_prereleases=&sort=semver&color=blue
-   :target: https://github.com/artificial-atomic-intelligence/api-client/releases/
+.. |tag-badge| image:: https://img.shields.io/github/tag/atomscale-ai/sdk?include_prereleases=&sort=semver&color=blue
+   :target: https://github.com/atomscale-ai/sdk/releases/
    :alt: Latest tag
 .. |python-badge| image:: https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python&logoColor=white
    :alt: Supported Python versions
 .. |license-badge| image:: https://img.shields.io/badge/License-GPLv3-blue
-   :target: https://github.com/artificial-atomic-intelligence/api-client/blob/main/LICENSE
+   :target: https://github.com/atomscale-ai/sdk/blob/main/LICENSE
    :alt: License: GPLv3
 
 |testing-badge| |tag-badge| |python-badge| |license-badge|
@@ -23,7 +23,7 @@ The material is split into:
 * Auto-generated API references pulled directly from the source.
 
 If you need help from a human, open an issue on
-`GitHub <https://github.com/atomic-data-sciences/api-client>`_ or email
+`GitHub <https://github.com/atomscale-ai/sdk>`_ or email
 support@atomscale.ai.
 
 Features
