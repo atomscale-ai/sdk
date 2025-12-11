@@ -40,11 +40,11 @@ def _extract_time_index(ts_df: DataFrame) -> tuple[pd.Index, DataFrame] | None:
 
     if "timestamp" in time_col.lower():
         if pd.api.types.is_datetime64_any_dtype(time_series):
-            time_index = pd.to_datetime(time_series)
+            time_index: pd.Index = pd.Index(pd.to_datetime(time_series))
         else:
-            time_index = pd.to_datetime(time_series, unit="ms", errors="coerce")
+            time_index = pd.Index(pd.to_datetime(time_series, unit="ms", errors="coerce"))
     else:
-        time_index = pd.to_timedelta(time_series, unit="s")
+        time_index = pd.Index(pd.to_timedelta(time_series, unit="s"))
 
     # Drop obvious bookkeeping columns that are not signals
     drop_cols = {"Frame Number"}
@@ -104,8 +104,7 @@ def align_timeseries_frames(
         if interpolation_window:
             freq_td = pd.Timedelta(freq)
             window_td = pd.Timedelta(interpolation_window)
-            limit = int(window_td / freq_td) if freq_td and window_td else 0
-            limit = limit or None
+            limit: int | None = int(window_td / freq_td) if freq_td and window_td else None
             aligned = aligned.interpolate(method="time", limit=limit)
 
     return aligned
