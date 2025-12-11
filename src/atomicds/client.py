@@ -16,6 +16,7 @@ from atomicds.results import (
     RamanResult,
     RHEEDImageResult,
     RHEEDVideoResult,
+    UnknownResult,
     XPSResult,
     _get_rheed_image_result,
 )
@@ -219,6 +220,7 @@ class Client(BaseClient):
         | XPSResult
         | PhotoluminescenceResult
         | RamanResult
+        | UnknownResult
     ]:
         """Get analyzed data results
 
@@ -258,7 +260,13 @@ class Client(BaseClient):
         for entry in data:
             data_id = entry["data_id"]
             data_type = entry["char_source_type"]
-            kwargs_list.append({"data_id": data_id, "data_type": data_type})
+            kwargs_list.append(
+                {
+                    "data_id": data_id,
+                    "data_type": data_type,
+                    "catalogue_entry": entry,
+                }
+            )
 
         # sort by submission order; this is important to match external labels
         kwargs_list = sorted(kwargs_list, key=lambda x: data_ids.index(x["data_id"]))
@@ -443,6 +451,7 @@ class Client(BaseClient):
         if physical_samples and not isinstance(physical_samples, list):
             physical_samples = [physical_samples]
 
+        print("PHYS_SAMPLE", physical_sample_id)
         entries: list[dict] | None = self._get(  # type: ignore  # noqa: PGH003
             sub_url="data_entries/",
             params={
@@ -569,12 +578,14 @@ class Client(BaseClient):
             "recipe",
             "optical",
         ],
+        catalogue_entry: dict[str, Any] | None = None,
     ) -> (
         RHEEDVideoResult
         | RHEEDImageResult
         | XPSResult
         | PhotoluminescenceResult
         | RamanResult
+        | UnknownResult
         | None
     ):
         if data_type == "xps":
@@ -646,7 +657,12 @@ class Client(BaseClient):
 
             return provider.build_result(self, data_id, data_type, ts_df)
 
-        raise ValueError("Data type must be supported")
+        # Fallback for unknown/unsupported data types
+        return UnknownResult(
+            data_id=data_id,
+            data_type=data_type,
+            catalogue_entry=catalogue_entry,
+        )
 
     def upload(self, files: list[str | BinaryIO]):
         """Upload and process files

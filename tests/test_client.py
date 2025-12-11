@@ -7,6 +7,7 @@ import pytest
 from pandas import DataFrame
 
 from atomicds import Client
+from atomicds.results import UnknownResult
 from atomicds.core import ClientError
 from .conftest import ResultIDs
 
@@ -158,6 +159,34 @@ def test_get(client: Client):
     assert len(data_types) >= 3
 
 
+def test_get_unknown_type(monkeypatch):
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    catalogue_entry = {
+        "data_id": "abc",
+        "char_source_type": "unknown_type",
+        "raw_name": "mystery.dat",
+        "pipeline_status": "success",
+    }
+
+    def fake_get(sub_url, params=None):
+        assert sub_url == "data_entries/"
+        return [catalogue_entry]
+
+    def fake_multi(func, kwargs_list, *args, **kwargs):
+        return [func(**kw) for kw in kwargs_list]
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    monkeypatch.setattr(client, "_multi_thread", fake_multi)
+
+    results = client.get(data_ids=["abc"])
+
+    assert len(results) == 1
+    result = results[0]
+    assert isinstance(result, UnknownResult)
+    assert result.data_type == "unknown_type"
+    assert result.catalogue_entry.get("raw_name") == "mystery.dat"
+
+
 def test_list_physical_samples(client: Client):
     samples = client.list_physical_samples()
 
@@ -180,6 +209,7 @@ def test_get_physical_sample(client: Client):
         pytest.skip("No physical samples available")
 
     sample_id = samples["Physical Sample ID"].dropna().iloc[0]
+    print(sample_id)
     result = client.get_physical_sample(
         sample_id, include_organization_data=False, align=False
     )

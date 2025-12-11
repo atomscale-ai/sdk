@@ -5,6 +5,7 @@ from .photoluminescence import PhotoluminescenceResult
 from .raman import RamanResult
 from .rheed_image import RHEEDImageCollection, RHEEDImageResult, _get_rheed_image_result
 from .rheed_video import RHEEDVideoResult
+from .unknown import UnknownResult
 from .xps import XPSResult
 
 __all__ = [
@@ -18,5 +19,6 @@ __all__ = [
     "RHEEDVideoResult",
     "RamanResult",
     "XPSResult",
+    "UnknownResult",
     "_get_rheed_image_result",
 ]
