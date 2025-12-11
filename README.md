@@ -6,3 +6,12 @@
 [![License](https://img.shields.io/badge/License-GPLv3-blue)](#license)
 
 [![view - Documentation](https://img.shields.io/badge/view-Documentation-blue?style=for-the-badge)](https://atomscale-ai.github.io/sdk/)
+
+## Install
+
+```bash
+pip install atomscale
+```
+
+> The package was renamed from `atomicds`. Importing `atomicds` (or installing
+> `atomicds`) still works via a thin shim but emits a `DeprecationWarning`.

@@ -9,9 +9,9 @@ from typing import Any, BinaryIO, Literal
 import pandas as pd
 from pandas import DataFrame
 
-from atomicds.core import BaseClient, ClientError, _FileSlice
-from atomicds.core.utils import _make_progress, normalize_path
-from atomicds.results import (
+from atomscale.core import BaseClient, ClientError, _FileSlice
+from atomscale.core.utils import _make_progress, normalize_path
+from atomscale.results import (
     PhotoluminescenceResult,
     RamanResult,
     RHEEDImageResult,
@@ -20,9 +20,9 @@ from atomicds.results import (
     XPSResult,
     _get_rheed_image_result,
 )
-from atomicds.results.group import PhysicalSampleResult, ProjectResult
-from atomicds.timeseries.align import align_timeseries
-from atomicds.timeseries.registry import get_provider
+from atomscale.results.group import PhysicalSampleResult, ProjectResult
+from atomscale.timeseries.align import align_timeseries
+from atomscale.timeseries.registry import get_provider
 
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
 
@@ -228,7 +228,7 @@ class Client(BaseClient):
             data_ids (str | list[str]): Data ID or list of data IDs from the data catalogue to obtain analyzed results for.
 
         Returns:
-            list[atomicds.results.RHEEDVideoResult | atomicds.results.RHEEDImageResult | atomicds.results.XPSResult]:
+            list[atomscale.results.RHEEDVideoResult | atomscale.results.RHEEDImageResult | atomscale.results.XPSResult]:
                 List of result objects
 
         """

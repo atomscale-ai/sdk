@@ -10,7 +10,7 @@ from typing import Any
 
 from pandas import DataFrame
 
-from atomicds.timeseries.registry import get_provider
+from atomscale.timeseries.registry import get_provider
 
 Result = DataFrame
 DistinctFn = Callable[[Result], Any]

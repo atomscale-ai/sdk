@@ -2,7 +2,7 @@ Stream RHEED Video
 ==================
 
 ``rheed_streaming.ipynb`` demonstrates both push (callback) and pull (generator)
-streaming with :class:`atomicds.streaming.rheed_stream.RHEEDStreamer`. This
+streaming with :class:`atomscale.streaming.rheed_stream.RHEEDStreamer`. This
 guide condenses the notebook into a quick reference and explains when to choose
 each style:
 
@@ -23,7 +23,7 @@ Create a streamer
 
 .. code-block:: python
 
-   from atomicds.streaming.rheed_stream import RHEEDStreamer
+   from atomscale.streaming.rheed_stream import RHEEDStreamer
 
    streamer = RHEEDStreamer(api_key="YOUR_API_KEY")
 

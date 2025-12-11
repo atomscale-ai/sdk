@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atomicds"
+description = "Legacy shim package that depends on atomscale."
+dynamic = ["version"]
+readme = "../README.md"
+license = { text = "GPL-3.0-only" }
+authors = [{ name = "Atomscale", email = "info@atomscale.ai" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: Unix",
+  "Operating System :: MacOS",
+]
+requires-python = ">=3.10, <3.13"
+dependencies = ["atomscale>=0"]
+
+[project.urls]
+Homepage = "https://www.atomscale.ai"
+Documentation = "https://atomscale-ai.github.io/sdk"
+
+[tool.setuptools_scm]
+root = ".."
+
+[tool.setuptools]
+package-dir = { "" = "../src" }
+
+[tool.setuptools.packages.find]
+where = ["../src"]
+include = ["atomicds"]

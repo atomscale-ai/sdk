@@ -1,7 +1,8 @@
+graft src/atomscale
 graft src/atomicds
 
-include src/atomicds/streaming/Cargo.toml
-recursive-include src/atomicds/streaming/src *.rs
+include src/atomscale/streaming/Cargo.toml
+recursive-include src/atomscale/streaming/src *.rs
 
-prune src/atomicds/streaming/target
+prune src/atomscale/streaming/target
 prune **/target

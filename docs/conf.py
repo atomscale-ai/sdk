@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 sys.path.insert(0, str(SRC_DIR))
 
-project = "atomicds"
+project = "atomscale"
 copyright = "2025, Atomscale"
 author = "Atomscale"
 release = "2025"
@@ -117,7 +117,7 @@ htmlhelp_basename = "adsdoc"
 man_pages = [
     (
         master_doc,
-        "atomicds",
+        "atomscale",
         "Atomscale API Client Documentation",
         [author],
         1,
@@ -133,10 +133,10 @@ man_pages = [
 texinfo_documents = [
     (
         master_doc,
-        "atomicds",
+        "atomscale",
         "Atomscale API Client Documentation",
         author,
-        "atomicds",
+        "atomscale",
         "Atomscale API.",
         "",
     ),

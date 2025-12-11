@@ -1,6 +1,6 @@
 import pytest
-from atomicds import Client
-from atomicds.results import PhotoluminescenceResult
+from atomscale import Client
+from atomscale.results import PhotoluminescenceResult
 from matplotlib.figure import Figure
 
 from .conftest import ResultIDs

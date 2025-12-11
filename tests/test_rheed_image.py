@@ -1,8 +1,8 @@
 from pandas import DataFrame
 import pytest
-from atomicds import Client
+from atomscale import Client
 from .conftest import ResultIDs
-from atomicds.results import RHEEDImageResult
+from atomscale.results import RHEEDImageResult
 from PIL.Image import Image
 
 

@@ -1,4 +1,4 @@
-atomicds API Client
+atomscale API Client
 ===================
 
 .. |testing-badge| image:: https://github.com/atomscale-ai/sdk/workflows/Testing/badge.svg
@@ -15,7 +15,7 @@ atomicds API Client
 
 |testing-badge| |tag-badge| |python-badge| |license-badge|
 
-``atomicds`` is the Python SDK for the Atomscale platform. Use these docs to
+``atomscale`` is the Python SDK for the Atomscale platform. Use these docs to
 install the client, move data, and integrate streaming or polling workflows.
 The material is split into:
 
@@ -29,7 +29,7 @@ support@atomscale.ai.
 Features
 --------
 
-- Unified :class:`atomicds.client.Client` for uploads, catalogue search, and downloads.
+- Unified :class:`atomscale.client.Client` for uploads, catalogue search, and downloads.
 - Streaming helpers for live RHEED capture via push or generator-style interfaces.
 - Fine-grained search filters for IDs, data types, lifecycle states, and time bounds.
 - Rich result objects exposing timeseries, diffraction graphs, and processed videos.
@@ -40,11 +40,17 @@ Installation
 
 .. code-block:: bash
 
-  pip install atomicds
+  pip install atomscale
 
 Set the ``AS_API_KEY`` and (optional) ``AS_API_ENDPOINT`` environment variables
-before creating a :class:`~atomicds.client.Client`, or pass them directly when
+before creating a :class:`~atomscale.client.Client`, or pass them directly when
 constructing the client in your scripts.
+
+.. note::
+
+   The package was renamed from ``atomicds``. Importing ``atomicds`` still
+   works for backward compatibility but emits a :class:`DeprecationWarning`
+   and internally depends on the ``atomscale`` package.
 
 .. toctree::
    :maxdepth: 2

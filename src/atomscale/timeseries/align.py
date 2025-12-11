@@ -5,7 +5,7 @@ from functools import reduce
 
 import pandas as pd
 
-from atomicds.results import MetrologyResult, OpticalResult, RHEEDVideoResult
+from atomscale.results import MetrologyResult, OpticalResult, RHEEDVideoResult
 
 
 def _infer_time_column(df: pd.DataFrame) -> pd.Series:

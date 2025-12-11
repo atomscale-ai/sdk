@@ -2,9 +2,9 @@ from pytest_httpserver import HTTPServer
 import pytest
 from requests import Session
 
-from atomicds.core import BaseClient, _make_progress
+from atomscale.core import BaseClient, _make_progress
 
-from atomicds.core.client import ClientError
+from atomscale.core.client import ClientError
 
 
 def test_core_get_session():

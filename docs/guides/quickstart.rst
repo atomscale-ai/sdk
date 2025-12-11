@@ -16,19 +16,19 @@ Install the client
 
 .. code-block:: bash
 
-   pip install atomicds
+   pip install atomscale
 
 Create a client
 ---------------
 
-The :class:`atomicds.client.Client` reads ``AS_API_KEY`` and
+The :class:`atomscale.client.Client` reads ``AS_API_KEY`` and
 ``AS_API_ENDPOINT`` from the environment. Export the variables, or pass values
 explicitly if you prefer.
 
 .. code-block:: python
 
    import os
-   from atomicds.client import Client
+   from atomscale.client import Client
 
    os.environ["AS_API_KEY"] = "YOUR_API_KEY"
 

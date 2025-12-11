@@ -5,9 +5,9 @@ from typing import Any
 
 from pandas import DataFrame
 
-from atomicds.core import BaseClient
-from atomicds.results.metrology import MetrologyResult
-from atomicds.timeseries.provider import TimeseriesProvider, extend_with_statistics
+from atomscale.core import BaseClient
+from atomscale.results.metrology import MetrologyResult
+from atomscale.timeseries.provider import TimeseriesProvider, extend_with_statistics
 
 
 class MetrologyProvider(TimeseriesProvider[MetrologyResult]):

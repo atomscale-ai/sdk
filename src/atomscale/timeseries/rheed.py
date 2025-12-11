@@ -5,9 +5,13 @@ from typing import Any
 
 from pandas import DataFrame, concat
 
-from atomicds.core import BaseClient
-from atomicds.results import RHEEDImageResult, RHEEDVideoResult, _get_rheed_image_result
-from atomicds.timeseries.provider import TimeseriesProvider
+from atomscale.core import BaseClient
+from atomscale.results import (
+    RHEEDImageResult,
+    RHEEDVideoResult,
+    _get_rheed_image_result,
+)
+from atomscale.timeseries.provider import TimeseriesProvider
 
 
 class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):

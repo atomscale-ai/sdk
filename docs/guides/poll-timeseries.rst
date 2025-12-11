@@ -3,7 +3,7 @@ Poll Time Series Updates
 
 ``timeseries_polling.ipynb`` shows how to stay current with streaming RHEED
 analysis. This guide summarises the four helper entry points in
-:mod:`atomicds.timeseries.polling` and explains which "mode" to pick:
+:mod:`atomscale.timeseries.polling` and explains which "mode" to pick:
 
 - **Manual loop** with :func:`iter_poll` – ideal for scripts that can block
   until each poll finishes.
@@ -19,8 +19,8 @@ Shared setup
 
 .. code-block:: python
 
-   from atomicds.client import Client
-   from atomicds.timeseries.polling import (
+   from atomscale.client import Client
+   from atomscale.timeseries.polling import (
        iter_poll,
        aiter_poll,
        start_polling_thread,
