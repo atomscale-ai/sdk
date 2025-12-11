@@ -85,6 +85,7 @@ html_theme_options = {
     "github_user": "atomic-data-sciences",
     "github_repo": "api-client",
     "github_banner": True,
+    "description": "Python SDK",
 }
 
 # Custom sidebar templates, must be a dictionary that maps document names

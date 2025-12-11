@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from atomicds.timeseries import (
-    MetrologyProvider,
-    OpticalProvider,
-    RHEEDProvider,
-    TimeseriesProvider,
-)
+from .metrology import MetrologyProvider
+from .optical import OpticalProvider
+from .provider import TimeseriesProvider
+from .rheed import RHEEDProvider
 
 _PROVIDER_CLASSES: dict[str, type[TimeseriesProvider]] = {
     RHEEDProvider.TYPE: RHEEDProvider,

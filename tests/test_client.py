@@ -1,10 +1,14 @@
-from pandas import DataFrame
-import pytest
-from atomicds import Client
 from datetime import datetime
 from pathlib import Path
 from unittest import mock
 from urllib.parse import urljoin
+
+import pytest
+from pandas import DataFrame
+
+from atomicds import Client
+from atomicds.results import UnknownResult
+from atomicds.core import ClientError
 from .conftest import ResultIDs
 
 
@@ -33,15 +37,16 @@ def test_generic_search(client: Client):
             "Status",
             "File Type",
             "Instrument Source",
-            "Sample Name",
             "Growth Length",
             "Tags",
             "Owner",
             "Physical Sample ID",
             "Physical Sample Name",
+            "Sample Name",
             "Sample Notes",
             "Sample Notes Last Updated",
-            "Workspaces",
+            "Project ID",
+            "Project Name",
         ]
     )
     assert not len(set(orig_data.keys().values) - column_names)
@@ -101,20 +106,144 @@ def test_last_accessed_datetime_search(client: Client):
 
 @pytest.mark.order(1)
 def test_get(client: Client):
-    data_types = ["rheed_image", "rheed_stationary", "rheed_rotating", "xps"]
+    data_type_aliases = {
+        "rheed_image": ["rheed_image"],
+        "rheed_stationary": ["rheed_stationary"],
+        "rheed_rotating": ["rheed_rotating"],
+        "xps": ["xps"],
+        "optical": ["optical"],
+        "metrology": ["metrology", "recipe"],
+        "photoluminescence": ["photoluminescence", "pl"],
+        "raman": ["raman"],
+    }
+    required_types = {
+        "rheed_image",
+        "rheed_stationary",
+        "rheed_rotating",
+        "xps",
+        # "photoluminescence",
+        # "raman",
+    }
     data_ids = []
 
-    for data_type in data_types:
-        data = client.search(data_type=data_type, include_organization_data=False)  # type: ignore
-        data_id = data["Data ID"].values[0] if len(data["Data ID"].values) else None
-        data_ids.append(data_id)
+    for result_attr, aliases in data_type_aliases.items():
+        data_id = None
+        for alias in aliases:
+            for include_org in (False, True):
+                try:
+                    data = client.search(  # type: ignore[arg-type]
+                        data_type=alias, include_organization_data=include_org
+                    )
 
-        setattr(ResultIDs, data_type, data_id)
+                except ClientError:
+                    continue
+
+                data_id_values = data["Data ID"].dropna().values if len(data) else []
+
+                if len(data_id_values):
+                    data_id = data_id_values[0]
+                    break
+
+            if data_id:
+                break
+
+        setattr(ResultIDs, result_attr, data_id or "")
+        if data_id:
+            data_ids.append(data_id)
+        elif result_attr in required_types:
+            pytest.fail(f"No data_id found for required data type '{result_attr}'")
 
     results = client.get(data_ids=data_ids)
-    data_types = set([type(result) for result in results])
+    data_types = {type(result) for result in results}
+    assert len(results) == len(data_ids)
+    assert len(data_types) >= 3
 
-    assert len(data_types) == 3
+
+def test_get_unknown_type(monkeypatch):
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    catalogue_entry = {
+        "data_id": "abc",
+        "char_source_type": "unknown_type",
+        "raw_name": "mystery.dat",
+        "pipeline_status": "success",
+    }
+
+    def fake_get(sub_url, params=None):
+        assert sub_url == "data_entries/"
+        return [catalogue_entry]
+
+    def fake_multi(func, kwargs_list, *args, **kwargs):
+        return [func(**kw) for kw in kwargs_list]
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    monkeypatch.setattr(client, "_multi_thread", fake_multi)
+
+    results = client.get(data_ids=["abc"])
+
+    assert len(results) == 1
+    result = results[0]
+    assert isinstance(result, UnknownResult)
+    assert result.data_type == "unknown_type"
+    assert result.catalogue_entry.get("raw_name") == "mystery.dat"
+
+
+def test_list_physical_samples(client: Client):
+    samples = client.list_physical_samples()
+
+    assert isinstance(samples, DataFrame)
+    if len(samples):
+        assert samples["Physical Sample ID"].notna().any()
+
+
+def test_list_projects(client: Client):
+    projects = client.list_projects()
+
+    assert isinstance(projects, DataFrame)
+    if len(projects):
+        assert projects["Project ID"].notna().any()
+
+
+def test_get_physical_sample(client: Client):
+    samples = client.list_physical_samples()
+    if not len(samples):
+        pytest.skip("No physical samples available")
+
+    sample_id = samples["Physical Sample ID"].dropna().iloc[0]
+    result = client.get_physical_sample(
+        sample_id, include_organization_data=False, align=False
+    )
+
+    assert result.physical_sample_id == sample_id
+    assert isinstance(result.data_results, list)
+
+
+def test_get_project(client: Client):
+    projects = client.list_projects()
+    if not len(projects):
+        pytest.skip("No projects available")
+
+    project_id = projects["Project ID"].dropna().iloc[0]
+    project = client.get_project(
+        project_id, include_organization_data=False, align=False
+    )
+
+    assert project.project_id == project_id
+    assert hasattr(project, "samples")
+
+
+def test_upload_rejects_missing_file(tmp_path):
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    missing_file = tmp_path / "nope.dat"
+
+    with pytest.raises(ClientError, match="does not exist"):
+        client.upload(files=[str(missing_file)])
+
+
+def test_download_videos_missing_metadata(client: Client, tmp_path):
+    with pytest.raises(ClientError, match="No processed data found"):
+        client.download_videos(
+            data_ids="ffffffff-ffff-ffff-ffff-ffffffffffff", dest_dir=tmp_path
+        )
 
 
 # @pytest.mark.order(2)

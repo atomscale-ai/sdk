@@ -37,7 +37,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://www.atomscale.ai"
-Documentation = "https://atomic-data-sciences.github.io/api-client"
+Documentation = "https://atomscale-ai.github.io/sdk"
 
 [tool.setuptools_scm]
 
@@ -48,6 +48,7 @@ dev = [
   "pytest-cov",
   "pytest-order",
   "pytest-dependency",
+  "pytest-asyncio",
   "ruff",
   "mypy",
   "types-requests",
@@ -140,6 +141,7 @@ lint.extend-ignore = [
   "B028",  # No explicit stacklevel
   "EM101", # Exception must not use a string literal
   "EM102", # Exception must not use an f-string literal
+  "PD901", # Avoid using the generic variable name `df` for DataFrames
 ]
 lint.typing-modules = ["mypackage._compat.typing"]
 src = ["src"]

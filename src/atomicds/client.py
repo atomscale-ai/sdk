@@ -6,16 +6,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, BinaryIO, Literal
 
+import pandas as pd
 from pandas import DataFrame
 
 from atomicds.core import BaseClient, ClientError, _FileSlice
 from atomicds.core.utils import _make_progress, normalize_path
 from atomicds.results import (
+    PhotoluminescenceResult,
+    RamanResult,
     RHEEDImageResult,
     RHEEDVideoResult,
+    UnknownResult,
     XPSResult,
     _get_rheed_image_result,
 )
+from atomicds.results.group import PhysicalSampleResult, ProjectResult
+from atomicds.timeseries.align import align_timeseries
 from atomicds.timeseries.registry import get_provider
 
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
@@ -27,18 +33,22 @@ class Client(BaseClient):
     def __init__(
         self,
         api_key: str | None = None,
-        endpoint: str = "https://api.atomscale.ai/",
+        endpoint: str | None = None,
         mute_bars: bool = False,
     ):
         """
         Args:
-            api_key (str | None): API key. Defaults to None which will try and pull from the ADS_API_KEY environment variable.
-            endpoint (str): Root API endpoint. Will prioritize pulling from the ADS_API_ENDPOINT environment variable.
-                If none provided it defaults to 'https://api.atomicdatasciences.com/'.
+            api_key (str | None): API key. Explicit value takes precedence; if None, falls back to AS_API_KEY environment variable.
+            endpoint (str): Root API endpoint. Explicit value takes precedence; if None, falls back to AS_API_ENDPOINT environment variable,
+                defaulting to 'https://api.atomscale.ai/' if not set.
             mute_bars (bool): Whether to mute progress bars. Defaults to False.
         """
-        api_key = api_key or os.environ.get("ADS_API_KEY")
-        endpoint = os.environ.get("ADS_API_ENDPOINT") or endpoint
+
+        if api_key is None:
+            api_key = os.environ.get("AS_API_KEY")
+
+        if endpoint is None:
+            endpoint = os.environ.get("AS_API_ENDPOINT") or "https://api.atomscale.ai/"
 
         if api_key is None:
             raise ValueError("No valid ADS API key supplied")
@@ -52,8 +62,18 @@ class Client(BaseClient):
         keywords: str | list[str] | None = None,
         include_organization_data: bool = True,
         data_ids: str | list[str] | None = None,
+        physical_sample_ids: str | list[str] | None = None,
+        project_ids: str | list[str] | None = None,
         data_type: Literal[
-            "rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"
+            "rheed_image",
+            "rheed_stationary",
+            "rheed_rotating",
+            "xps",
+            "photoluminescence",
+            "pl",
+            "raman",
+            "recipe",
+            "all",
         ] = "all",
         status: Literal[
             "success",
@@ -78,7 +98,9 @@ class Client(BaseClient):
             include_organization_data (bool): Whether to include catalogue entries from other users in
                 your organization. Defaults to True.
             data_ids (str | list[str] | None): Data ID or list of data IDs. Defaults to None.
-            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"]): Type of data. Defaults to "all".
+            physical_sample_ids (str | list[str] | None): Physical sample ID or list of IDs. Defaults to None.
+            project_ids (str | list[str] | None): Project ID or list of IDs. Defaults to None.
+            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "photoluminescence", "raman", "all"]): Type of data. Defaults to "all".
             status (Literal["success", "pending", "error", "running", "all"]): Analyzed status of the data. Defaults to "all".
             growth_length (tuple[int | None, int | None]): Minimum and maximum values of the growth length in seconds.
                 Defaults to (None, None) which will include all non-video data.
@@ -95,6 +117,8 @@ class Client(BaseClient):
             "keywords": keywords,
             "include_organization_data": include_organization_data,
             "data_ids": data_ids,
+            "physical_sample_ids": physical_sample_ids,
+            "project_ids": project_ids,
             "data_type": None if data_type == "all" else data_type,
             "status": status,
             "growth_length_min": growth_length[0],
@@ -128,6 +152,8 @@ class Client(BaseClient):
             "tags": "Tags",
             "name": "Owner",
             "workspaces": "Workspaces",
+            "project_ids": "Project ID",
+            "project_names": "Project Name",
         }
 
         columns_to_drop = [
@@ -136,17 +162,66 @@ class Client(BaseClient):
             "sample_id",
             "processed_file_type",
             "bucket_file_name",
+            "projects",
         ]
         catalogue = DataFrame(data)
 
-        if len(catalogue):
-            catalogue = catalogue.drop(columns=columns_to_drop)
+        if "projects" in catalogue.columns:
+            catalogue["project_ids"] = catalogue["projects"].apply(
+                lambda projects: (projects[0].get("id") if projects else None)
+            )
+            catalogue["project_names"] = catalogue["projects"].apply(
+                lambda projects: (projects[0].get("name") if projects else None)
+            )
 
-        return catalogue.rename(columns=column_mapping)
+        if len(catalogue):
+            if "detail_note_last_updated" in catalogue.columns:
+                catalogue["detail_note_last_updated"] = catalogue[
+                    "detail_note_last_updated"
+                ].apply(lambda v: None if (pd.isna(v) or v == "NaT") else v)
+            drop_cols = [col for col in columns_to_drop if col in catalogue.columns]
+            catalogue = catalogue.drop(columns=drop_cols)
+
+        catalogue = catalogue.rename(columns=column_mapping)
+
+        desired_order = [
+            "Data ID",
+            "File Name",
+            "Type",
+            "Status",
+            "File Type",
+            "Instrument Source",
+            "Sample Name",
+            "Physical Sample ID",
+            "Physical Sample Name",
+            "Project ID",
+            "Project Name",
+            "Growth Length",
+            "Upload Datetime",
+            "Last Accessed Datetime",
+            "Sample Notes",
+            "Sample Notes Last Updated",
+            "File Metadata",
+            "Tags",
+            "Owner",
+            "Workspaces",
+        ]
+        ordered_cols = [col for col in desired_order if col in catalogue.columns] + [
+            col for col in catalogue.columns if col not in desired_order
+        ]
+
+        return catalogue[ordered_cols]
 
     def get(
         self, data_ids: str | list[str]
-    ) -> list[RHEEDVideoResult | RHEEDImageResult | XPSResult]:
+    ) -> list[
+        RHEEDVideoResult
+        | RHEEDImageResult
+        | XPSResult
+        | PhotoluminescenceResult
+        | RamanResult
+        | UnknownResult
+    ]:
         """Get analyzed data results
 
         Args:
@@ -160,19 +235,38 @@ class Client(BaseClient):
         if isinstance(data_ids, str):
             data_ids = [data_ids]
 
-        data: list[dict] = self._get(  # type: ignore  # noqa: PGH003
-            sub_url="data_entries/",
-            params={
-                "data_ids": data_ids,
-                "include_organization_data": True,
-            },
-        )
+        # Chunk requests to avoid overly long query strings
+        data: list[dict] = []
+        chunk_size = 100
+        chunks = [
+            data_ids[i : i + chunk_size]  # type: ignore[index]
+            for i in range(0, len(data_ids), chunk_size)
+        ]
+
+        for chunk in chunks:
+            chunk_data: list[dict] | dict | None = self._get(  # type: ignore[assignment]
+                sub_url="data_entries/",
+                params={
+                    "data_ids": chunk,
+                    "include_organization_data": True,
+                },
+            )
+            if chunk_data:
+                data.extend(
+                    chunk_data if isinstance(chunk_data, list) else [chunk_data]
+                )
 
         kwargs_list = []
         for entry in data:
             data_id = entry["data_id"]
             data_type = entry["char_source_type"]
-            kwargs_list.append({"data_id": data_id, "data_type": data_type})
+            kwargs_list.append(
+                {
+                    "data_id": data_id,
+                    "data_type": data_type,
+                    "catalogue_entry": entry,
+                }
+            )
 
         # sort by submission order; this is important to match external labels
         kwargs_list = sorted(kwargs_list, key=lambda x: data_ids.index(x["data_id"]))
@@ -185,19 +279,314 @@ class Client(BaseClient):
                 progress_description="Obtaining data results",
             )
 
+    def list_physical_samples(self) -> DataFrame:
+        """List physical samples available to the user."""
+        data = self._get(sub_url="physical_samples/")
+        if data is None:
+            return DataFrame(None)
+        samples = DataFrame(data)
+
+        if "projects" in samples.columns:
+            samples["project_id"] = samples["projects"].apply(
+                lambda projects: (projects[0].get("id") if projects else None)
+            )
+            samples["project_name"] = samples["projects"].apply(
+                lambda projects: (projects[0].get("name") if projects else None)
+            )
+
+        if "detail_notes" in samples.columns:
+            samples["detail_note_content"] = samples["detail_notes"].apply(
+                lambda note: note.get("content") if isinstance(note, dict) else None
+            )
+            samples["detail_note_last_updated"] = samples["detail_notes"].apply(
+                lambda note: note.get("last_updated")
+                if isinstance(note, dict)
+                else None
+            )
+            samples["detail_note_last_updated"] = samples[
+                "detail_note_last_updated"
+            ].apply(lambda v: None if (pd.isna(v) or v == "NaT") else v)
+
+        if "target_material" in samples.columns:
+            samples["target_material"] = samples["target_material"].apply(
+                lambda tm: {
+                    k: tm.get(k)
+                    for k in ("substrate", "sample_name")
+                    if isinstance(tm, dict) and k in tm
+                }
+                if isinstance(tm, dict)
+                else tm
+            )
+
+        columns_to_drop = [
+            "sample_id",
+            "detail_notes_id",
+            "user_id",
+            "growth_instrument_id",
+            "version",
+            "owner_id",
+            "projects",
+            "detail_notes",
+        ]
+
+        column_mapping = {
+            "physical_sample_metadata": "Sample Metadata",
+            "name": "Physical Sample Name",
+            "last_updated": "Last Updated",
+            "created_datetime": "Created Datetime",
+            "id": "Physical Sample ID",
+            "owner_name": "Owner",
+            "target_material": "Target Material",
+            "growth_instrument": "Growth Instrument",
+            "num_data_items": "Data Items",
+            "project_id": "Project ID",
+            "project_name": "Project Name",
+            "detail_note_content": "Sample Notes",
+            "detail_note_last_updated": "Sample Notes Last Updated",
+        }
+
+        if len(samples):
+            drop_cols = [col for col in columns_to_drop if col in samples.columns]
+            samples = samples.drop(columns=drop_cols)
+
+        samples = samples.rename(columns=column_mapping)
+
+        desired_order = [
+            "Physical Sample ID",
+            "Physical Sample Name",
+            "Project ID",
+            "Project Name",
+            "Target Material",
+            "Sample Metadata",
+            "Sample Notes",
+            "Sample Notes Last Updated",
+            "Growth Instrument",
+            "Data Items",
+            "Created Datetime",
+            "Last Updated",
+            "Owner",
+        ]
+        ordered_cols = [col for col in desired_order if col in samples.columns] + [
+            col for col in samples.columns if col not in desired_order
+        ]
+
+        return samples[ordered_cols]
+
+    def list_projects(self) -> DataFrame:
+        """List projects available to the user."""
+        data = self._get(sub_url="projects/")
+        if data is None:
+            return DataFrame(None)
+        projects = DataFrame(data)
+
+        if "detail_note" in projects.columns:
+            projects["detail_note_content"] = projects["detail_note"].apply(
+                lambda note: note.get("content") if isinstance(note, dict) else None
+            )
+            projects["detail_note_last_updated"] = projects["detail_note"].apply(
+                lambda note: note.get("last_updated")
+                if isinstance(note, dict)
+                else None
+            )
+            projects["detail_note_last_updated"] = projects[
+                "detail_note_last_updated"
+            ].apply(lambda v: None if (pd.isna(v) or v == "NaT") else v)
+
+        columns_to_drop = [
+            "owner_id",
+            "detail_note",
+        ]
+
+        column_mapping = {
+            "id": "Project ID",
+            "last_updated": "Last Updated",
+            "name": "Project Name",
+            "physical_sample_count": "Physical Sample Count",
+            "owner_name": "Owner",
+            "detail_note_content": "Project Notes",
+            "detail_note_last_updated": "Project Notes Last Updated",
+        }
+
+        if len(projects):
+            drop_cols = [col for col in columns_to_drop if col in projects.columns]
+            projects = projects.drop(columns=drop_cols)
+
+        projects = projects.rename(columns=column_mapping)
+
+        desired_order = [
+            "Project ID",
+            "Project Name",
+            "Physical Sample Count",
+            "Project Notes",
+            "Project Notes Last Updated",
+            "Last Updated",
+            "Owner",
+        ]
+        ordered_cols = [col for col in desired_order if col in projects.columns] + [
+            col for col in projects.columns if col not in desired_order
+        ]
+
+        return projects[ordered_cols]
+
+    def get_physical_sample(
+        self,
+        physical_sample_id: str,
+        *,
+        include_organization_data: bool = True,
+        align: bool | str = False,
+        resample: str | None = None,
+    ) -> PhysicalSampleResult:
+        """Get all data for a physical sample.
+
+        Args:
+            physical_sample_id: Identifier of the physical sample.
+            include_organization_data: Whether to include organization data. Defaults to True.
+            align: Whether to align timeseries data. If truthy, an aligned DataFrame is returned.
+            resample: Optional pandas resample rule applied after alignment.
+        """
+        physical_samples: list[dict] | None = self._get(  # type: ignore  # noqa: PGH003
+            sub_url="physical_samples/",
+            params={"physical_sample_id": physical_sample_id},
+        )
+        if physical_samples and not isinstance(physical_samples, list):
+            physical_samples = [physical_samples]
+
+        entries: list[dict] | None = self._get(  # type: ignore  # noqa: PGH003
+            sub_url="data_entries/",
+            params={
+                "physical_sample_ids": [physical_sample_id],
+                "include_organization_data": include_organization_data,
+            },
+        )
+        if entries and not isinstance(entries, list):
+            entries = [entries]
+
+        data_ids = [e["data_id"] for e in entries] if entries else []
+
+        results = self.get(data_ids=data_ids) if data_ids else []
+        join_how = "outer"
+        if isinstance(align, str):
+            join_how = align
+
+        ts_aligned = (
+            align_timeseries(results, how=join_how, resample=resample)
+            if align
+            else None
+        )
+
+        non_timeseries = [
+            r
+            for r in results
+            if not hasattr(r, "timeseries_data") or r.timeseries_data is None
+        ]
+        sample_name = (
+            physical_samples[0].get("name")
+            if physical_samples
+            else entries[0].get("physical_sample_name")
+            if entries
+            else None
+        )
+        sample_id = physical_sample_id
+        return PhysicalSampleResult(
+            physical_sample_id=sample_id,
+            physical_sample_name=sample_name,
+            data_results=results,
+            aligned_timeseries=ts_aligned,
+            non_timeseries=non_timeseries,
+        )
+
+    def get_project(
+        self,
+        project_id: str,
+        *,
+        include_organization_data: bool = True,
+        align: bool | str = False,
+        resample: str | None = None,
+    ) -> ProjectResult:
+        """Get all data grouped by physical sample for a project.
+
+        Args:
+            project_id: Identifier of the project.
+            include_organization_data: Whether to include organization data. Defaults to True.
+            align: Whether to align timeseries at the project level. Defaults to False.
+            resample: Optional pandas resample rule applied after alignment.
+        """
+        # Get physical samples associated with the project, then fetch data per sample.
+        project_samples: list[dict] = (
+            self._get(sub_url=f"projects/{project_id}/physical_samples") or []
+        )
+        if not project_samples:
+            return ProjectResult(project_id, None, [], None)
+
+        sample_results: list[PhysicalSampleResult] = []
+        for sample in project_samples:
+            sid = sample.get("id")
+            if not sid:
+                continue
+            sample_results.append(
+                self.get_physical_sample(
+                    sid,
+                    include_organization_data=include_organization_data,
+                    align=align,
+                    resample=resample,
+                )
+            )
+
+        project_aligned = None
+        if align:
+            frames = []
+            for sample in sample_results:
+                if sample.aligned_timeseries is None:
+                    continue
+                renamed = sample.aligned_timeseries.copy()
+                renamed.columns = pd.MultiIndex.from_tuples(
+                    [
+                        (sample.physical_sample_id, *tuple(col))
+                        if isinstance(col, tuple)
+                        else (sample.physical_sample_id, col)
+                        for col in renamed.columns
+                    ]
+                )
+                frames.append(renamed)
+            if frames:
+                project_aligned = frames[0]
+                for frame in frames[1:]:
+                    project_aligned = project_aligned.join(frame, how="outer")
+
+        project_name = None
+        return ProjectResult(
+            project_id=project_id,
+            project_name=project_name,
+            samples=sample_results,
+            aligned_timeseries=project_aligned,
+        )
+
     def _get_result_data(
         self,
         data_id: str,
         data_type: Literal[
             "xps",
+            "photoluminescence",
+            "pl",
+            "raman",
             "rheed_image",
             "rheed_stationary",
             "rheed_rotating",
             "rheed_xscan",
             "metrology",
+            "recipe",
             "optical",
         ],
-    ) -> RHEEDVideoResult | RHEEDImageResult | XPSResult | None:
+        catalogue_entry: dict[str, Any] | None = None,
+    ) -> (
+        RHEEDVideoResult
+        | RHEEDImageResult
+        | XPSResult
+        | PhotoluminescenceResult
+        | RamanResult
+        | UnknownResult
+        | None
+    ):
         if data_type == "xps":
             result: dict = self._get(sub_url=f"xps/{data_id}")  # type: ignore  # noqa: PGH003
 
@@ -211,6 +600,35 @@ class Client(BaseClient):
                 elements_manually_set=bool(result["set_elements"]),
             )
 
+        if data_type in ("photoluminescence", "pl"):
+            result = (
+                self._get(  # type: ignore  # noqa: PGH003
+                    sub_url=f"photoluminescence/{data_id}"
+                )
+                or {}
+            )
+            return PhotoluminescenceResult(
+                data_id=data_id,
+                photoluminescence_id=result.get(
+                    "photoluminescence_id", result.get("id")
+                ),
+                energies=result.get("energies", []),
+                intensities=result.get("intensities", []),
+                detected_peaks=result.get("detected_peaks", {}),
+                last_updated=result.get("last_updated"),
+            )
+
+        if data_type == "raman":
+            result = self._get(sub_url=f"raman/{data_id}") or {}  # type: ignore  # noqa: PGH003
+            return RamanResult(
+                data_id=data_id,
+                raman_id=result.get("raman_id", result.get("id")),
+                raman_shift=result.get("energies", result.get("wavenumbers", [])),
+                intensities=result.get("intensities", []),
+                detected_peaks=result.get("detected_peaks", {}),
+                last_updated=result.get("last_updated"),
+            )
+
         if data_type == "rheed_image":
             return _get_rheed_image_result(self, data_id)
 
@@ -219,9 +637,17 @@ class Client(BaseClient):
             "rheed_rotating",
             "rheed_xscan",
             "metrology",
+            "recipe",
             "optical",
         ]:
-            timeseries_type = "rheed" if "rheed" in data_type else data_type
+            # recipe timeseries are served from the metrology endpoint; reuse that provider.
+            timeseries_type = (
+                "rheed"
+                if "rheed" in data_type
+                else "metrology"
+                if data_type == "recipe"
+                else data_type
+            )
             provider = get_provider(timeseries_type)
 
             # Get timeseries data
@@ -230,7 +656,12 @@ class Client(BaseClient):
 
             return provider.build_result(self, data_id, data_type, ts_df)
 
-        raise ValueError("Data type must be supported")
+        # Fallback for unknown/unsupported data types
+        return UnknownResult(
+            data_id=data_id,
+            data_type=data_type,
+            catalogue_entry=catalogue_entry,
+        )
 
     def upload(self, files: list[str | BinaryIO]):
         """Upload and process files

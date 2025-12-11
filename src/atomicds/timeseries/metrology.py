@@ -23,6 +23,7 @@ class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
             "decay_constant_minutes": "Decay Constant",
             "median_period": "Median Period",
             "median_period_seconds": "Median Period",
+            "decay_fit": "Decay Fit",
         }
     )
     INDEX_COLS: Sequence[str] = ["Frame Number"]

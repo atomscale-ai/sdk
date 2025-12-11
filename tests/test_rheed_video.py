@@ -39,6 +39,8 @@ def test_get_dataframe(result: RHEEDVideoResult):
             "Specular FWHM",
             "First Order FWHM",
             "Time",
+            "UNIX Timestamp",
+            "Relative Time",
         ]
     )
 
