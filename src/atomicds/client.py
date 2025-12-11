@@ -451,7 +451,6 @@ class Client(BaseClient):
         if physical_samples and not isinstance(physical_samples, list):
             physical_samples = [physical_samples]
 
-        print("PHYS_SAMPLE", physical_sample_id)
         entries: list[dict] | None = self._get(  # type: ignore  # noqa: PGH003
             sub_url="data_entries/",
             params={

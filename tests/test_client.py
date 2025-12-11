@@ -209,7 +209,6 @@ def test_get_physical_sample(client: Client):
         pytest.skip("No physical samples available")
 
     sample_id = samples["Physical Sample ID"].dropna().iloc[0]
-    print(sample_id)
     result = client.get_physical_sample(
         sample_id, include_organization_data=False, align=False
     )
