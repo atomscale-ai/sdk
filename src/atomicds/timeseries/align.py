@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from functools import reduce
-from typing import Iterable
 
 import pandas as pd
 
@@ -94,9 +94,7 @@ def align_timeseries(
             continue
         data_id, domain, df = extracted
         df = df.copy()
-        df.columns = pd.MultiIndex.from_product(
-            [[data_id], [domain], df.columns]
-        )
+        df.columns = pd.MultiIndex.from_product([[data_id], [domain], df.columns])
         frames.append(df)
 
     if not frames:

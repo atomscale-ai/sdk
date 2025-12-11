@@ -40,7 +40,7 @@ def test_get_dataframe(result: RHEEDVideoResult):
             "First Order FWHM",
             "Time",
             "UNIX Timestamp",
-            "Relative Time"
+            "Relative Time",
         ]
     )
 

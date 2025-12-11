@@ -45,7 +45,7 @@ def test_generic_search(client: Client):
             "Sample Notes",
             "Sample Notes Last Updated",
             "Project ID",
-            "Project Name"
+            "Project Name",
         ]
     )
     assert not len(set(orig_data.keys().values) - column_names)
@@ -194,7 +194,9 @@ def test_get_project(client: Client):
         pytest.skip("No projects available")
 
     project_id = projects["Project ID"].dropna().iloc[0]
-    project = client.get_project(project_id, include_organization_data=False, align=False)
+    project = client.get_project(
+        project_id, include_organization_data=False, align=False
+    )
 
     assert project.project_id == project_id
     assert hasattr(project, "samples")
@@ -210,7 +212,9 @@ def test_upload_rejects_missing_file(tmp_path):
 
 def test_download_videos_missing_metadata(client: Client, tmp_path):
     with pytest.raises(ClientError, match="No processed data found"):
-        client.download_videos(data_ids="ffffffff-ffff-ffff-ffff-ffffffffffff", dest_dir=tmp_path)
+        client.download_videos(
+            data_ids="ffffffff-ffff-ffff-ffff-ffffffffffff", dest_dir=tmp_path
+        )
 
 
 # @pytest.mark.order(2)

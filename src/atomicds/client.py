@@ -242,7 +242,7 @@ class Client(BaseClient):
         ]
 
         for chunk in chunks:
-            chunk_data: list[dict] | dict | None = self._get(  # type: ignore[assignment] # noqa: PGH003
+            chunk_data: list[dict] | dict | None = self._get(  # type: ignore[assignment]
                 sub_url="data_entries/",
                 params={
                     "data_ids": chunk,
@@ -533,7 +533,7 @@ class Client(BaseClient):
                 renamed = sample.aligned_timeseries.copy()
                 renamed.columns = pd.MultiIndex.from_tuples(
                     [
-                        (sample.physical_sample_id,) + tuple(col)
+                        (sample.physical_sample_id, *tuple(col))
                         if isinstance(col, tuple)
                         else (sample.physical_sample_id, col)
                         for col in renamed.columns
