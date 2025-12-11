@@ -16,6 +16,8 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
     # Mapping from API fields → user-facing column names
     RENAME_MAP: Mapping[str, str] = {
         "time_seconds": "Time",
+        "relative_time_seconds": "Relative Time",
+        "unix_timestamp_ms": "UNIX Timestamp",
         "frame_number": "Frame Number",
         "cluster_id": "Cluster ID",
         "cluster_std": "Cluster ID Uncertainty",

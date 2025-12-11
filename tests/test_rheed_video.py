@@ -39,9 +39,12 @@ def test_get_dataframe(result: RHEEDVideoResult):
             "Specular FWHM",
             "First Order FWHM",
             "Time",
+            "UNIX Timestamp",
+            "Relative Time"
         ]
     )
 
+    print(result.timeseries_data.keys().values)
     assert isinstance(result.timeseries_data, DataFrame)
     assert not len(set(result.timeseries_data.keys().values) - column_names)
     assert result.timeseries_data.index.names == ["Angle", "Frame Number"]
