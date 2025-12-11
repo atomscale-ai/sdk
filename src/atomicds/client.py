@@ -12,11 +12,11 @@ from pandas import DataFrame
 from atomicds.core import BaseClient, ClientError, _FileSlice
 from atomicds.core.utils import _make_progress, normalize_path
 from atomicds.results import (
+    PhotoluminescenceResult,
+    RamanResult,
     RHEEDImageResult,
     RHEEDVideoResult,
     XPSResult,
-    PhotoluminescenceResult,
-    RamanResult,
     _get_rheed_image_result,
 )
 from atomicds.results.group import PhysicalSampleResult, ProjectResult
@@ -32,21 +32,22 @@ class Client(BaseClient):
     def __init__(
         self,
         api_key: str | None = None,
-        endpoint: str | None = "https://api.atomscale.ai/",
+        endpoint: str | None = None,
         mute_bars: bool = False,
     ):
         """
         Args:
-            api_key (str | None): API key. Explicit value takes precedence; if None, falls back to ADS_API_KEY environment variable.
-            endpoint (str): Root API endpoint. Explicit value takes precedence; if None, falls back to ADS_API_ENDPOINT environment variable,
+            api_key (str | None): API key. Explicit value takes precedence; if None, falls back to AS_API_KEY environment variable.
+            endpoint (str): Root API endpoint. Explicit value takes precedence; if None, falls back to AS_API_ENDPOINT environment variable,
                 defaulting to 'https://api.atomscale.ai/' if not set.
             mute_bars (bool): Whether to mute progress bars. Defaults to False.
         """
+
         if api_key is None:
-            api_key = os.environ.get("ADS_API_KEY")
+            api_key = os.environ.get("AS_API_KEY")
 
         if endpoint is None:
-            endpoint = os.environ.get("ADS_API_ENDPOINT") or "https://api.atomscale.ai/"
+            endpoint = os.environ.get("AS_API_ENDPOINT") or "https://api.atomscale.ai/"
 
         if api_key is None:
             raise ValueError("No valid ADS API key supplied")
