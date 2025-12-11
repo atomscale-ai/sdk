@@ -210,7 +210,7 @@ def test_upload_rejects_missing_file(tmp_path):
 
 def test_download_videos_missing_metadata(client: Client, tmp_path):
     with pytest.raises(ClientError, match="No processed data found"):
-        client.download_videos(data_ids="missing-id", dest_dir=tmp_path)
+        client.download_videos(data_ids="ffffffff-ffff-ffff-ffff-ffffffffffff", dest_dir=tmp_path)
 
 
 # @pytest.mark.order(2)
