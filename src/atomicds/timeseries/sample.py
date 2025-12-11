@@ -42,7 +42,9 @@ def _extract_time_index(ts_df: DataFrame) -> tuple[pd.Index, DataFrame] | None:
         if pd.api.types.is_datetime64_any_dtype(time_series):
             time_index: pd.Index = pd.Index(pd.to_datetime(time_series))
         else:
-            time_index = pd.Index(pd.to_datetime(time_series, unit="ms", errors="coerce"))
+            time_index = pd.Index(
+                pd.to_datetime(time_series, unit="ms", errors="coerce")
+            )
     else:
         time_index = pd.Index(pd.to_timedelta(time_series, unit="s"))
 
@@ -104,7 +106,9 @@ def align_timeseries_frames(
         if interpolation_window:
             freq_td = pd.Timedelta(freq)
             window_td = pd.Timedelta(interpolation_window)
-            limit: int | None = int(window_td / freq_td) if freq_td and window_td else None
+            limit: int | None = (
+                int(window_td / freq_td) if freq_td and window_td else None
+            )
             aligned = aligned.interpolate(method="time", limit=limit)
 
     return aligned
