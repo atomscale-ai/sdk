@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 import pandas as pd
-from atomscale.results import MetrologyResult, OpticalResult, RHEEDVideoResult
 
+from atomscale.results import MetrologyResult, OpticalResult, RHEEDVideoResult
 
 ABS_TIME_COLS = (
     "UNIX Timestamp",
@@ -253,5 +253,4 @@ def align_timeseries(
             df = df.sort_index(axis=1)
         return df
 
-    aligned = _merge_compatible_metrics(aligned)
-    return aligned
+    return _merge_compatible_metrics(aligned)
