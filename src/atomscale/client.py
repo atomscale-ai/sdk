@@ -434,7 +434,6 @@ class Client(BaseClient):
         *,
         include_organization_data: bool = True,
         align: bool | str = False,
-        resample: str | None = None,
     ) -> PhysicalSampleResult:
         """Get all data for a physical sample.
 
@@ -442,7 +441,6 @@ class Client(BaseClient):
             physical_sample_id: Identifier of the physical sample.
             include_organization_data: Whether to include organization data. Defaults to True.
             align: Whether to align timeseries data. If truthy, an aligned DataFrame is returned.
-            resample: Optional pandas resample rule applied after alignment.
         """
         physical_samples: list[dict] | None = self._get(  # type: ignore  # noqa: PGH003
             sub_url="physical_samples/",
@@ -468,11 +466,7 @@ class Client(BaseClient):
         if isinstance(align, str):
             join_how = align
 
-        ts_aligned = (
-            align_timeseries(results, how=join_how, resample=resample)
-            if align
-            else None
-        )
+        ts_aligned = align_timeseries(results, how=join_how) if align else None
 
         non_timeseries = [
             r
@@ -501,7 +495,6 @@ class Client(BaseClient):
         *,
         include_organization_data: bool = True,
         align: bool | str = False,
-        resample: str | None = None,
     ) -> ProjectResult:
         """Get all data grouped by physical sample for a project.
 
@@ -509,7 +502,6 @@ class Client(BaseClient):
             project_id: Identifier of the project.
             include_organization_data: Whether to include organization data. Defaults to True.
             align: Whether to align timeseries at the project level. Defaults to False.
-            resample: Optional pandas resample rule applied after alignment.
         """
         # Get physical samples associated with the project, then fetch data per sample.
         project_samples: list[dict] = (
@@ -519,39 +511,27 @@ class Client(BaseClient):
             return ProjectResult(project_id, None, [], None)
 
         sample_results: list[PhysicalSampleResult] = []
+        all_results: list = []
         for sample in project_samples:
             sid = sample.get("id")
             if not sid:
                 continue
+            # For project-level alignment we align once across all entries, so
+            # skip per-sample alignment when align=True.
+            sample_align = False if align else align
             sample_results.append(
                 self.get_physical_sample(
                     sid,
                     include_organization_data=include_organization_data,
-                    align=align,
-                    resample=resample,
+                    align=sample_align,
                 )
             )
+            if sample_results[-1].data_results:
+                all_results.extend(sample_results[-1].data_results)
 
         project_aligned = None
         if align:
-            frames = []
-            for sample in sample_results:
-                if sample.aligned_timeseries is None:
-                    continue
-                renamed = sample.aligned_timeseries.copy()
-                renamed.columns = pd.MultiIndex.from_tuples(
-                    [
-                        (sample.physical_sample_id, *tuple(col))
-                        if isinstance(col, tuple)
-                        else (sample.physical_sample_id, col)
-                        for col in renamed.columns
-                    ]
-                )
-                frames.append(renamed)
-            if frames:
-                project_aligned = frames[0]
-                for frame in frames[1:]:
-                    project_aligned = project_aligned.join(frame, how="outer")
+            project_aligned = align_timeseries(all_results, how="outer")
 
         project_name = None
         return ProjectResult(
@@ -654,7 +634,13 @@ class Client(BaseClient):
             raw = provider.fetch_raw(self, data_id)
             ts_df = provider.to_dataframe(raw)
 
-            return provider.build_result(self, data_id, data_type, ts_df)
+            result_obj = provider.build_result(self, data_id, data_type, ts_df)
+            if catalogue_entry:
+                # Store upload datetime for alignment fallback when only relative time is available.
+                upload_dt = catalogue_entry.get("upload_datetime")
+                if upload_dt:
+                    result_obj.upload_datetime = upload_dt
+            return result_obj
 
         # Fallback for unknown/unsupported data types
         return UnknownResult(
