@@ -1,4 +1,4 @@
-atomscale API Client
+Atomscale Python SDK
 ===================
 
 .. |testing-badge| image:: https://github.com/atomscale-ai/sdk/workflows/Testing/badge.svg
