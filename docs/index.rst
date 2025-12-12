@@ -42,8 +42,8 @@ Installation
 
   pip install atomscale
 
-Much of the functionality of the package requires an API key. It can be provided using 
-the ``AS_API_KEY`` environment variable before creating a :class:`~atomscale.client.Client`, 
+Much of the functionality of the package requires an API key. It can be provided using
+the ``AS_API_KEY`` environment variable before creating a :class:`~atomscale.client.Client`,
 or passed in directly when constructing the client in your code.
 
 .. note::
