@@ -76,7 +76,7 @@ jobs:
 
       - name: Test with pytest
         env:
-          AS_API_KEY: ${{ secrets.ADS_API_KEY }}
+          AS_API_KEY: ${{ secrets.AS_API_KEY }}
           AS_API_ENDPOINT: "https://api.atomscale.ai"
         run: |
           pip install -e .
