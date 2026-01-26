@@ -71,26 +71,26 @@ def _extract_timeseries(result):
     """Return (data_id, domain, df_with_timeindex) or None for non-timeseries."""
     if isinstance(result, RHEEDVideoResult):
         domain = "rheed"
-        df = result.timeseries_data
+        timeseries = result.timeseries_data
     elif isinstance(result, OpticalResult):
         domain = "optical"
-        df = result.timeseries_data
+        timeseries = result.timeseries_data
     elif isinstance(result, MetrologyResult):
         domain = "metrology"
-        df = result.timeseries_data
+        timeseries = result.timeseries_data
     else:
         return None
 
-    if df is None or df.empty:
+    if timeseries is None or timeseries.empty:
         return None
 
     # Build time index: prefer absolute epochs; fall back to upload_datetime + relative offsets.
     upload_dt = getattr(result, "upload_datetime", None)
 
-    time_index = _infer_absolute_time(df)
+    time_index = _infer_absolute_time(timeseries)
     if time_index is None and upload_dt is not None:
         base = pd.to_datetime(upload_dt, utc=True, errors="coerce")
-        rel = _infer_relative_time(df)
+        rel = _infer_relative_time(timeseries)
         if base is not pd.NaT and rel is not None:
             time_index = base + rel
 
@@ -101,7 +101,7 @@ def _extract_timeseries(result):
     if not valid_mask.any():
         return None
 
-    indexed = df.loc[valid_mask].copy(deep=False)
+    indexed = timeseries.loc[valid_mask].copy(deep=False)
     indexed.index = pd.Index(time_index[valid_mask], name="time")
     indexed = indexed.sort_index()
 
@@ -173,11 +173,11 @@ def align_timeseries(
         if not extracted:
             continue
 
-        data_id, domain, df = extracted
-        df = df.copy(deep=False)
-        df.columns = pd.MultiIndex.from_product([[data_id], [domain], df.columns])
-        frames.append(df)
-        indices.append(df.index)
+        data_id, domain, frame = extracted
+        frame = frame.copy(deep=False)
+        frame.columns = pd.MultiIndex.from_product([[data_id], [domain], frame.columns])
+        frames.append(frame)
+        indices.append(frame.index)
 
     if not frames:
         return pd.DataFrame()
@@ -211,11 +211,11 @@ def align_timeseries(
 
     # Merge compatible metrics across items: if multiple columns share (domain, metric)
     # and never conflict where they overlap, collapse into (shared, domain, metric).
-    def _merge_compatible_metrics(df: pd.DataFrame) -> pd.DataFrame:
-        if not isinstance(df.columns, pd.MultiIndex):
-            return df
-        domains = df.columns.get_level_values(1)
-        metrics = df.columns.get_level_values(2)
+    def _merge_compatible_metrics(data: pd.DataFrame) -> pd.DataFrame:
+        if not isinstance(data.columns, pd.MultiIndex):
+            return data
+        domains = data.columns.get_level_values(1)
+        metrics = data.columns.get_level_values(2)
         new_cols: dict = {}
         drop_cols: list = []
 
@@ -223,16 +223,16 @@ def align_timeseries(
             for metric in metrics.unique():
                 cols = [
                     c
-                    for c in df.columns
+                    for c in data.columns
                     if c[1] == domain and c[2] == metric and c[0] != "shared"
                 ]
                 if len(cols) <= 1:
                     continue
 
-                merged = df[cols[0]]
+                merged = data[cols[0]]
                 conflict = False
                 for c in cols[1:]:
-                    other = df[c]
+                    other = data[c]
                     overlap_mask = merged.notna() & other.notna()
                     if (merged[overlap_mask] != other[overlap_mask]).any():
                         conflict = True
@@ -247,10 +247,10 @@ def align_timeseries(
                 drop_cols.extend(cols)
 
         if new_cols:
-            df = df.drop(columns=drop_cols)
+            data = data.drop(columns=drop_cols)
             for col, series in new_cols.items():
-                df[col] = series
-            df = df.sort_index(axis=1)
-        return df
+                data[col] = series
+            data = data.sort_index(axis=1)
+        return data
 
     return _merge_compatible_metrics(aligned)
