@@ -23,15 +23,17 @@ jobs:
           version: "latest"
 
       - name: Set up Python
-        run: uv python install 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
-          uv pip install -r requirements/requirements-ubuntu-latest_py3.11.txt
-          uv pip install -r requirements/requirements-ubuntu-latest_py3.11_extras.txt
+          uv pip install --system -r requirements/requirements-ubuntu-latest_py3.11.txt
+          uv pip install --system -r requirements/requirements-ubuntu-latest_py3.11_extras.txt
 
       - name: Run pre-commit
-        run: uv run pre-commit run --all-files --show-diff-on-failure
+        run: pre-commit run --all-files --show-diff-on-failure
 
   test:
     needs: lint
@@ -52,29 +54,31 @@ jobs:
           version: "latest"
 
       - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
-          uv pip install -r requirements/requirements-${{ matrix.os }}_py${{ matrix.python-version }}.txt
-          uv pip install -r requirements/requirements-${{ matrix.os }}_py${{ matrix.python-version }}_extras.txt
+          uv pip install --system -r requirements/requirements-${{ matrix.os }}_py${{ matrix.python-version }}.txt
+          uv pip install --system -r requirements/requirements-${{ matrix.os }}_py${{ matrix.python-version }}_extras.txt
 
       - name: Set SSL_CERT_FILE (Linux/MacOS)
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'macos-latest'
-        run: echo "SSL_CERT_FILE=$(uv run python -m certifi)" >> $GITHUB_ENV
+        run: echo "SSL_CERT_FILE=$(python -m certifi)" >> $GITHUB_ENV
 
       - name: Set SSL_CERT_FILE (Windows)
         if: matrix.os == 'windows-latest'
-        run: echo "SSL_CERT_FILE=$(uv run python -m certifi)" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+        run: echo "SSL_CERT_FILE=$(python -m certifi)" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Install package
-        run: uv pip install -e .
+        run: uv pip install --system -e .
 
       - name: Test with pytest
         env:
           AS_API_KEY: ${{ secrets.AS_API_KEY }}
           AS_API_ENDPOINT: "https://api.atomscale.ai"
-        run: uv run pytest -x
+        run: pytest -x
 
   auto-gen-release:
     needs: test
