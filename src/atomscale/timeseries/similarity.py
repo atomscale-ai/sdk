@@ -68,15 +68,17 @@ class SimilarityTrajectoryProvider(TimeseriesProvider[SimilarityTrajectoryResult
                 continue
 
             # Build dataframe from columnar data
-            traj_df = DataFrame({
-                "reference_id": ref_id,
-                "reference_item_name": ref_name,
-                "similarity_values": similarity_values,
-                "real_time_seconds": real_time_seconds,
-                "unix_times": unix_times,
-                "is_active": is_active,
-                "averaged_count": averaged_count,
-            })
+            traj_df = DataFrame(
+                {
+                    "reference_id": ref_id,
+                    "reference_item_name": ref_name,
+                    "similarity_values": similarity_values,
+                    "real_time_seconds": real_time_seconds,
+                    "unix_times": unix_times,
+                    "is_active": is_active,
+                    "averaged_count": averaged_count,
+                }
+            )
             frames.append(traj_df)
 
         if not frames:
