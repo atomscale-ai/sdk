@@ -27,3 +27,5 @@ class ResultIDs:
     metrology = ""
     photoluminescence = ""
     raman = ""
+    similarity_workflow = "rheed_stationary"
+    similarity_source_id = "bb3494b1-b5fb-4f3e-ac50-e4024f8aacf5"

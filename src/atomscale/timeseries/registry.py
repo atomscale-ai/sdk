@@ -4,11 +4,13 @@ from .metrology import MetrologyProvider
 from .optical import OpticalProvider
 from .provider import TimeseriesProvider
 from .rheed import RHEEDProvider
+from .similarity import SimilarityTrajectoryProvider
 
 _PROVIDER_CLASSES: dict[str, type[TimeseriesProvider]] = {
     RHEEDProvider.TYPE: RHEEDProvider,
     OpticalProvider.TYPE: OpticalProvider,
     MetrologyProvider.TYPE: MetrologyProvider,
+    SimilarityTrajectoryProvider.TYPE: SimilarityTrajectoryProvider,
 }
 
 
