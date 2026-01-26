@@ -41,8 +41,13 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         "first_order_fwhm_1": "First Order FWHM",
         "lattice_spacing": "Lattice Spacing",
         "tar_metric": "TAR Metric",
+        "composition_metric": "Composition Metric",
     }
-    DROP_IF_ALL_NA: Sequence[str] = ["reconstruction_intensity", "tar_metric"]
+    DROP_IF_ALL_NA: Sequence[str] = [
+        "reconstruction_intensity",
+        "tar_metric",
+        "composition_metric",
+    ]
     INDEX_COLS: Sequence[str] = ["Angle", "Frame Number"]
 
     def fetch_raw(self, client: BaseClient, data_id: str, **kwargs) -> Any:
