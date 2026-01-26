@@ -25,6 +25,7 @@ class RHEEDStreamer:
         chunk_size: int,
         stream_name: str | None = None,
         physical_sample: str | None = None,
+        project_id: str | None = None,
     ) -> str: ...
     def run(
         self,

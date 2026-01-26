@@ -133,9 +133,9 @@ impl RHEEDStreamer {
     ///
     /// Raises:
     ///     RuntimeError: If the initialization POST fails.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None))]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None))]
     #[pyo3(
-        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None)"
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None)"
     )]
     fn initialize(
         &mut self,
@@ -144,6 +144,7 @@ impl RHEEDStreamer {
         chunk_size: usize,
         stream_name: Option<String>,
         physical_sample: Option<String>,
+        project_id: Option<String>,
     ) -> PyResult<String> {
         // Guard: chunk_size must be >= ceil(2 * fps)
         let min_chunk = (2.0 * fps).ceil() as usize;
@@ -165,6 +166,10 @@ impl RHEEDStreamer {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
+        let project_id = project_id
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
         let fpr = (fps * 60.0) / rotations_per_min;
 
         #[allow(clippy::redundant_field_names)]
@@ -173,6 +178,7 @@ impl RHEEDStreamer {
             rotational_period: fpr,
             rotations_per_min,
             fps_capture_rate: fps,
+            project_id,
         };
 
         let base_endpoint = self.endpoint.clone();

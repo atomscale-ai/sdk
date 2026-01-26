@@ -9,6 +9,8 @@ pub struct RHEEDStreamSettings {
     pub rotational_period: f64,
     pub rotations_per_min: f64,
     pub fps_capture_rate: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
 }
 
 /// POST request to initialize a RHEED stream
