@@ -49,10 +49,11 @@ dev = [
   "pytest-order",
   "pytest-dependency",
   "pytest-asyncio",
-  "ruff",
-  "mypy",
+  "ruff>=0.9.0",
+  "ty",
   "types-requests",
   "pandas-stubs",
+  "pre-commit>=4.0.0",
 ]
 docs = ["sphinx>=6.2", "sphinx-autodoc-typehints>=1.24", "alabaster>=0.7"]
 
@@ -73,28 +74,12 @@ path = "src/atomscale/streaming/Cargo.toml"
 binding = "PyO3"
 
 
-[tool.pyright]
-include = ["atomscale", "atomicds"]
-exclude = ["**/__pycache__"]
-
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = ["-p no:warnings", "--import-mode=importlib"]
 xfail_strict = true
 log_cli_level = "warn"
 testpaths = ["tests"]
-
-[tool.black]
-exclude = '''
-/(
-    \.git
-  | \.tox
-)/
-'''
-
-[tool.isort]
-profile = 'black'
-skip_gitignore = true
 
 [tool.coverage.run]
 source = ["src"]
@@ -149,20 +134,19 @@ lint.unfixable = [
 ]
 exclude = []
 lint.flake8-unused-arguments.ignore-variadic-names = true
-extend-exclude = ["tests"]
+extend-exclude = ["tests", "examples", "*.ipynb"]
 lint.pydocstyle.convention = "google"
 lint.isort.known-first-party = ["atomscale"]
 
 [tool.docformatter]
 pre-summary-newline = true
-black = true
 
-[tool.mypy]
-ignore_missing_imports = true
-namespace_packages = true
-explicit_package_bases = true
-no_implicit_optional = false
-disable_error_code = "annotation-unchecked"
+[tool.ty.environment]
+root = ["./src"]
+
+[tool.ty.src]
+include = ["src/atomicds"]
+exclude = ["tests", "examples", "docs"]
 
 [tool.codespell]
 ignore-words-list = "fpr"

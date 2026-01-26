@@ -22,6 +22,7 @@ def result(client: Client):
 
 
 def test_get_dataframe(result: RHEEDVideoResult):
+    # Core columns that should always be present
     column_names = set(
         [
             "Strain",
@@ -38,9 +39,12 @@ def test_get_dataframe(result: RHEEDVideoResult):
             "Half Order Intensity R",
             "Specular FWHM",
             "First Order FWHM",
-            "Time",
             "UNIX Timestamp",
             "Relative Time",
+            # Optional columns (included if data exists)
+            "Time",
+            "TAR Metric",
+            "Composition Metric",
         ]
     )
 

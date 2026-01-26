@@ -245,9 +245,9 @@ class BaseClient:
         atomscale_info = "atomscale/" + __version__
         python_info = f"Python/{sys.version.split()[0]}"
         platform_info = f"{platform.system()}/{platform.release()}"
-        session.headers[
-            "user-agent"
-        ] = f"{atomscale_info} ({python_info} {platform_info})"
+        session.headers["user-agent"] = (
+            f"{atomscale_info} ({python_info} {platform_info})"
+        )
 
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3
