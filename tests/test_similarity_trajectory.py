@@ -23,11 +23,16 @@ def raw_data(client: Client, provider: SimilarityTrajectoryProvider):
     if not ResultIDs.similarity_workflow or not ResultIDs.similarity_source_id:
         pytest.skip("No similarity trajectory data available")
 
-    return provider.fetch_raw(
+    data = provider.fetch_raw(
         client,
         ResultIDs.similarity_source_id,
         workflow=ResultIDs.similarity_workflow,
     )
+
+    if not data or not data.get("trajectories"):
+        pytest.skip("No trajectory data returned from API")
+
+    return data
 
 
 @pytest.fixture
