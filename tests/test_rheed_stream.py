@@ -1,53 +1,97 @@
-"""Integration tests for RHEEDStreamer."""
+"""Integration tests for RHEEDStreamer.
+
+These tests use a subprocess-based HTTP server because the RHEEDStreamer uses
+a Rust HTTP client (reqwest) which doesn't interact well with Python's threading
+model used by pytest-httpserver. The subprocess approach provides true process
+isolation and works reliably across platforms.
+"""
 import json
-import multiprocessing
 import socket
-import time
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import subprocess
+import sys
+from pathlib import Path
+from typing import Callable
 
 import pytest
 
+# Path to the mock server module
+_MOCK_SERVER_MODULE = Path(__file__).parent / "_mock_http_server.py"
 
-def get_free_port():
-    """Get a free port on localhost."""
+
+class MockServer:
+    """A mock HTTP server running in a subprocess."""
+
+    def __init__(self, port: int, response_data: str):
+        self.port = port
+        self.response_data = response_data
+        self._proc: subprocess.Popen | None = None
+        self._captured_body: dict | None = None
+
+    def start(self) -> None:
+        """Start the server subprocess."""
+        self._proc = subprocess.Popen(
+            [sys.executable, str(_MOCK_SERVER_MODULE), str(self.port), self.response_data],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        # Wait for server to signal it's ready
+        ready_line = self._proc.stdout.readline()
+        if not ready_line.startswith("READY:"):
+            self.stop()
+            raise RuntimeError(f"Server failed to start: {ready_line}")
+
+    def stop(self) -> None:
+        """Stop the server subprocess."""
+        if self._proc:
+            self._proc.terminate()
+            self._proc.wait(timeout=5)
+            self._proc = None
+
+    @property
+    def endpoint(self) -> str:
+        """Return the server endpoint URL (no trailing slash)."""
+        return f"http://127.0.0.1:{self.port}"
+
+    def get_captured_body(self) -> dict | None:
+        """Read and return the captured request body from the server."""
+        if self._proc and self._captured_body is None:
+            for line in self._proc.stdout:
+                if line.startswith("BODY:"):
+                    self._captured_body = json.loads(line[5:])
+                    break
+        return self._captured_body
+
+    def __enter__(self) -> "MockServer":
+        self.start()
+        return self
+
+    def __exit__(self, *args) -> None:
+        self.stop()
+
+
+def _get_free_port() -> int:
+    """Get an available port on localhost."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return s.getsockname()[1]
 
 
-class CaptureHandler(BaseHTTPRequestHandler):
-    """HTTP handler that captures request bodies."""
+@pytest.fixture
+def mock_server_factory() -> Callable[[str], MockServer]:
+    """Factory fixture to create mock servers with custom responses."""
+    servers: list[MockServer] = []
 
-    captured_bodies = []
-    response_data = '"test-data-id"'
+    def create(response_data: str) -> MockServer:
+        server = MockServer(_get_free_port(), response_data)
+        server.start()
+        servers.append(server)
+        return server
 
-    def do_POST(self):
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length)
-        CaptureHandler.captured_bodies.append(json.loads(body))
+    yield create
 
-        response = CaptureHandler.response_data
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", len(response))
-        self.end_headers()
-        self.wfile.write(response.encode())
-
-    def log_message(self, format, *args):
-        pass  # Suppress log messages
-
-
-def run_server(port, response_data, request_count, result_queue):
-    """Run HTTP server in a subprocess."""
-    CaptureHandler.response_data = response_data
-    CaptureHandler.captured_bodies = []
-
-    server = HTTPServer(("127.0.0.1", port), CaptureHandler)
-    for _ in range(request_count):
-        server.handle_request()
-
-    result_queue.put(CaptureHandler.captured_bodies)
-    server.server_close()
+    for server in servers:
+        server.stop()
 
 
 class TestRHEEDStreamerInitialize:
@@ -71,7 +115,7 @@ class TestRHEEDStreamerInitialize:
 
         streamer = RHEEDStreamer(
             api_key="test-api-key",
-            endpoint="http://localhost:9999/",
+            endpoint="http://localhost:9999",
         )
 
         with pytest.raises(ValueError, match="chunk_size must be at least 2×fps"):
@@ -81,156 +125,96 @@ class TestRHEEDStreamerInitialize:
                 chunk_size=30,  # Invalid: less than 2 * 30 = 60
             )
 
-    def test_initialize_sends_project_id_in_request(self):
+    def test_initialize_sends_project_id_in_request(self, mock_server_factory):
         """Verify project_id is included in POST body when provided."""
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
-        port = get_free_port()
-        result_queue = multiprocessing.Queue()
+        server = mock_server_factory('"test-data-id-123"')
 
-        # Start server in subprocess
-        server_proc = multiprocessing.Process(
-            target=run_server,
-            args=(port, '"test-data-id-123"', 1, result_queue),
+        streamer = RHEEDStreamer(
+            api_key="test-api-key",
+            endpoint=server.endpoint,
         )
-        server_proc.start()
-        time.sleep(0.3)  # Wait for server to start
 
-        try:
-            streamer = RHEEDStreamer(
-                api_key="test-api-key",
-                endpoint=f"http://127.0.0.1:{port}",
-            )
+        project_uuid = "550e8400-e29b-41d4-a716-446655440000"
+        data_id = streamer.initialize(
+            fps=30.0,
+            rotations_per_min=0.0,
+            chunk_size=60,
+            project_id=project_uuid,
+        )
 
-            project_uuid = "550e8400-e29b-41d4-a716-446655440000"
-            data_id = streamer.initialize(
-                fps=30.0,
-                rotations_per_min=0.0,
-                chunk_size=60,
-                project_id=project_uuid,
-            )
+        assert data_id == "test-data-id-123"
 
-            assert data_id == "test-data-id-123"
+        body = server.get_captured_body()
+        assert body is not None
+        assert body.get("project_id") == project_uuid
+        assert "data_item_name" in body
+        assert body.get("fps_capture_rate") == 30.0
 
-            # Get captured bodies from server process
-            captured_bodies = result_queue.get(timeout=5)
-            assert len(captured_bodies) == 1
-            captured_body = captured_bodies[0]
-
-            assert captured_body.get("project_id") == project_uuid
-            assert "data_item_name" in captured_body
-            assert captured_body.get("fps_capture_rate") == 30.0
-        finally:
-            server_proc.join(timeout=5)
-            if server_proc.is_alive():
-                server_proc.terminate()
-
-    def test_initialize_omits_project_id_when_none(self):
+    def test_initialize_omits_project_id_when_none(self, mock_server_factory):
         """Verify project_id is omitted from POST body when not provided."""
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
-        port = get_free_port()
-        result_queue = multiprocessing.Queue()
+        server = mock_server_factory('"test-data-id-456"')
 
-        server_proc = multiprocessing.Process(
-            target=run_server,
-            args=(port, '"test-data-id-456"', 1, result_queue),
+        streamer = RHEEDStreamer(
+            api_key="test-api-key",
+            endpoint=server.endpoint,
         )
-        server_proc.start()
-        time.sleep(0.3)
 
-        try:
-            streamer = RHEEDStreamer(
-                api_key="test-api-key",
-                endpoint=f"http://127.0.0.1:{port}",
-            )
+        data_id = streamer.initialize(
+            fps=30.0,
+            rotations_per_min=0.0,
+            chunk_size=60,
+        )
 
-            data_id = streamer.initialize(
-                fps=30.0,
-                rotations_per_min=0.0,
-                chunk_size=60,
-            )
+        assert data_id == "test-data-id-456"
 
-            assert data_id == "test-data-id-456"
+        body = server.get_captured_body()
+        assert body is not None
+        assert "project_id" not in body
 
-            captured_bodies = result_queue.get(timeout=5)
-            assert len(captured_bodies) == 1
-            captured_body = captured_bodies[0]
-
-            assert "project_id" not in captured_body
-        finally:
-            server_proc.join(timeout=5)
-            if server_proc.is_alive():
-                server_proc.terminate()
-
-    def test_initialize_omits_project_id_when_empty_string(self):
+    def test_initialize_omits_project_id_when_empty_string(self, mock_server_factory):
         """Verify empty string project_id is treated as None (omitted)."""
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
-        port = get_free_port()
-        result_queue = multiprocessing.Queue()
+        server = mock_server_factory('"test-data-id-789"')
 
-        server_proc = multiprocessing.Process(
-            target=run_server,
-            args=(port, '"test-data-id-789"', 1, result_queue),
+        streamer = RHEEDStreamer(
+            api_key="test-api-key",
+            endpoint=server.endpoint,
         )
-        server_proc.start()
-        time.sleep(0.3)
 
-        try:
-            streamer = RHEEDStreamer(
-                api_key="test-api-key",
-                endpoint=f"http://127.0.0.1:{port}",
-            )
+        data_id = streamer.initialize(
+            fps=30.0,
+            rotations_per_min=0.0,
+            chunk_size=60,
+            project_id="",
+        )
 
-            data_id = streamer.initialize(
-                fps=30.0,
-                rotations_per_min=0.0,
-                chunk_size=60,
-                project_id="",
-            )
+        assert data_id == "test-data-id-789"
 
-            assert data_id == "test-data-id-789"
+        body = server.get_captured_body()
+        assert body is not None
+        assert "project_id" not in body
 
-            captured_bodies = result_queue.get(timeout=5)
-            assert len(captured_bodies) == 1
-            captured_body = captured_bodies[0]
-
-            assert "project_id" not in captured_body
-        finally:
-            server_proc.join(timeout=5)
-            if server_proc.is_alive():
-                server_proc.terminate()
-
-    def test_initialize_returns_data_id(self):
+    def test_initialize_returns_data_id(self, mock_server_factory):
         """Verify initialize() returns the data_id from the server."""
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
-        port = get_free_port()
-        result_queue = multiprocessing.Queue()
-
         expected_data_id = "abc-123-xyz"
-        server_proc = multiprocessing.Process(
-            target=run_server,
-            args=(port, f'"{expected_data_id}"', 1, result_queue),
+        server = mock_server_factory(f'"{expected_data_id}"')
+
+        streamer = RHEEDStreamer(
+            api_key="test-api-key",
+            endpoint=server.endpoint,
         )
-        server_proc.start()
-        time.sleep(0.3)
 
-        try:
-            streamer = RHEEDStreamer(
-                api_key="test-api-key",
-                endpoint=f"http://127.0.0.1:{port}",
-            )
+        data_id = streamer.initialize(
+            fps=30.0,
+            rotations_per_min=0.0,
+            chunk_size=60,
+        )
 
-            data_id = streamer.initialize(
-                fps=30.0,
-                rotations_per_min=0.0,
-                chunk_size=60,
-            )
-
-            assert data_id == expected_data_id
-        finally:
-            server_proc.join(timeout=5)
-            if server_proc.is_alive():
-                server_proc.terminate()
+        assert data_id == expected_data_id
