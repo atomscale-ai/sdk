@@ -31,6 +31,7 @@ jobs:
         run: |
           uv pip install --system -r requirements/requirements-ubuntu-latest_py3.11.txt
           uv pip install --system -r requirements/requirements-ubuntu-latest_py3.11_extras.txt
+          uv pip install --system pre-commit ty
 
       - name: Run pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
