@@ -18,7 +18,7 @@ __all__ = [
     "RHEEDImageResult",
     "RHEEDVideoResult",
     "RamanResult",
-    "XPSResult",
     "UnknownResult",
+    "XPSResult",
     "_get_rheed_image_result",
 ]
