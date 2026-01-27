@@ -13,7 +13,10 @@ mod utils;
 use utils::{generic_post, init_tracing_once};
 
 mod initialize;
-use initialize::{ensure_physical_sample_link, post_for_initialization, RHEEDStreamSettings};
+use initialize::{
+    ensure_physical_sample_link, post_for_initialization, update_project_tracking_sample,
+    RHEEDStreamSettings,
+};
 
 mod upload;
 use upload::{
@@ -109,7 +112,7 @@ impl RHEEDStreamer {
     }
 
     ////Initialize stream
-    /// initialize(self, stream_name: Optional[str] = None, fps: float, rotations_per_min: float, chunk_size: int, physical_sample: Optional[str] = None) -> str
+    /// initialize(self, fps: float, rotations_per_min: float, chunk_size: int, stream_name: Optional[str] = None, physical_sample: Optional[str] = None, project_id: Optional[str] = None) -> str
     ///
     /// Creates a new **remote data item** for this stream and returns its `data_id`.
     /// Also captures runtime configuration used for subsequent chunk uploads.
@@ -121,21 +124,24 @@ impl RHEEDStreamer {
     /// After streaming via `run(...)` or `push(...)`, call `finalize(data_id)` to mark the stream as complete.
     ///
     /// Args:
-    ///     stream_name (Optional[str]): Human-readable name shown in the platform. If `None` or an empty string,
-    ///         a default like `"RHEED Stream @ 1:23PM"` is used.
     ///     fps (float): Capture rate in frames per second.
     ///     rotations_per_min (float): Wafer/crystal rotations per minute; use `0.0` for stationary operation.
     ///     chunk_size (int): The **intended** number of frames per chunk you will send with `run(...)` or `push(...)`.
+    ///     stream_name (Optional[str]): Human-readable name shown in the platform. If `None` or an empty string,
+    ///         a default like `"RHEED Stream @ 1:23PM"` is used.
     ///     physical_sample (Optional[str]): Name of a physical sample to associate with the data item; matched case-insensitively or created if missing.
+    ///     project_id (Optional[str]): UUID of a project to associate with the stream. When provided along with
+    ///         `physical_sample`, the project's `tracking_physical_sample_id` configuration is automatically updated
+    ///         to link the physical sample to the project for growth monitoring.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
     ///     RuntimeError: If the initialization POST fails.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None))]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None))]
     #[pyo3(
-        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None)"
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None)"
     )]
     fn initialize(
         &mut self,
@@ -144,6 +150,7 @@ impl RHEEDStreamer {
         chunk_size: usize,
         stream_name: Option<String>,
         physical_sample: Option<String>,
+        project_id: Option<String>,
     ) -> PyResult<String> {
         // Guard: chunk_size must be >= ceil(2 * fps)
         let min_chunk = (2.0 * fps).ceil() as usize;
@@ -165,6 +172,10 @@ impl RHEEDStreamer {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
+        let project_id = project_id
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
         let fpr = (fps * 60.0) / rotations_per_min;
 
         #[allow(clippy::redundant_field_names)]
@@ -173,6 +184,7 @@ impl RHEEDStreamer {
             rotational_period: fpr,
             rotations_per_min,
             fps_capture_rate: fps,
+            project_id,
         };
 
         let base_endpoint = self.endpoint.clone();
@@ -192,9 +204,24 @@ impl RHEEDStreamer {
                 &data_id,
                 &sample_name,
             );
-            self.rt
+            let sample_id = self
+                .rt
                 .block_on(physical_sample_fut)
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+
+            // If project_id was provided, update the project's tracking_physical_sample_id
+            if let Some(ref proj_id) = settings.project_id {
+                let update_project_fut = update_project_tracking_sample(
+                    &self.client,
+                    &base_endpoint,
+                    &self.api_key,
+                    proj_id,
+                    &sample_id,
+                );
+                self.rt
+                    .block_on(update_project_fut)
+                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            }
         }
 
         self.fps = Some(fps);
