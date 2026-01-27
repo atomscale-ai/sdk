@@ -13,7 +13,10 @@ mod utils;
 use utils::{generic_post, init_tracing_once};
 
 mod initialize;
-use initialize::{ensure_physical_sample_link, post_for_initialization, RHEEDStreamSettings};
+use initialize::{
+    ensure_physical_sample_link, post_for_initialization, update_project_tracking_sample,
+    RHEEDStreamSettings,
+};
 
 mod upload;
 use upload::{
@@ -198,9 +201,24 @@ impl RHEEDStreamer {
                 &data_id,
                 &sample_name,
             );
-            self.rt
+            let sample_id = self
+                .rt
                 .block_on(physical_sample_fut)
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+
+            // If project_id was provided, update the project's tracking_physical_sample_id
+            if let Some(ref proj_id) = settings.project_id {
+                let update_project_fut = update_project_tracking_sample(
+                    &self.client,
+                    &base_endpoint,
+                    &self.api_key,
+                    proj_id,
+                    &sample_id,
+                );
+                self.rt
+                    .block_on(update_project_fut)
+                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            }
         }
 
         self.fps = Some(fps);

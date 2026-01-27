@@ -218,3 +218,62 @@ class TestRHEEDStreamerInitialize:
         )
 
         assert data_id == expected_data_id
+
+    def test_initialize_updates_project_config_when_physical_sample_and_project_id(
+        self, mock_server_factory
+    ):
+        """Verify project configuration is updated with tracking_physical_sample_id.
+
+        When both physical_sample and project_id are provided, the SDK should:
+        1. POST /rheed/stream/ to create the stream
+        2. GET /physical_samples/ to list existing samples
+        3. POST /physical_samples/ to create the sample (if not found)
+        4. POST /data_entries/physical_sample to link sample to data entry
+        5. GET /projects/ to get current project configuration
+        6. POST /projects/{id}/configuration to update tracking_physical_sample_id
+        """
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        project_uuid = "550e8400-e29b-41d4-a716-446655440000"
+        sample_uuid = "660e8400-e29b-41d4-a716-446655440001"
+
+        # Configure routes for the multi-request flow
+        # Note: /physical_samples/ is used for both GET (returns list) and POST (returns created sample)
+        # The mock returns the same response for both, which works because:
+        # - GET expects a list - we return a list with the sample already existing
+        # - This skips the POST /physical_samples/ call since sample already exists
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 6,
+            "/rheed/stream/": '"test-data-id-999"',
+            "/physical_samples/": json.dumps([{"id": sample_uuid, "name": "Test Sample"}]),
+            "/data_entries/physical_sample": '"OK"',
+            "/projects/": json.dumps([{
+                "id": project_uuid,
+                "name": "Test Project",
+                "configuration": {
+                    "api_configuration": {
+                        "reference_group_type": "categorical",
+                        "onboarding_complete": True
+                    }
+                }
+            }]),
+            f"/projects/{project_uuid}/configuration": '"OK"',
+        })
+
+        server = mock_server_factory(routes)
+
+        streamer = RHEEDStreamer(
+            api_key="test-api-key",
+            endpoint=server.endpoint,
+        )
+
+        data_id = streamer.initialize(
+            fps=30.0,
+            rotations_per_min=0.0,
+            chunk_size=60,
+            physical_sample="Test Sample",
+            project_id=project_uuid,
+        )
+
+        assert data_id == "test-data-id-999"
