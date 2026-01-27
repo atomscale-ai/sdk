@@ -112,7 +112,7 @@ impl RHEEDStreamer {
     }
 
     ////Initialize stream
-    /// initialize(self, stream_name: Optional[str] = None, fps: float, rotations_per_min: float, chunk_size: int, physical_sample: Optional[str] = None) -> str
+    /// initialize(self, fps: float, rotations_per_min: float, chunk_size: int, stream_name: Optional[str] = None, physical_sample: Optional[str] = None, project_id: Optional[str] = None) -> str
     ///
     /// Creates a new **remote data item** for this stream and returns its `data_id`.
     /// Also captures runtime configuration used for subsequent chunk uploads.
@@ -124,12 +124,15 @@ impl RHEEDStreamer {
     /// After streaming via `run(...)` or `push(...)`, call `finalize(data_id)` to mark the stream as complete.
     ///
     /// Args:
-    ///     stream_name (Optional[str]): Human-readable name shown in the platform. If `None` or an empty string,
-    ///         a default like `"RHEED Stream @ 1:23PM"` is used.
     ///     fps (float): Capture rate in frames per second.
     ///     rotations_per_min (float): Wafer/crystal rotations per minute; use `0.0` for stationary operation.
     ///     chunk_size (int): The **intended** number of frames per chunk you will send with `run(...)` or `push(...)`.
+    ///     stream_name (Optional[str]): Human-readable name shown in the platform. If `None` or an empty string,
+    ///         a default like `"RHEED Stream @ 1:23PM"` is used.
     ///     physical_sample (Optional[str]): Name of a physical sample to associate with the data item; matched case-insensitively or created if missing.
+    ///     project_id (Optional[str]): UUID of a project to associate with the stream. When provided along with
+    ///         `physical_sample`, the project's `tracking_physical_sample_id` configuration is automatically updated
+    ///         to link the physical sample to the project for growth monitoring.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
