@@ -1,4 +1,4 @@
-# polling.py
+"""Polling utilities for similarity trajectory data."""
 from __future__ import annotations
 
 import asyncio
@@ -18,30 +18,38 @@ DistinctFn = Callable[[Result], Any]
 Predicate = Callable[[Result], bool]
 ErrorHandler = Callable[[BaseException], None]
 
-# Re-export for backwards compatibility
-_drift_corrected_sleep = drift_corrected_sleep
+_DEFAULT_TRAJECTORY_WORKFLOW = "rheed_stationary"
 
 
-def _fetch_result(client, data_id: str, last_n: int | None) -> Result:
-    """Build a result via provider -> fetch_raw -> to_dataframe.
+def _fetch_trajectory_result(client, source_id: str, last_n: int | None) -> Result:
+    """Fetch trajectory data via SimilarityTrajectoryProvider.
 
     Args:
         client: API client instance passed to the provider.
-        data_id: Identifier of the resource to fetch.
-        last_n: Last number of entries to poll for
+        source_id: The data_id or physical_sample_id to fetch trajectory for.
+        last_n: Last number of entries to poll for.
 
     Returns:
-        Any: The provider-converted result (typically a pandas.DataFrame).
+        DataFrame: Trajectory data with multi-index ["Reference ID", "Time"].
     """
-    provider = get_provider("rheed")
-    kwargs = {"last_n": last_n} if last_n is not None else {}
-    raw = provider.fetch_raw(client, data_id, **kwargs)
+    provider = get_provider("similarity_trajectory")
+    kwargs: dict[str, Any] = {"workflow": _DEFAULT_TRAJECTORY_WORKFLOW}
+    if last_n is not None:
+        kwargs["last_n"] = last_n
+    raw = provider.fetch_raw(client, source_id, **kwargs)
     return provider.to_dataframe(raw)
 
 
-def iter_poll(
+def _default_trajectory_until(df: Result) -> bool:
+    """Default stop condition: stop when trajectory has data and is no longer active."""
+    if len(df) == 0:
+        return False
+    return not df["Active"].any()
+
+
+def iter_poll_trajectory(
     client,
-    data_id: str,
+    source_id: str,
     *,
     interval: float = 1.0,
     last_n: int | None = None,
@@ -52,20 +60,18 @@ def iter_poll(
     jitter: float = 0.0,
     on_error: ErrorHandler | None = None,
 ) -> Iterator[Result]:
-    """
-    Yield time series results at a fixed cadence.
-
-    Supports deduplication (via a key extractor), stop conditions,
-    bounded polling, optional jitter, and non-fatal error handling.
+    """Synchronously poll similarity trajectory data, yielding DataFrames.
 
     Args:
         client: API client instance forwarded to the provider.
-        data_id: Identifier to fetch data for.
-        last_n: Last number of time series data points to poll. None is all.
+        source_id: The data_id or physical_sample_id to poll trajectory for.
         interval: Seconds between polls. Defaults to 1.0.
+        last_n: Last number of trajectory data points to poll. None is all.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
         until: Optional predicate; stop when it returns True for a result.
+            If None, defaults to stopping when no trajectory is active
+            (i.e., ``not df["Active"].any()``).
         max_polls: Optional maximum number of polls before stopping.
         fire_immediately: If True, perform the first poll immediately; otherwise
             wait one interval before the first poll. Defaults to True.
@@ -75,13 +81,14 @@ def iter_poll(
             poll fails. Errors are swallowed so polling continues.
 
     Yields:
-        Any: Each (optionally deduped) time series data frame result.
+        DataFrame: Trajectory data with multi-index ["Reference ID", "Time"].
 
     Notes:
         - Uses drift-corrected scheduling to maintain the requested cadence
           even if individual polls are slow.
         - Stops when `until` is satisfied or `max_polls` is reached (if set).
     """
+    effective_until = until if until is not None else _default_trajectory_until
     last_key = object()
     polls = 0
     next_tick = time.monotonic()
@@ -92,7 +99,7 @@ def iter_poll(
     while True:
         polls += 1
         try:
-            result = _fetch_result(client, data_id, last_n)
+            result = _fetch_trajectory_result(client, source_id, last_n)
         except BaseException as exc:
             if on_error:
                 on_error(exc)
@@ -101,22 +108,21 @@ def iter_poll(
             if distinct_by is None or key != last_key:
                 last_key = key
                 yield result
-                if until and until(result):
+                if effective_until(result):
                     return
         if max_polls and polls >= max_polls:
             return
 
-        # timing
         next_tick += interval
-        delay = _drift_corrected_sleep(next_tick, interval)
+        delay = drift_corrected_sleep(next_tick, interval)
         if jitter:
             delay += random.uniform(0, max(0.0, min(jitter, interval)))
         time.sleep(delay)
 
 
-async def aiter_poll(
+async def aiter_poll_trajectory(
     client,
-    data_id: str,
+    source_id: str,
     *,
     interval: float = 1.0,
     last_n: int | None = None,
@@ -127,19 +133,20 @@ async def aiter_poll(
     jitter: float = 0.0,
     on_error: ErrorHandler | None = None,
 ) -> AsyncIterator[Result]:
-    """
-    Asynchronously yield time series results without blocking the loop.
+    """Asynchronously poll similarity trajectory data without blocking the loop.
 
-    Uses the the same semantics as `iter_poll`.
+    Uses the same semantics as `iter_poll_trajectory`.
 
     Args:
         client: API client instance forwarded to the provider.
-        data_id: Identifier to fetch data for.
+        source_id: The data_id or physical_sample_id to poll trajectory for.
         interval: Seconds between polls. Defaults to 1.0.
-        last_n: Last number of time series data points to poll. None is all.
+        last_n: Last number of trajectory data points to poll. None is all.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
         until: Optional predicate; stop when it returns True for a result.
+            If None, defaults to stopping when no trajectory is active
+            (i.e., ``not df["Active"].any()``).
         max_polls: Optional maximum number of polls before stopping.
         fire_immediately: If True, perform the first poll immediately; otherwise
             wait one interval before the first poll. Defaults to True.
@@ -149,13 +156,14 @@ async def aiter_poll(
             poll fails. Errors are swallowed so polling continues.
 
     Yields:
-        Any: Each (optionally deduped) time series data frame result.
+        DataFrame: Trajectory data with multi-index ["Reference ID", "Time"].
 
     Notes:
         - Uses `asyncio.to_thread` so provider calls never block the event loop.
         - Drift-corrected scheduling preserves cadence even with slow polls.
         - Stops when `until` is satisfied or `max_polls` is reached (if set).
     """
+    effective_until = until if until is not None else _default_trajectory_until
     loop = asyncio.get_running_loop()
     last_key = object()
     polls = 0
@@ -167,7 +175,9 @@ async def aiter_poll(
     while True:
         polls += 1
         try:
-            result = await asyncio.to_thread(_fetch_result, client, data_id, last_n)
+            result = await asyncio.to_thread(
+                _fetch_trajectory_result, client, source_id, last_n
+            )
         except BaseException as exc:
             if on_error:
                 on_error(exc)
@@ -176,12 +186,11 @@ async def aiter_poll(
             if distinct_by is None or key != last_key:
                 last_key = key
                 yield result
-                if until and until(result):
+                if effective_until(result):
                     return
         if max_polls and polls >= max_polls:
             return
 
-        # timing
         next_tick += interval
         delay = next_tick - loop.time()
         if delay < 0:
@@ -193,28 +202,28 @@ async def aiter_poll(
         await asyncio.sleep(delay)
 
 
-def start_polling_thread(
+def start_polling_trajectory_thread(
     client,
-    data_id: str,
+    source_id: str,
     *,
     interval: float = 1.0,
     last_n: int | None = None,
     on_result: Callable[[Result], None],
     **kwargs,
 ) -> threading.Event:
-    """Start the sync poller in a background thread and stream results to a callback.
+    """Start polling trajectory data in a background daemon thread.
 
-    Wraps `iter_poll` in a daemon thread and invokes `on_result(result)` for
-    each yielded item. Returns a `threading.Event` that can be set to stop
-    polling gracefully.
+    Wraps `iter_poll_trajectory` in a daemon thread and invokes
+    `on_result(result)` for each yielded item. Returns a `threading.Event`
+    that can be set to stop polling gracefully.
 
     Args:
         client: API client instance forwarded to the provider.
-        data_id: Identifier to fetch data for.
+        source_id: The data_id or physical_sample_id to poll trajectory for.
         interval: Seconds between polls. Defaults to 1.0.
-        last_n: Last number of time series data points to poll for. None is all.
+        last_n: Last number of trajectory data points to poll for. None is all.
         on_result: Callback invoked with each yielded result.
-        **kwargs: Additional keyword arguments forwarded to `iter_poll`
+        **kwargs: Additional keyword arguments forwarded to `iter_poll_trajectory`
             (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,
             `jitter`, `on_error`).
 
@@ -224,40 +233,40 @@ def start_polling_thread(
     stop = threading.Event()
 
     def _runner():
-        for res in iter_poll(
-            client, data_id, interval=interval, last_n=last_n, **kwargs
+        for res in iter_poll_trajectory(
+            client, source_id, interval=interval, last_n=last_n, **kwargs
         ):
             if stop.is_set():
                 break
             on_result(res)
 
-    t = threading.Thread(target=_runner, name=f"poll:{data_id}", daemon=True)
+    t = threading.Thread(target=_runner, name=f"poll_trajectory:{source_id}", daemon=True)
     t.start()
     return stop
 
 
-def start_polling_task(
+def start_polling_trajectory_task(
     client,
-    data_id: str,
+    source_id: str,
     *,
     interval: float = 1.0,
     last_n: int | None = None,
     on_result: Callable[[Result], Any] | None = None,
     **kwargs,
 ) -> asyncio.Task[None]:
-    """Start the async poller as an `asyncio.Task` and stream results to a callback.
+    """Start polling trajectory data as an `asyncio.Task`.
 
-    Wraps `aiter_poll` in a background Task. If `on_result` returns a coroutine,
-    it will be awaited before the next iteration.
+    Wraps `aiter_poll_trajectory` in a background Task. If `on_result` returns
+    a coroutine, it will be awaited before the next iteration.
 
     Args:
         client: API client instance forwarded to the provider.
-        data_id: Identifier to fetch data for.
+        source_id: The data_id or physical_sample_id to poll trajectory for.
         interval: Seconds between polls. Defaults to 1.0.
-        last_n: Last number of time series data points to poll for. None is all.
+        last_n: Last number of trajectory data points to poll for. None is all.
         on_result: Optional callback invoked with each yielded result. If it
             returns a coroutine, it will be awaited.
-        **kwargs: Additional keyword arguments forwarded to `aiter_poll`
+        **kwargs: Additional keyword arguments forwarded to `aiter_poll_trajectory`
             (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,
             `jitter`, `on_error`).
 
@@ -269,8 +278,8 @@ def start_polling_task(
     """
 
     async def _runner():
-        async for res in aiter_poll(
-            client, data_id, interval=interval, last_n=last_n, **kwargs
+        async for res in aiter_poll_trajectory(
+            client, source_id, interval=interval, last_n=last_n, **kwargs
         ):
             if on_result is None:
                 continue
@@ -278,4 +287,4 @@ def start_polling_task(
             if asyncio.iscoroutine(maybe):
                 await maybe
 
-    return asyncio.create_task(_runner(), name=f"poll:{data_id}")
+    return asyncio.create_task(_runner(), name=f"poll_trajectory:{source_id}")

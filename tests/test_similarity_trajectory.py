@@ -3,7 +3,7 @@ from pandas import DataFrame
 
 from atomscale import Client
 from atomscale.results import SimilarityTrajectoryResult
-from atomscale.timeseries.similarity import SimilarityTrajectoryProvider
+from atomscale.similarity import SimilarityTrajectoryProvider
 
 from .conftest import ResultIDs
 
