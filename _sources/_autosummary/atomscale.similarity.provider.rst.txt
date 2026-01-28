@@ -1,0 +1,31 @@
+﻿atomscale.similarity.provider
+=============================
+
+.. automodule:: atomscale.similarity.provider
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:
+      :template: custom-class-template.rst
+   
+      SimilarityTrajectoryProvider
+   
+   
+
+   
+   
+   
+
+
+

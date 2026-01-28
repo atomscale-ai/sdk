@@ -1,0 +1,6 @@
+atomscale.similarity.polling.start\_polling\_trajectory\_task
+=============================================================
+
+.. currentmodule:: atomscale.similarity.polling
+
+.. autofunction:: start_polling_trajectory_task

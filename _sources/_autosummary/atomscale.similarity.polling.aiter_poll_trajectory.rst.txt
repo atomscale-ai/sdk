@@ -1,0 +1,6 @@
+atomscale.similarity.polling.aiter\_poll\_trajectory
+====================================================
+
+.. currentmodule:: atomscale.similarity.polling
+
+.. autofunction:: aiter_poll_trajectory

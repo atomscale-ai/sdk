@@ -1,0 +1,39 @@
+atomscale.similarity.provider.SimilarityTrajectoryProvider
+==========================================================
+
+.. currentmodule:: atomscale.similarity.provider
+
+.. autoclass:: SimilarityTrajectoryProvider
+   :members:
+   :show-inheritance:
+   :inherited-members:
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~SimilarityTrajectoryProvider.__init__
+      ~SimilarityTrajectoryProvider.build_result
+      ~SimilarityTrajectoryProvider.fetch_raw
+      ~SimilarityTrajectoryProvider.fetch_snapshot
+      ~SimilarityTrajectoryProvider.snapshot_image_uuids
+      ~SimilarityTrajectoryProvider.snapshot_url
+      ~SimilarityTrajectoryProvider.to_dataframe
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~SimilarityTrajectoryProvider.INDEX_COLS
+      ~SimilarityTrajectoryProvider.RENAME_MAP
+      ~SimilarityTrajectoryProvider.TYPE
+   
+   

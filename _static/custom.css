@@ -1,1 +1,38 @@
-/* This file intentionally left blank. */
+/* Override hardcoded logo dimensions */
+img[alt="Logo"] {
+    height: 48px !important;
+    width: auto !important;
+    max-height: none !important;
+}
+
+/* Target the header/nav area logo specifically */
+header img[alt="Logo"],
+nav img[alt="Logo"],
+a img[alt="Logo"] {
+    height: 25px !important;
+    width: auto !important;
+    position: relative;
+    top: -5px;
+}
+
+/* Force badges to display inline horizontally */
+p > a.reference.external,
+p > img {
+    display: inline !important;
+    margin-right: 4px;
+}
+
+p > a.reference.external > img {
+    display: inline !important;
+    vertical-align: middle;
+}
+
+/* Reduce space between h1 and badges, add space below badges */
+section > h1 {
+    margin-bottom: 0.25rem !important;
+}
+
+section > p:first-of-type {
+    margin-top: 0 !important;
+    margin-bottom: 1.5rem !important;
+}

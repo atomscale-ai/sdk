@@ -1,0 +1,33 @@
+﻿atomscale.similarity.polling
+============================
+
+.. automodule:: atomscale.similarity.polling
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+      :toctree:
+   
+      aiter_poll_trajectory
+      iter_poll_trajectory
+      start_polling_trajectory_task
+      start_polling_trajectory_thread
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+
