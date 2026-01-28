@@ -16,6 +16,11 @@ Collect the local file paths you want to upload. Mixing file types is fine.
        "/data/growths/2025-02-10/RHEED-rotating.imm",
    ]
 
+.. tip::
+
+   Supported formats include ``.mp4``, ``.imm``, ``.png``, ``.jpg``, and XPS
+   data files. Check the web app for the full list of accepted extensions.
+
 Start the upload
 ----------------
 
@@ -29,11 +34,16 @@ Start the upload
 Each file streams to the API, and analysis starts as soon as data arrives. The
 :meth:`upload` call returns a handle you can inspect for progress details.
 
-Optional: mute progress bars
-----------------------------
+.. note::
 
-If you are running uploads non-interactively (for example in CI) pass
-``mute_bars=True`` when constructing the client.
+   Large files are uploaded in chunks with automatic retry on transient
+   failures. You don't need to implement resumption logic yourself.
+
+Mute progress bars
+------------------
+
+If you are running uploads non-interactively (for example in CI), pass
+``mute_bars=True`` when constructing the client:
 
 .. code-block:: python
 
@@ -44,3 +54,8 @@ Check status in the web app
 
 Uploads immediately appear in the Atomscale UI. Analysis runs in the background,
 and results land in the catalogue once the pipeline finishes.
+
+.. seealso::
+
+   - :doc:`search-data` – Find your uploaded data in the catalogue
+   - :doc:`inspect-results` – View analysis results programmatically

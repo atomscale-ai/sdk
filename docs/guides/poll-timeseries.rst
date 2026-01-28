@@ -14,6 +14,12 @@ analysis. This guide summarises the four helper entry points in
 - **Async background task** with :func:`start_polling_task` – fire-and-forget
   inside an asyncio application.
 
+.. tip::
+
+   For similarity trajectory data that tracks structure-property relationships,
+   see :doc:`poll-trajectory` instead. That API auto-stops when the trajectory
+   completes.
+
 Shared setup
 ------------
 
@@ -41,9 +47,7 @@ Synchronous polling
 
 Loop over :func:`iter_poll` to fetch fresh rows on a fixed cadence. The helper
 waits ``interval`` seconds between polls so a simple ``for`` loop is enough to
-keep the script going. Use ``distinct_by`` to avoid duplicates,
-``max_polls`` to stop automatically, and ``fire_immediately=False`` to skip the
-first immediate request if you only want timed polls.
+keep the script going.
 
 .. code-block:: python
 
@@ -61,13 +65,19 @@ first immediate request if you only want timed polls.
        print(f"Poll {idx}: latest timestamp -> {latest_timestamp(result)}")
        print(result.tail())
 
+.. note::
+
+   The iterator uses **drift-corrected scheduling** to maintain accurate timing
+   even when individual polls are slow. Use ``distinct_by`` to avoid processing
+   duplicate data, and ``fire_immediately=False`` to skip the initial poll.
+
 Background thread helper
 ------------------------
 
 Use :func:`start_polling_thread` when you want updates but cannot block the
 main thread (for example, inside a GUI or acquisition loop). The helper spawns
 a daemon thread, starts polling immediately, and forwards each update to your
-callback. Call ``stop_event.set()`` to shut it down cleanly.
+callback.
 
 .. code-block:: python
 
@@ -91,6 +101,11 @@ callback. Call ``stop_event.set()`` to shut it down cleanly.
 
    # Call stop_event.set() to terminate early.
 
+.. caution::
+
+   The callback runs in the polling thread, not the main thread. If you need to
+   update UI elements, use thread-safe mechanisms (e.g., ``queue.Queue``).
+
 Async utilities
 ---------------
 
@@ -100,6 +115,8 @@ Two helpers integrate with asyncio:
   ``async for`` over updates.
 * :func:`start_polling_task` creates a background task that awaits the poller
   in parallel and invokes an (optional) async handler for each result.
+
+**Async iterator**
 
 .. code-block:: python
 
@@ -121,6 +138,8 @@ Two helpers integrate with asyncio:
 
    asyncio.run(stream_updates())
 
+**Background task**
+
 .. code-block:: python
 
    async def handle_async(result):
@@ -141,3 +160,7 @@ Two helpers integrate with asyncio:
 
 
    asyncio.run(main())
+
+.. tip::
+
+   Cancel the task with ``task.cancel()`` to stop polling early in async code.

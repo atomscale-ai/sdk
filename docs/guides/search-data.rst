@@ -16,6 +16,11 @@ Basic search
    rheed_runs = client.search(keywords=["WSe2"])
    print(rheed_runs[["Data ID", "Status", "Sample Name"]])
 
+.. tip::
+
+   Keywords are matched against sample names, file names, and metadata fields.
+   Use specific terms for more precise results.
+
 Limit to your uploads
 ---------------------
 
@@ -35,6 +40,21 @@ Filter by IDs or type
 
    rotating = client.search(data_type="rheed_rotating")
 
+.. list-table:: Available data types
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Type
+     - Description
+   * - ``rheed_stationary``
+     - Stationary RHEED video
+   * - ``rheed_rotating``
+     - Rotating RHEED video
+   * - ``rheed_image``
+     - Single RHEED image
+   * - ``xps``
+     - XPS spectrum data
+
 Filter by lifecycle state
 -------------------------
 
@@ -45,6 +65,11 @@ the streaming-specific values ``"stream_active"``, ``"stream_interrupted"``,
 .. code-block:: python
 
    completed = client.search(status="success")
+
+.. note::
+
+   Use ``status="stream_active"`` to find live streaming sessions that are
+   currently receiving data.
 
 Apply numeric or datetime bounds
 --------------------------------
@@ -61,8 +86,25 @@ upload timestamp, or last-accessed timestamp. Use ``None`` for an open bound.
        growth_length=(3000, None),
    )
 
+.. tip::
+
+   Combine multiple filters in a single call for precise queries:
+
+   .. code-block:: python
+
+      results = client.search(
+          keywords="GaN",
+          data_type="rheed_stationary",
+          status="success",
+          growth_length=(1000, 5000),
+      )
+
 Next steps
 ----------
 
 Pass the ``Data ID`` column to :meth:`atomscale.client.Client.get` to fetch
-analysis artefacts. See :doc:`inspect-results` for a hands-on tour.
+analysis artefacts.
+
+.. seealso::
+
+   :doc:`inspect-results` – Work with timeseries, diffraction graphs, and videos

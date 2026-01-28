@@ -55,7 +55,7 @@ dev = [
   "pandas-stubs",
   "pre-commit>=4.0.0",
 ]
-docs = ["sphinx>=6.2", "sphinx-autodoc-typehints>=1.24", "alabaster>=0.7"]
+docs = ["sphinx>=6.2", "sphinx-autodoc-typehints>=1.24", "sphinxawesome-theme>=5.0"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }

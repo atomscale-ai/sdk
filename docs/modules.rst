@@ -19,3 +19,5 @@ Reference documentation for modules pulled directly from the source code.
    atomscale.timeseries.provider
    atomscale.timeseries.polling
    atomscale.timeseries.registry
+   atomscale.similarity.polling
+   atomscale.similarity.provider

@@ -72,37 +72,21 @@ pygments_style = "sphinx"
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "alabaster"
-# html_static_path = ['_static']
+html_theme = "sphinxawesome_theme"
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
+html_static_path = ["_static"]
+html_css_files = ["custom.css"]
+html_logo = "_static/AtomscaleLogoFull.png"
+html_title = "Python SDK"
+
 html_theme_options = {
-    "github_button": True,
-    "github_type": "star&v=2",
-    "github_user": "atomic-data-sciences",
-    "github_repo": "api-client",
-    "github_banner": True,
-    "description": "Python SDK",
+    "show_breadcrumbs": True,
+    "show_prev_next": True,
+    "logo_light": "_static/AtomscaleLogoFull.png",
+    "logo_dark": "_static/AtomscaleLogoFull.png",
 }
 
-# Custom sidebar templates, must be a dictionary that maps document names
-# to template names.
-#
-# The default sidebars (for documents that don't match any pattern) are
-# defined by theme itself.  Builtin themes are using these templates by
-# default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
-# 'searchbox.html']``.
-#
-html_sidebars = {
-    "**": [
-        "about.html",
-        "navigation.html",
-        "searchbox.html",
-    ]
-}
+html_permalinks_icon = "<span>#</span>"
 
 # -- Options for HTMLHelp output ---------------------------------------------
 

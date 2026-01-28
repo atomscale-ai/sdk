@@ -21,6 +21,11 @@ Each item in ``analysed`` is a subclass of
 :class:`atomscale.results.RHEEDVideoResult` or
 :class:`atomscale.results.RHEEDImageResult`, depending on the source data.
 
+.. note::
+
+   The :meth:`get` call fetches metadata and analysis artefacts for each ID.
+   For large result sets, consider batching or filtering first.
+
 Inspect time series data
 ------------------------
 
@@ -33,6 +38,21 @@ Inspect time series data
 
 The timeseries frame contains specular intensity, strain metrics, cluster IDs,
 and other summary features for every frame in the video.
+
+.. list-table:: Common timeseries columns
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Column
+     - Description
+   * - ``timestamp``
+     - Frame timestamp in seconds
+   * - ``specular_intensity``
+     - Specular spot brightness
+   * - ``strain``
+     - Computed strain metric
+   * - ``cluster_id``
+     - Pattern cluster assignment
 
 Work with extracted frames
 --------------------------
@@ -47,6 +67,11 @@ Work with extracted frames
 ``pattern_graph`` exposes the detected diffraction network as a NetworkX graph,
 while :meth:`get_pattern_dataframe` returns a tidy table describing each spot.
 
+.. tip::
+
+   Use ``figure.savefig("snapshot.png")`` to export plots for reports or
+   publications.
+
 Download processed videos
 -------------------------
 
@@ -58,3 +83,13 @@ Download processed videos
    )
 
 The files are saved as MP4 (one per data ID) and mirror what you see in the UI.
+
+.. caution::
+
+   Downloaded videos can be large. Ensure you have sufficient disk space and
+   consider filtering to only the IDs you need.
+
+.. seealso::
+
+   - :doc:`poll-timeseries` – Poll for live timeseries updates
+   - :doc:`poll-trajectory` – Poll similarity trajectory data
