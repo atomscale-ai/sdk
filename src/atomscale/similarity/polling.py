@@ -1,4 +1,5 @@
 """Polling utilities for similarity trajectory data."""
+
 from __future__ import annotations
 
 import asyncio
@@ -240,7 +241,9 @@ def start_polling_trajectory_thread(
                 break
             on_result(res)
 
-    t = threading.Thread(target=_runner, name=f"poll_trajectory:{source_id}", daemon=True)
+    t = threading.Thread(
+        target=_runner, name=f"poll_trajectory:{source_id}", daemon=True
+    )
     t.start()
     return stop
 
