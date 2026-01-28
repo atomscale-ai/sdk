@@ -8,7 +8,7 @@
   <a href="https://github.com/atomscale-ai/sdk/actions/workflows/testing.yml?query=branch%3Amain"><img src="https://github.com/atomscale-ai/sdk/actions/workflows/testing.yml/badge.svg?branch=main" alt="Testing"></a>
   <a href="https://github.com/atomscale-ai/sdk/releases/"><img src="https://img.shields.io/github/tag/atomscale-ai/sdk?include_prereleases=&sort=semver&color=blue" alt="GitHub tag"></a>
   <img src="https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python&logoColor=white" alt="Python">
-  <a href="#license"><img src="https://img.shields.io/badge/License-GPLv3-blue" alt="License"></a>
+  <a href="#license"><img src="https://img.shields.io/badge/License-MPL_2.0-blue" alt="License"></a>
 </p>
 
 <p align="center">
@@ -67,4 +67,4 @@ Full documentation is available at **[atomscale-ai.github.io/sdk](https://atomsc
 
 ## License
 
-This project is licensed under the [GPLv3 License](LICENSE).
+This project is licensed under the [Mozilla Public License 2.0](LICENSE).

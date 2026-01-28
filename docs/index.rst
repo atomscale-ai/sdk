@@ -11,9 +11,9 @@ Atomscale Python SDK
    :alt: Latest tag
 .. |python-badge| image:: https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python&logoColor=white
    :alt: Supported Python versions
-.. |license-badge| image:: https://img.shields.io/badge/License-GPLv3-blue
+.. |license-badge| image:: https://img.shields.io/badge/License-MPL_2.0-blue
    :target: https://github.com/atomscale-ai/sdk/blob/main/LICENSE
-   :alt: License: GPLv3
+   :alt: License: MPL 2.0
 
 ``atomscale`` is the Python SDK for the Atomscale platform. Use these docs to
 install the client, move data, and integrate streaming or polling workflows.
