@@ -13,3 +13,4 @@ single workflow so you can jump straight to what you need.
    inspect-results
    stream-rheed
    poll-timeseries
+   poll-trajectory

@@ -14,9 +14,13 @@ each style:
 Prerequisites
 -------------
 
-- ``numpy`` installed
-- RHEED frames as ``uint8`` arrays shaped ``(N, H, W)`` or ``(H, W)``
-- A stable clock so you can honour the capture cadence
+.. important::
+
+   Before streaming, ensure you have:
+
+   - ``numpy`` installed
+   - RHEED frames as ``uint8`` arrays shaped ``(N, H, W)`` or ``(H, W)``
+   - A stable clock so you can honour the capture cadence
 
 Create a streamer
 -----------------
@@ -29,9 +33,11 @@ Create a streamer
 
 Optional keyword arguments tune chunking and logging. For example,
 ``verbosity=4`` emits detailed progress, and ``max_workers`` caps concurrency.
-If you already know the sample name, pass it to :meth:`initialize` so the data
-links to the right physical sample (names are matched case-insensitively or
-created on the fly).
+
+.. tip::
+
+   Pass a ``physical_sample`` name to :meth:`initialize` so the data links to
+   the right sample. Names are matched case-insensitively or created on the fly.
 
 Callback / push mode
 --------------------
@@ -65,6 +71,11 @@ just long enough to match the capture cadence.
    time.sleep(1.0)  # let in-flight uploads finish
    streamer.finalize(data_id)
 
+.. note::
+
+   The ``rotations_per_min`` parameter determines whether the stream is
+   classified as rotating or stationary RHEED.
+
 Generator / pull mode
 ---------------------
 
@@ -94,11 +105,30 @@ the helper will take care of pacing and retry logic.
    streamer.run(data_id, frame_chunks(frames, chunk_size=20, fps=10.0))
    streamer.finalize(data_id)
 
-Tips
-----
+Best practices
+--------------
 
-- Maintain the original capture cadence so the server can keep up.
-- Make each chunk cover at least two seconds of frames.
-- Call :meth:`finalize` even if the upload fails part-way; it lets the pipeline
-  clean up gracefully.
-- Use distinct ``stream_name`` values while testing so you can find runs later.
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Practice
+     - Reason
+   * - Maintain capture cadence
+     - Server expects real-time pacing for proper analysis
+   * - Use ≥2 second chunks
+     - Balances upload overhead with latency
+   * - Always call ``finalize()``
+     - Lets the pipeline clean up, even after partial failures
+   * - Use distinct ``stream_name`` values
+     - Makes it easier to find test runs later
+
+.. warning::
+
+   Failing to call :meth:`finalize` may leave the stream in an incomplete state,
+   preventing proper analysis completion.
+
+.. seealso::
+
+   - :doc:`poll-timeseries` – Monitor analysis results as they arrive
+   - :doc:`poll-trajectory` – Track similarity trajectory during growth

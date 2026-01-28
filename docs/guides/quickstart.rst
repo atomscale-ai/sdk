@@ -7,9 +7,13 @@ for calling the Atomscale API.
 Prerequisites
 -------------
 
-- Python 3.10 or newer
-- An active Atomscale account
-- An API key from the Atomscale web app (Profile → Account Management)
+.. important::
+
+   Before you begin, make sure you have:
+
+   - Python 3.10 or newer
+   - An active Atomscale account
+   - An API key from the Atomscale web app (Profile → Account Management)
 
 Install the client
 ------------------
@@ -34,7 +38,12 @@ explicitly if you prefer.
 
    client = Client()
 
-Override the endpoint when pointing at staging or a private deployment.
+.. tip::
+
+   Set ``AS_API_KEY`` in your shell profile (e.g., ``.bashrc`` or ``.zshrc``)
+   to avoid hardcoding credentials in scripts.
+
+Override the endpoint when pointing at staging or a private deployment:
 
 .. code-block:: python
 
@@ -43,9 +52,16 @@ Override the endpoint when pointing at staging or a private deployment.
        endpoint="https://api.atomscale.ai/",
    )
 
+.. warning::
+
+   Never commit API keys to version control. Use environment variables or a
+   secrets manager instead.
+
 Next steps
 ----------
 
-- Upload files with :doc:`upload-data`
-- Find items in the catalogue with :doc:`search-data`
-- Explore results and plots with :doc:`inspect-results`
+.. seealso::
+
+   - :doc:`upload-data` – Upload RHEED videos, images, or XPS files
+   - :doc:`search-data` – Find items in the catalogue
+   - :doc:`inspect-results` – Explore results and plots
