@@ -378,6 +378,53 @@ impl TimeseriesStreamer {
         self.run_internal(data_id.clone(), channel_name, data_iter, units)
     }
 
+    /// finalize(self) -> None
+    ///
+    /// Finalize the stream, marking it as complete on the server.
+    ///
+    /// Call this after all data has been pushed to signal that the stream is finished.
+    /// Must call initialize() first.
+    ///
+    /// Returns:
+    ///     None
+    ///
+    /// Raises:
+    ///     RuntimeError: If initialize() was not called or the request fails.
+    #[pyo3(signature = ())]
+    #[pyo3(text_signature = "()")]
+    fn finalize(&self) -> PyResult<()> {
+        let data_id = self.data_id.as_ref().ok_or_else(|| {
+            PyRuntimeError::new_err("data_id not set; call initialize() first")
+        })?;
+
+        let url = format!("{}/instrument-timeseries/{}/finalize", self.endpoint, data_id);
+
+        let result = self.rt.block_on(async {
+            let resp = self
+                .client
+                .post(&url)
+                .header("X-API-KEY", &self.api_key)
+                .send()
+                .await?;
+
+            let status = resp.status();
+            if !status.is_success() {
+                let text = resp.text().await.unwrap_or_default();
+                return Err(anyhow::anyhow!("HTTP {}: {}", status, text));
+            }
+
+            Ok(())
+        });
+
+        match result {
+            Ok(()) => {
+                debug!("[timeseries_stream] finalized: data_id={}", data_id);
+                Ok(())
+            }
+            Err(e) => Err(PyRuntimeError::new_err(e.to_string())),
+        }
+    }
+
     /// data_id property getter
     #[getter]
     fn get_data_id(&self) -> Option<String> {

@@ -519,3 +519,49 @@ class TestTimeseriesStreamerIntegration:
         requests = server.get_all_requests()
         # 1 initialize + 3 chunks = 4 requests
         assert len(requests) == 4
+
+
+class TestTimeseriesStreamerFinalize:
+    """Tests for TimeseriesStreamer.finalize() method."""
+
+    def test_finalize_requires_initialize(self):
+        """Verify finalize() raises error if initialize() not called."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        streamer = TimeseriesStreamer(
+            api_key="test-api-key",
+            endpoint="http://localhost:9999",
+        )
+
+        with pytest.raises(RuntimeError, match="initialize"):
+            streamer.finalize()
+
+    def test_finalize_sends_request(self, mock_server_factory):
+        """Verify finalize() sends POST to finalize endpoint."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 2,
+            "/instrument-timeseries/initialize": json.dumps({
+                "data_id": "test-data-id",
+                "processed_data_id": "test-processed-id",
+            }),
+            "/instrument-timeseries/test-data-id/finalize": json.dumps({
+                "data_id": "test-data-id",
+                "processed_data_id": "test-processed-id",
+            }),
+        })
+        server = mock_server_factory(routes)
+
+        streamer = TimeseriesStreamer(
+            api_key="test-api-key",
+            endpoint=server.endpoint,
+        )
+
+        streamer.initialize()
+        streamer.finalize()
+
+        requests = server.get_all_requests()
+        assert len(requests) == 2
+        assert "/finalize" in requests[1]
