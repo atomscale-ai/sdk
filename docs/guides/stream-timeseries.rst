@@ -19,16 +19,42 @@ Create a streamer
 
    streamer = TimeseriesStreamer(api_key="YOUR_API_KEY")
 
+Growth instruments
+------------------
+
+You can link streams to growth instruments for better organization. Use the
+main client to manage instruments:
+
+.. code-block:: python
+
+   from atomscale import Client
+
+   client = Client()
+
+   # List available instruments
+   instruments = client.list_growth_instruments()
+   for inst in instruments:
+       print(f"{inst['synth_source_id']}: {inst['source_name']} ({inst['synth_source_type']})")
+
+   # Create a new instrument
+   instrument_id = client.create_growth_instrument(
+       label="Main MBE",
+       name="Veeco GEN10",
+       instrument_type="mbe",  # mbe, cvd, pvd, sputter, ald, pld
+       serial_id="SN-12345",
+   )
+
 Initialize a stream
 -------------------
 
-Before sending data, initialize a stream to get a ``data_id``:
+Before sending data, initialize a stream to get a ``data_id``. Optionally
+link it to a growth instrument:
 
 .. code-block:: python
 
    data_id = streamer.initialize(
        stream_name="Growth Run 1",
-       instrument_type="mbe",
+       synth_source_id=instrument_id,  # Optional - link to instrument
    )
 
 Push mode (single channel)
@@ -125,15 +151,28 @@ Complete example
 .. code-block:: python
 
    import time
+   from atomscale import Client
    from atomscale.streaming import TimeseriesStreamer
 
-   # Create streamer
+   # Create client and streamer
+   client = Client()
    streamer = TimeseriesStreamer(api_key="YOUR_API_KEY")
 
-   # Initialize stream
+   # Get or create an instrument
+   instruments = client.list_growth_instruments()
+   if instruments:
+       instrument_id = instruments[0]["synth_source_id"]
+   else:
+       instrument_id = client.create_growth_instrument(
+           label="Main MBE",
+           name="Veeco GEN10",
+           instrument_type="mbe",
+       )
+
+   # Initialize stream linked to instrument
    data_id = streamer.initialize(
        stream_name="MBE Growth - Sample A",
-       instrument_type="mbe",
+       synth_source_id=instrument_id,
    )
 
    # Stream data for 10 seconds

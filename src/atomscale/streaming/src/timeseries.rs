@@ -15,7 +15,8 @@ use crate::utils::init_tracing_once;
 #[derive(Serialize, Debug)]
 struct InitializeRequest {
     stream_name: Option<String>,
-    instrument_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    synth_source_id: Option<i64>,
     points_per_chunk: usize,
     physical_sample_id: Option<String>,
     project_id: Option<String>,
@@ -27,6 +28,7 @@ struct InitializeResponse {
     data_id: String,
     processed_data_id: String,
 }
+
 
 /// Payload for a single time series chunk.
 #[derive(Serialize, Debug)]
@@ -112,7 +114,7 @@ impl TimeseriesStreamer {
         })
     }
 
-    /// initialize(self, stream_name: Optional[str] = None, instrument_type: Optional[str] = None, ...) -> str
+    /// initialize(self, stream_name: Optional[str] = None, synth_source_id: Optional[int] = None, ...) -> str
     ///
     /// Initialize a new time series stream on the server.
     ///
@@ -121,7 +123,8 @@ impl TimeseriesStreamer {
     ///
     /// Args:
     ///     stream_name (Optional[str]): Human-readable name for the stream.
-    ///     instrument_type (Optional[str]): Instrument type (e.g., "mbe", "cvd").
+    ///     synth_source_id (Optional[int]): Growth instrument ID to link. Must belong to your
+    ///         organization. Use list_instruments() to see available instruments.
     ///     physical_sample_id (Optional[str]): Associated physical sample UUID.
     ///     project_id (Optional[str]): Associated project UUID.
     ///
@@ -129,21 +132,21 @@ impl TimeseriesStreamer {
     ///     str: The data_id for this stream.
     ///
     /// Raises:
-    ///     RuntimeError: If the initialization request fails.
-    #[pyo3(signature = (stream_name=None, instrument_type=None, physical_sample_id=None, project_id=None))]
+    ///     RuntimeError: If the initialization request fails or instrument not found.
+    #[pyo3(signature = (stream_name=None, synth_source_id=None, physical_sample_id=None, project_id=None))]
     #[pyo3(
-        text_signature = "(stream_name=None, instrument_type=None, physical_sample_id=None, project_id=None)"
+        text_signature = "(stream_name=None, synth_source_id=None, physical_sample_id=None, project_id=None)"
     )]
     fn initialize(
         &self,
         stream_name: Option<String>,
-        instrument_type: Option<String>,
+        synth_source_id: Option<i64>,
         physical_sample_id: Option<String>,
         project_id: Option<String>,
     ) -> PyResult<String> {
         let request = InitializeRequest {
             stream_name,
-            instrument_type,
+            synth_source_id,
             points_per_chunk: self.points_per_chunk,
             physical_sample_id,
             project_id,

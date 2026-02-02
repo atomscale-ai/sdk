@@ -162,7 +162,6 @@ class TestTimeseriesStreamerInitialize:
 
         data_id = streamer.initialize(
             stream_name="Test Stream",
-            instrument_type="mbe",
         )
 
         assert data_id == "test-data-id-123"
@@ -185,13 +184,11 @@ class TestTimeseriesStreamerInitialize:
 
         streamer.initialize(
             stream_name="My Stream",
-            instrument_type="cvd",
         )
 
         body = server.get_captured_body()
         assert body is not None
         assert body["stream_name"] == "My Stream"
-        assert body["instrument_type"] == "cvd"
         assert body["points_per_chunk"] == 50
 
 
@@ -433,7 +430,6 @@ class TestTimeseriesStreamerIntegration:
         # Initialize
         data_id = streamer.initialize(
             stream_name="Integration Test Stream",
-            instrument_type="mbe",
         )
         assert data_id == "workflow-data-id"
 

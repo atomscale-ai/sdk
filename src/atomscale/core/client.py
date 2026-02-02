@@ -150,6 +150,43 @@ class BaseClient:
 
         return return_data
 
+    def _delete(
+        self,
+        sub_url: str,
+        params: dict[str, Any] | None = None,
+        deserialize: bool = True,
+        base_override: str | None = None,
+    ) -> list[dict[Any, Any]] | dict[Any, Any] | bytes | None:
+        """Method for issuing a DELETE request
+
+        Args:
+            sub_url (str): API sub-url to use.
+            params (dict[str, Any] | None): Params to pass in the DELETE request. Defaults to None.
+            deserialize (bool): Whether to JSON deserialize the response data or return raw bytes. Defaults to True.
+            base_override (str): Base URL to use instead of the default ADS API root URL.
+
+        Raises:
+            ClientError: If the response code returned is not within the range of 200-400.
+
+        Returns:
+            (list[dict] | dict | bytes | None): Deserialized JSON data or raw bytes. Returns None if response is a 404.
+        """
+        base_url = base_override or self.endpoint
+        response = self.session.delete(
+            url=urljoin(base_url, sub_url), verify=True, params=params
+        )
+        if not response.ok:
+            if response.status_code == 404:
+                return None
+
+            raise ClientError(
+                f"Problem deleting data at {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}"
+            )
+        if len(response.content) == 0:
+            return None
+
+        return response.json() if deserialize else response.content
+
     def _multi_thread(
         self,
         func: Callable[..., Any],

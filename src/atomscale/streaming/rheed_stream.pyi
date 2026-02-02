@@ -74,7 +74,7 @@ class TimeseriesStreamer:
     def initialize(
         self,
         stream_name: str | None = None,
-        instrument_type: str | None = None,
+        synth_source_id: int | None = None,
         physical_sample_id: str | None = None,
         project_id: str | None = None,
     ) -> str:
@@ -85,7 +85,8 @@ class TimeseriesStreamer:
 
         Args:
             stream_name: Human-readable name for the stream.
-            instrument_type: Instrument type (e.g., "mbe", "cvd").
+            synth_source_id: Growth instrument ID to link. Must belong to your
+                organization. Use list_instruments() to see available instruments.
             physical_sample_id: UUID of the associated physical sample.
             project_id: UUID of the associated project.
 
