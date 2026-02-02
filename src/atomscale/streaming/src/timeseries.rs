@@ -73,7 +73,6 @@ pub struct TimeseriesStreamer {
     client: Client,
     rt: Runtime,
     points_per_chunk: usize,
-    data_id: Option<String>,
 }
 
 #[pymethods]
@@ -110,7 +109,6 @@ impl TimeseriesStreamer {
             client,
             rt,
             points_per_chunk,
-            data_id: None,
         })
     }
 
@@ -137,7 +135,7 @@ impl TimeseriesStreamer {
         text_signature = "(stream_name=None, instrument_type=None, physical_sample_id=None, project_id=None)"
     )]
     fn initialize(
-        &mut self,
+        &self,
         stream_name: Option<String>,
         instrument_type: Option<String>,
         physical_sample_id: Option<String>,
@@ -179,21 +177,19 @@ impl TimeseriesStreamer {
                     "[timeseries_stream] initialized: data_id={}",
                     response.data_id
                 );
-                self.data_id = Some(response.data_id.clone());
                 Ok(response.data_id)
             }
             Err(e) => Err(PyRuntimeError::new_err(e.to_string())),
         }
     }
 
-    /// push(self, chunk_index: int, channel_name: str, timestamps: list[float], values: list[float], ...) -> None
+    /// push(self, data_id: str, chunk_index: int, channel_name: str, timestamps: list[float], values: list[float], ...) -> None
     ///
     /// Push a single chunk of time series data for a channel. This method is **fire-and-forget**:
     /// it spawns an async upload task and returns immediately.
     ///
-    /// Must call initialize() first to get a data_id.
-    ///
     /// Args:
+    ///     data_id (str): The stream identifier returned by `initialize()`.
     ///     chunk_index (int): Zero-based index of this chunk for ordering.
     ///     channel_name (str): Name of the data channel (e.g., "temperature", "pressure").
     ///     timestamps (list[float]): Unix epoch timestamps in seconds.
@@ -204,20 +200,18 @@ impl TimeseriesStreamer {
     ///     None
     ///
     /// Raises:
-    ///     RuntimeError: If initialize() was not called or timestamps/values have different lengths.
-    #[pyo3(signature = (chunk_index, channel_name, timestamps, values, units=None))]
-    #[pyo3(text_signature = "(chunk_index, channel_name, timestamps, values, units=None)")]
+    ///     RuntimeError: If timestamps/values have different lengths.
+    #[pyo3(signature = (data_id, chunk_index, channel_name, timestamps, values, units=None))]
+    #[pyo3(text_signature = "(data_id, chunk_index, channel_name, timestamps, values, units=None)")]
     fn push(
         &self,
+        data_id: String,
         chunk_index: usize,
         channel_name: String,
         timestamps: Vec<f64>,
         values: Vec<f64>,
         units: Option<String>,
     ) -> PyResult<()> {
-        let data_id = self.data_id.as_ref().ok_or_else(|| {
-            PyRuntimeError::new_err("data_id not set; call initialize() first")
-        })?;
 
         if timestamps.len() != values.len() {
             return Err(PyRuntimeError::new_err(
@@ -226,7 +220,7 @@ impl TimeseriesStreamer {
         }
 
         let payload = ChunkPayload {
-            data_id: data_id.clone(),
+            data_id,
             chunk_index,
             channel_name,
             timestamps,
@@ -238,12 +232,13 @@ impl TimeseriesStreamer {
         Ok(())
     }
 
-    /// push_multi(self, chunk_index: int, channels: dict[str, dict]) -> None
+    /// push_multi(self, data_id: str, chunk_index: int, channels: dict[str, dict]) -> None
     ///
     /// Push data for multiple channels at once. Each channel's data is uploaded as a separate
     /// async task.
     ///
     /// Args:
+    ///     data_id (str): The stream identifier returned by `initialize()`.
     ///     chunk_index (int): Zero-based index of this chunk.
     ///     channels (dict[str, dict]): Mapping of channel_name to channel data dict.
     ///         Each channel dict should have:
@@ -252,7 +247,7 @@ impl TimeseriesStreamer {
     ///         - "units" (str, optional): Units for the values
     ///
     /// Example:
-    ///     streamer.push_multi(0, {
+    ///     streamer.push_multi(data_id, 0, {
     ///         "temperature": {"timestamps": [0.0, 0.1], "values": [25.0, 25.1], "units": "C"},
     ///         "pressure": {"timestamps": [0.0, 0.1], "values": [1.0, 1.1]},
     ///     })
@@ -261,13 +256,10 @@ impl TimeseriesStreamer {
     ///     None
     ///
     /// Raises:
-    ///     RuntimeError: If initialize() was not called or any channel has mismatched lengths.
-    #[pyo3(signature = (chunk_index, channels))]
-    #[pyo3(text_signature = "(chunk_index, channels)")]
-    fn push_multi(&self, chunk_index: usize, channels: Bound<PyDict>) -> PyResult<()> {
-        let data_id = self.data_id.as_ref().ok_or_else(|| {
-            PyRuntimeError::new_err("data_id not set; call initialize() first")
-        })?;
+    ///     RuntimeError: If any channel has mismatched lengths.
+    #[pyo3(signature = (data_id, chunk_index, channels))]
+    #[pyo3(text_signature = "(data_id, chunk_index, channels)")]
+    fn push_multi(&self, data_id: String, chunk_index: usize, channels: Bound<PyDict>) -> PyResult<()> {
 
         for (key, value) in channels.iter() {
             let channel_name: String = key.extract().map_err(|e| {
@@ -421,11 +413,6 @@ impl TimeseriesStreamer {
         }
     }
 
-    /// data_id property getter
-    #[getter]
-    fn get_data_id(&self) -> Option<String> {
-        self.data_id.clone()
-    }
 }
 
 impl TimeseriesStreamer {
