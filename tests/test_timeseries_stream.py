@@ -109,20 +109,20 @@ class TestTimeseriesStreamerInit:
 
     def test_can_import_timeseries_streamer(self):
         """Verify TimeseriesStreamer can be imported."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         assert TimeseriesStreamer is not None
 
     def test_init_with_defaults(self):
         """Verify TimeseriesStreamer can be instantiated with minimal args."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         streamer = TimeseriesStreamer(api_key="test-api-key")
         assert streamer is not None
 
     def test_init_with_custom_endpoint(self):
         """Verify TimeseriesStreamer accepts custom endpoint."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         streamer = TimeseriesStreamer(
             api_key="test-api-key",
@@ -132,7 +132,7 @@ class TestTimeseriesStreamerInit:
 
     def test_init_with_custom_points_per_chunk(self):
         """Verify TimeseriesStreamer accepts custom points_per_chunk."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         streamer = TimeseriesStreamer(
             api_key="test-api-key",
@@ -146,7 +146,7 @@ class TestTimeseriesStreamerInitialize:
 
     def test_initialize_returns_data_id(self, mock_server_factory):
         """Verify initialize() returns data_id from server."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         response = json.dumps({
             "data_id": "test-data-id-123",
@@ -169,7 +169,7 @@ class TestTimeseriesStreamerInitialize:
 
     def test_initialize_sends_correct_payload(self, mock_server_factory):
         """Verify initialize() sends correct request body."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         response = json.dumps({
             "data_id": "test-data-id",
@@ -200,7 +200,7 @@ class TestTimeseriesStreamerPush:
 
     def test_push_validates_length_mismatch(self):
         """Verify push() raises error when timestamps/values lengths don't match."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         streamer = TimeseriesStreamer(
             api_key="test-api-key",
@@ -218,7 +218,7 @@ class TestTimeseriesStreamerPush:
 
     def test_push_sends_correct_payload(self, mock_server_factory):
         """Verify push() sends the correct JSON payload."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         # Configure routes for initialize + chunk
         routes = json.dumps({
@@ -267,7 +267,7 @@ class TestTimeseriesStreamerRun:
 
     def test_run_validates_length_mismatch(self, mock_server_factory):
         """Verify run() raises error when any chunk has mismatched lengths."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         init_response = json.dumps({
             "data_id": "test-data-id",
@@ -293,7 +293,7 @@ class TestTimeseriesStreamerRun:
 
     def test_run_streams_from_iterator(self, mock_server_factory):
         """Verify run() streams all chunks from iterator and blocks until complete."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         # Configure routes for initialize + 3 chunks
         routes = json.dumps({
@@ -343,7 +343,7 @@ class TestTimeseriesStreamerPushMulti:
 
     def test_push_multi_validates_length_mismatch(self):
         """Verify push_multi() raises error when any channel has mismatched lengths."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         streamer = TimeseriesStreamer(
             api_key="test-api-key",
@@ -362,7 +362,7 @@ class TestTimeseriesStreamerPushMulti:
 
     def test_push_multi_with_units(self, mock_server_factory):
         """Verify push_multi() supports units per channel."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         routes = json.dumps({
             "__routes__": True,
@@ -405,7 +405,7 @@ class TestTimeseriesStreamerIntegration:
 
     def test_full_streaming_workflow(self, mock_server_factory):
         """Test a complete streaming workflow with initialize and multiple chunks."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         # Configure routes
         routes = json.dumps({
@@ -463,7 +463,7 @@ class TestTimeseriesStreamerFinalize:
 
     def test_finalize_sends_request(self, mock_server_factory):
         """Verify finalize() sends POST to finalize endpoint."""
-        from rheed_stream import TimeseriesStreamer
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         routes = json.dumps({
             "__routes__": True,
