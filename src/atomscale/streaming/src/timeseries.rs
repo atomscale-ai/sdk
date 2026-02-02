@@ -344,16 +344,17 @@ impl TimeseriesStreamer {
         Ok(())
     }
 
-    /// run(self, channel_name: str, data_iter: Iterable[tuple[list[float], list[float]]], units: Optional[str] = None) -> None
+    /// run(self, data_id: str, channel_name: str, data_iter: Iterable[tuple[list[float], list[float]]], units: Optional[str] = None) -> None
     ///
     /// **Iterator mode.** Stream time series data by iterating over chunks. The chunk_index is
     /// automatically assigned based on iteration order.
     ///
     /// Each yielded item should be a tuple of `(timestamps, values)` where both are lists of floats.
     ///
-    /// This method **blocks until all upload tasks complete**. Must call initialize() first.
+    /// This method **blocks until all upload tasks complete**.
     ///
     /// Args:
+    ///     data_id (str): The stream identifier returned by `initialize()`.
     ///     channel_name (str): Name of the data channel (e.g., "temperature", "pressure").
     ///     data_iter (Iterable[tuple[list[float], list[float]]]): Iterator yielding (timestamps, values) tuples.
     ///     units (Optional[str]): Units for the values.
@@ -362,41 +363,36 @@ impl TimeseriesStreamer {
     ///     None
     ///
     /// Raises:
-    ///     RuntimeError: If initialize() was not called or any chunk has mismatched lengths.
-    #[pyo3(signature = (channel_name, data_iter, units=None))]
-    #[pyo3(text_signature = "(channel_name, data_iter, units=None)")]
+    ///     RuntimeError: If any chunk has mismatched lengths.
+    #[pyo3(signature = (data_id, channel_name, data_iter, units=None))]
+    #[pyo3(text_signature = "(data_id, channel_name, data_iter, units=None)")]
     fn run(
         &self,
+        data_id: String,
         channel_name: String,
         data_iter: Bound<PyAny>,
         units: Option<String>,
     ) -> PyResult<()> {
-        let data_id = self.data_id.as_ref().ok_or_else(|| {
-            PyRuntimeError::new_err("data_id not set; call initialize() first")
-        })?;
-
-        self.run_internal(data_id.clone(), channel_name, data_iter, units)
+        self.run_internal(data_id, channel_name, data_iter, units)
     }
 
-    /// finalize(self) -> None
+    /// finalize(self, data_id: str) -> None
     ///
     /// Finalize the stream, marking it as complete on the server.
     ///
     /// Call this after all data has been pushed to signal that the stream is finished.
-    /// Must call initialize() first.
+    ///
+    /// Args:
+    ///     data_id (str): The stream identifier returned by `initialize()`.
     ///
     /// Returns:
     ///     None
     ///
     /// Raises:
-    ///     RuntimeError: If initialize() was not called or the request fails.
-    #[pyo3(signature = ())]
-    #[pyo3(text_signature = "()")]
-    fn finalize(&self) -> PyResult<()> {
-        let data_id = self.data_id.as_ref().ok_or_else(|| {
-            PyRuntimeError::new_err("data_id not set; call initialize() first")
-        })?;
-
+    ///     RuntimeError: If the request fails.
+    #[pyo3(signature = (data_id))]
+    #[pyo3(text_signature = "(data_id)")]
+    fn finalize(&self, data_id: String) -> PyResult<()> {
         let url = format!("{}/instrument-timeseries/{}/finalize", self.endpoint, data_id);
 
         let result = self.rt.block_on(async {

@@ -290,24 +290,6 @@ class TestTimeseriesStreamerPush:
 class TestTimeseriesStreamerRun:
     """Tests for TimeseriesStreamer.run() method (iterator mode)."""
 
-    def test_run_requires_initialize(self):
-        """Verify run() raises error if initialize() not called."""
-        from atomscale.streaming.rheed_stream import TimeseriesStreamer
-
-        streamer = TimeseriesStreamer(
-            api_key="test-api-key",
-            endpoint="http://localhost:9999",
-        )
-
-        def data_generator():
-            yield ([0.0, 0.01], [25.0, 25.1])
-
-        with pytest.raises(RuntimeError, match="initialize"):
-            streamer.run(
-                channel_name="temperature",
-                data_iter=data_generator(),
-            )
-
     def test_run_validates_length_mismatch(self, mock_server_factory):
         """Verify run() raises error when any chunk has mismatched lengths."""
         from atomscale.streaming.rheed_stream import TimeseriesStreamer
@@ -322,13 +304,14 @@ class TestTimeseriesStreamerRun:
             api_key="test-api-key",
             endpoint=server.endpoint,
         )
-        streamer.initialize()
+        data_id = streamer.initialize()
 
         def bad_data_generator():
             yield ([0.0, 0.01, 0.02], [25.0, 25.1])  # Mismatch
 
         with pytest.raises(RuntimeError, match="same length"):
             streamer.run(
+                data_id=data_id,
                 channel_name="temperature",
                 data_iter=bad_data_generator(),
             )
@@ -360,7 +343,7 @@ class TestTimeseriesStreamerRun:
             points_per_chunk=100,
         )
 
-        streamer.initialize()
+        data_id = streamer.initialize()
 
         def data_generator():
             for i in range(3):
@@ -369,7 +352,7 @@ class TestTimeseriesStreamerRun:
                 yield (timestamps, values)
 
         # run() blocks until all uploads complete
-        streamer.run(channel_name="temperature", data_iter=data_generator())
+        streamer.run(data_id=data_id, channel_name="temperature", data_iter=data_generator())
 
         # Should have 4 requests: 1 init + 3 chunks
         requests = server.get_all_requests()
@@ -524,18 +507,6 @@ class TestTimeseriesStreamerIntegration:
 class TestTimeseriesStreamerFinalize:
     """Tests for TimeseriesStreamer.finalize() method."""
 
-    def test_finalize_requires_initialize(self):
-        """Verify finalize() raises error if initialize() not called."""
-        from atomscale.streaming.rheed_stream import TimeseriesStreamer
-
-        streamer = TimeseriesStreamer(
-            api_key="test-api-key",
-            endpoint="http://localhost:9999",
-        )
-
-        with pytest.raises(RuntimeError, match="initialize"):
-            streamer.finalize()
-
     def test_finalize_sends_request(self, mock_server_factory):
         """Verify finalize() sends POST to finalize endpoint."""
         from atomscale.streaming.rheed_stream import TimeseriesStreamer
@@ -559,8 +530,8 @@ class TestTimeseriesStreamerFinalize:
             endpoint=server.endpoint,
         )
 
-        streamer.initialize()
-        streamer.finalize()
+        data_id = streamer.initialize()
+        streamer.finalize(data_id)
 
         requests = server.get_all_requests()
         assert len(requests) == 2
