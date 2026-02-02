@@ -12,6 +12,9 @@ use tracing::debug;
 mod utils;
 use utils::{generic_post, init_tracing_once};
 
+mod timeseries;
+use timeseries::TimeseriesStreamer;
+
 mod initialize;
 use initialize::{
     ensure_physical_sample_link, post_for_initialization, update_project_tracking_sample,
@@ -529,5 +532,6 @@ impl RHEEDStreamer {
 #[pymodule]
 fn rheed_stream(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RHEEDStreamer>()?;
+    m.add_class::<TimeseriesStreamer>()?;
     Ok(())
 }
