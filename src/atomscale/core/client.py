@@ -1,3 +1,5 @@
+"""Base client implementation and HTTP utilities."""
+
 from __future__ import annotations
 
 import itertools

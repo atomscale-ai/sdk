@@ -1,3 +1,5 @@
+"""Registry for data providers."""
+
 from __future__ import annotations
 
 from atomscale.similarity.provider import SimilarityTrajectoryProvider

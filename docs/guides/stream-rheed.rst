@@ -1,50 +1,49 @@
 Stream RHEED Video
 ==================
 
-``rheed_streaming.ipynb`` demonstrates both push (callback) and pull (generator)
-streaming with :class:`atomscale.streaming.rheed_stream.RHEEDStreamer`. This
-guide condenses the notebook into a quick reference and explains when to choose
-each style:
+Stream live RHEED frames directly from your instrument to Atomscale. Analysis
+runs in real-time as data arrives.
 
-- **Callback / push mode** – the camera or SDK hands you fresh frames and you
-  upload each chunk immediately.
-- **Generator / pull mode** – you already have frames buffered (from disk,
-  memory, or a simulated source) and want the helper to pace the upload for you.
+When to Use This
+----------------
 
-Prerequisites
--------------
+- Your camera SDK provides frames as numpy arrays
+- You want real-time analysis during growth
+- You need results before the growth completes
 
-.. important::
+.. tip::
 
-   Before streaming, ensure you have:
+   For pre-recorded videos, use :doc:`upload-files` instead.
 
-   - ``numpy`` installed
-   - RHEED frames as ``uint8`` arrays shaped ``(N, H, W)`` or ``(H, W)``
-   - A stable clock so you can honour the capture cadence
-
-Create a streamer
+Create a Streamer
 -----------------
 
 .. code-block:: python
 
-   from atomscale.streaming.rheed_stream import RHEEDStreamer
+   from atomscale.streaming import RHEEDStreamer
 
    streamer = RHEEDStreamer(api_key="YOUR_API_KEY")
 
-Optional keyword arguments tune chunking and logging. For example,
-``verbosity=4`` emits detailed progress, and ``max_workers`` caps concurrency.
+Initialize a Stream
+-------------------
 
-.. tip::
+.. code-block:: python
 
-   Pass a ``physical_sample`` name to :meth:`initialize` so the data links to
-   the right sample. Names are matched case-insensitively or created on the fly.
+   data_id = streamer.initialize(
+       fps=120.0,
+       rotations_per_min=15.0,  # Use 0.0 for stationary RHEED
+       chunk_size=240,          # Frames per chunk (2 seconds at 120fps)
+       stream_name="Growth 001",
+       physical_sample="GaN-2025-001",
+   )
 
-Callback / push mode
---------------------
+The ``rotations_per_min`` parameter determines whether data is classified as
+rotating or stationary RHEED.
 
-Use this variant when frames arrive live from the instrument. The outer loop is
-your acquisition callback: once a chunk is ready, send it to the API and wait
-just long enough to match the capture cadence.
+Push Mode (Live Capture)
+------------------------
+
+Use when your camera SDK delivers frames in real-time:
 
 .. code-block:: python
 
@@ -52,60 +51,55 @@ just long enough to match the capture cadence.
    import time
 
    fps = 120.0
-   chunk_size = 240  # ≥ 2 seconds of frames is recommended
+   chunk_size = 240
    seconds_per_chunk = chunk_size / fps
 
-   data_id = streamer.initialize(
-       fps=fps,
-       rotations_per_min=15.0,  # set to 0.0 for stationary
-       chunk_size=chunk_size,
-       stream_name="Demo (callback mode)",
-       physical_sample="Demo wafer",
-   )
+   for chunk_idx in range(num_chunks):
+       # Get frames from your camera (shape: [chunk_size, height, width])
+       frames = camera.capture(chunk_size)  # Your camera SDK
 
-   for chunk_idx in range(5):
-       frames = np.random.randint(0, 256, size=(chunk_size, 300, 500), dtype=np.uint8)
        streamer.push(data_id, chunk_idx, frames)
        time.sleep(seconds_per_chunk)
 
-   time.sleep(1.0)  # let in-flight uploads finish
    streamer.finalize(data_id)
 
-.. note::
+Run Mode (Buffered Data)
+------------------------
 
-   The ``rotations_per_min`` parameter determines whether the stream is
-   classified as rotating or stationary RHEED.
-
-Generator / pull mode
----------------------
-
-Use this form when frames are already buffered (for example, saved by the
-instrument or simulated offline). Provide an iterator that yields chunks and
-the helper will take care of pacing and retry logic.
+Use when frames are already in memory:
 
 .. code-block:: python
 
-   def frame_chunks(frames, *, chunk_size=240, fps=120.0):
-       seconds_per_chunk = chunk_size / fps
-       for start in range(0, len(frames), chunk_size):
-           yield frames[start : start + chunk_size]
-           time.sleep(seconds_per_chunk)
+   import numpy as np
+   import time
 
+   def frame_generator(all_frames, chunk_size, fps):
+       """Yield chunks at the correct pace."""
+       for start in range(0, len(all_frames), chunk_size):
+           yield all_frames[start:start + chunk_size]
+           time.sleep(chunk_size / fps)
 
-   frames = np.random.randint(0, 256, size=(1200, 300, 500), dtype=np.uint8)
+   # Frames already in memory
+   frames = np.load("recorded_frames.npy")
 
    data_id = streamer.initialize(
-       fps=10.0,
+       fps=120.0,
        rotations_per_min=0.0,
-       chunk_size=20,
-       stream_name="Demo (generator mode)",
-       physical_sample="Demo wafer",
+       chunk_size=240,
+       stream_name="Playback",
    )
 
-   streamer.run(data_id, frame_chunks(frames, chunk_size=20, fps=10.0))
+   streamer.run(data_id, frame_generator(frames, chunk_size=240, fps=120.0))
    streamer.finalize(data_id)
 
-Best practices
+Frame Requirements
+------------------
+
+- **Data type**: ``uint8`` grayscale
+- **Shape**: ``(N, height, width)`` for chunks, ``(height, width)`` for single frames
+- **Timing**: Maintain real-time pacing for accurate analysis
+
+Best Practices
 --------------
 
 .. list-table::
@@ -113,22 +107,17 @@ Best practices
    :widths: 30 70
 
    * - Practice
-     - Reason
-   * - Maintain capture cadence
-     - Server expects real-time pacing for proper analysis
-   * - Use ≥2 second chunks
+     - Why
+   * - Chunk size >= 2 seconds
      - Balances upload overhead with latency
+   * - Maintain capture cadence
+     - Server expects real-time pacing
    * - Always call ``finalize()``
-     - Lets the pipeline clean up, even after partial failures
-   * - Use distinct ``stream_name`` values
-     - Makes it easier to find test runs later
+     - Signals stream is complete so processing can finish
+   * - Use descriptive ``stream_name``
+     - Makes data easier to find later
 
 .. warning::
 
-   Failing to call :meth:`finalize` may leave the stream in an incomplete state,
-   preventing proper analysis completion.
-
-.. seealso::
-
-   - :doc:`poll-timeseries` – Monitor analysis results as they arrive
-   - :doc:`poll-trajectory` – Track similarity trajectory during growth
+   Failing to call ``finalize()`` leaves the stream incomplete and may prevent
+   analysis from completing.

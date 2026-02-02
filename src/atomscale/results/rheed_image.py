@@ -1,3 +1,5 @@
+"""Result objects for RHEED image analysis."""
+
 from __future__ import annotations
 
 from io import BytesIO

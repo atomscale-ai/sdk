@@ -1,3 +1,5 @@
+"""Result objects for RHEED video analysis."""
+
 from __future__ import annotations
 
 from uuid import UUID
