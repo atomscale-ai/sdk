@@ -132,7 +132,9 @@ impl RHEEDStreamer {
     ///     chunk_size (int): The **intended** number of frames per chunk you will send with `run(...)` or `push(...)`.
     ///     stream_name (Optional[str]): Human-readable name shown in the platform. If `None` or an empty string,
     ///         a default like `"RHEED Stream @ 1:23PM"` is used.
-    ///     physical_sample (Optional[str]): Name of a physical sample to associate with the data item; matched case-insensitively or created if missing.
+    ///     physical_sample (Optional[str]): Name or UUID of a physical sample to associate with the data item.
+    ///         If a UUID is provided, it must match an existing sample. If a name is provided, it is matched
+    ///         case-insensitively against existing samples, or a new sample is created if no match is found.
     ///     project_id (Optional[str]): UUID of a project to associate with the stream. When provided along with
     ///         `physical_sample`, the project's `tracking_physical_sample_id` configuration is automatically updated
     ///         to link the physical sample to the project for growth monitoring.

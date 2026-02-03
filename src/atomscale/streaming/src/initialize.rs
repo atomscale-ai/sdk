@@ -67,16 +67,35 @@ struct LinkPhysicalSampleRequest {
     physical_sample_id: String,
 }
 
+/// Check if a string looks like a UUID (e.g., "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx").
+fn looks_like_uuid(s: &str) -> bool {
+    // UUID format: 8-4-4-4-12 hex digits with dashes (36 chars total)
+    if s.len() != 36 {
+        return false;
+    }
+    let parts: Vec<&str> = s.split('-').collect();
+    if parts.len() != 5 {
+        return false;
+    }
+    let expected_lens = [8, 4, 4, 4, 12];
+    for (part, &expected_len) in parts.iter().zip(&expected_lens) {
+        if part.len() != expected_len || !part.chars().all(|c| c.is_ascii_hexdigit()) {
+            return false;
+        }
+    }
+    true
+}
+
 pub async fn ensure_physical_sample_link(
     client: &Client,
     base_endpoint: &str,
     api_key: &str,
     data_id: &str,
-    sample_name: &str,
+    sample_name_or_id: &str,
 ) -> Result<String> {
-    let sample_name = sample_name.trim();
-    if sample_name.is_empty() {
-        anyhow::bail!("sample_name cannot be empty");
+    let sample_name_or_id = sample_name_or_id.trim();
+    if sample_name_or_id.is_empty() {
+        anyhow::bail!("physical_sample cannot be empty");
     }
 
     let list_url = format!("{base_endpoint}/physical_samples/");
@@ -92,26 +111,40 @@ pub async fn ensure_physical_sample_link(
         .await
         .context("failed to deserialize physical sample list")?;
 
-    let sample_id = if let Some(sample) = existing_samples
-        .into_iter()
-        .find(|sample| sample.name.eq_ignore_ascii_case(sample_name))
-    {
-        sample.id
+    // Determine if input looks like a UUID or a name
+    let sample_id = if looks_like_uuid(sample_name_or_id) {
+        // UUID provided: look up by ID, error if not found
+        existing_samples
+            .into_iter()
+            .find(|sample| sample.id == sample_name_or_id)
+            .map(|sample| sample.id)
+            .ok_or_else(|| anyhow::anyhow!(
+                "physical sample with id '{}' not found",
+                sample_name_or_id
+            ))?
     } else {
-        let create_body = CreatePhysicalSampleRequest { name: sample_name };
-        let created: CreatePhysicalSampleResponse = client
-            .post(&list_url)
-            .header("X-API-KEY", api_key)
-            .json(&create_body)
-            .send()
-            .await
-            .context("failed to create physical sample")?
-            .error_for_status()
-            .context("physical sample creation returned error status")?
-            .json()
-            .await
-            .context("failed to deserialize physical sample creation response")?;
-        created.physical_sample_id
+        // Name provided: look up by name (case-insensitive), create if not found
+        if let Some(sample) = existing_samples
+            .into_iter()
+            .find(|sample| sample.name.eq_ignore_ascii_case(sample_name_or_id))
+        {
+            sample.id
+        } else {
+            let create_body = CreatePhysicalSampleRequest { name: sample_name_or_id };
+            let created: CreatePhysicalSampleResponse = client
+                .post(&list_url)
+                .header("X-API-KEY", api_key)
+                .json(&create_body)
+                .send()
+                .await
+                .context("failed to create physical sample")?
+                .error_for_status()
+                .context("physical sample creation returned error status")?
+                .json()
+                .await
+                .context("failed to deserialize physical sample creation response")?;
+            created.physical_sample_id
+        }
     };
 
     let link_url = format!("{base_endpoint}/data_entries/physical_sample");

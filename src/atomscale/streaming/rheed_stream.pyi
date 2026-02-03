@@ -26,7 +26,32 @@ class RHEEDStreamer:
         stream_name: str | None = None,
         physical_sample: str | None = None,
         project_id: str | None = None,
-    ) -> str: ...
+    ) -> str:
+        """Initialize a new RHEED stream.
+
+        Creates the server-side data entries and returns a data_id to use
+        for subsequent push/run/finalize calls.
+
+        Args:
+            fps: Capture rate in frames per second.
+            rotations_per_min: Wafer/crystal rotations per minute. Use 0.0
+                for stationary operation.
+            chunk_size: Number of frames per chunk. Must be >= 2 * fps.
+            stream_name: Human-readable name for the stream. Defaults to
+                "RHEED Stream @ <time>".
+            physical_sample: Name or UUID of a physical sample to associate
+                with the data item. If a UUID is provided, it must match an
+                existing sample. If a name is provided, it is matched
+                case-insensitively against existing samples, or a new sample
+                is created if no match is found.
+            project_id: UUID of the associated project. When provided along
+                with physical_sample, the project's tracking_physical_sample_id
+                is automatically updated to link the sample for growth monitoring.
+
+        Returns:
+            The data_id for this stream.
+        """
+        ...
     def run(
         self,
         data_id: str,
@@ -75,7 +100,7 @@ class TimeseriesStreamer:
         self,
         stream_name: str | None = None,
         synth_source_id: int | None = None,
-        physical_sample_id: str | None = None,
+        physical_sample: str | None = None,
         project_id: str | None = None,
     ) -> str:
         """Initialize a new timeseries stream.
@@ -87,8 +112,14 @@ class TimeseriesStreamer:
             stream_name: Human-readable name for the stream.
             synth_source_id: Growth instrument ID to link. Must belong to your
                 organization. Use list_instruments() to see available instruments.
-            physical_sample_id: UUID of the associated physical sample.
-            project_id: UUID of the associated project.
+            physical_sample: Name or UUID of a physical sample to associate
+                with the data item. If a UUID is provided, it must match an
+                existing sample. If a name is provided, it is matched
+                case-insensitively against existing samples, or a new sample
+                is created if no match is found.
+            project_id: UUID of the associated project. When provided along with
+                physical_sample, the project's tracking_physical_sample_id is
+                automatically updated to link the sample for growth monitoring.
 
         Returns:
             The data_id for this stream.

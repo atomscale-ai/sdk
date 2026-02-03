@@ -9,6 +9,7 @@ use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
+use crate::initialize::{ensure_physical_sample_link, update_project_tracking_sample};
 use crate::utils::init_tracing_once;
 
 /// Request body for stream initialization.
@@ -18,7 +19,6 @@ struct InitializeRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     synth_source_id: Option<i64>,
     points_per_chunk: usize,
-    physical_sample_id: Option<String>,
     project_id: Option<String>,
 }
 
@@ -125,31 +125,44 @@ impl TimeseriesStreamer {
     ///     stream_name (Optional[str]): Human-readable name for the stream.
     ///     synth_source_id (Optional[int]): Growth instrument ID to link. Must belong to your
     ///         organization. Use list_instruments() to see available instruments.
-    ///     physical_sample_id (Optional[str]): Associated physical sample UUID.
-    ///     project_id (Optional[str]): Associated project UUID.
+    ///     physical_sample (Optional[str]): Name or UUID of a physical sample to associate with the
+    ///         data item. If a UUID is provided, it must match an existing sample. If a name is
+    ///         provided, it is matched case-insensitively against existing samples, or a new sample
+    ///         is created if no match is found.
+    ///     project_id (Optional[str]): UUID of a project to associate with the stream. When
+    ///         provided along with `physical_sample`, the project's `tracking_physical_sample_id`
+    ///         configuration is automatically updated to link the physical sample to the project
+    ///         for growth monitoring.
     ///
     /// Returns:
     ///     str: The data_id for this stream.
     ///
     /// Raises:
     ///     RuntimeError: If the initialization request fails or instrument not found.
-    #[pyo3(signature = (stream_name=None, synth_source_id=None, physical_sample_id=None, project_id=None))]
+    #[pyo3(signature = (stream_name=None, synth_source_id=None, physical_sample=None, project_id=None))]
     #[pyo3(
-        text_signature = "(stream_name=None, synth_source_id=None, physical_sample_id=None, project_id=None)"
+        text_signature = "(stream_name=None, synth_source_id=None, physical_sample=None, project_id=None)"
     )]
     fn initialize(
         &self,
         stream_name: Option<String>,
         synth_source_id: Option<i64>,
-        physical_sample_id: Option<String>,
+        physical_sample: Option<String>,
         project_id: Option<String>,
     ) -> PyResult<String> {
+        let physical_sample = physical_sample
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
+        let project_id = project_id
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
         let request = InitializeRequest {
             stream_name,
             synth_source_id,
             points_per_chunk: self.points_per_chunk,
-            physical_sample_id,
-            project_id,
+            project_id: project_id.clone(),
         };
 
         let url = format!("{}/instrument-timeseries/initialize", self.endpoint);
@@ -174,16 +187,48 @@ impl TimeseriesStreamer {
             Ok(response)
         });
 
-        match result {
+        let data_id = match result {
             Ok(response) => {
                 debug!(
                     "[timeseries_stream] initialized: data_id={}",
                     response.data_id
                 );
-                Ok(response.data_id)
+                response.data_id
             }
-            Err(e) => Err(PyRuntimeError::new_err(e.to_string())),
+            Err(e) => return Err(PyRuntimeError::new_err(e.to_string())),
+        };
+
+        // Handle physical sample linking (same flow as RHEEDStreamer)
+        if let Some(sample_name) = physical_sample {
+            let base_endpoint = self.endpoint.clone();
+            let physical_sample_fut = ensure_physical_sample_link(
+                &self.client,
+                &base_endpoint,
+                &self.api_key,
+                &data_id,
+                &sample_name,
+            );
+            let sample_id = self
+                .rt
+                .block_on(physical_sample_fut)
+                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+
+            // If project_id was provided, update the project's tracking_physical_sample_id
+            if let Some(ref proj_id) = project_id {
+                let update_project_fut = update_project_tracking_sample(
+                    &self.client,
+                    &base_endpoint,
+                    &self.api_key,
+                    proj_id,
+                    &sample_id,
+                );
+                self.rt
+                    .block_on(update_project_fut)
+                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            }
         }
+
+        Ok(data_id)
     }
 
     /// push(self, data_id: str, chunk_index: int, channel_name: str, timestamps: list[float], values: list[float], ...) -> None
