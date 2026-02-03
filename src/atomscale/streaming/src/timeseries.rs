@@ -165,7 +165,7 @@ impl TimeseriesStreamer {
             project_id: project_id.clone(),
         };
 
-        let url = format!("{}/instrument-timeseries/initialize", self.endpoint);
+        let url = format!("{}/metrology/stream/initialize", self.endpoint);
 
         let result = self.rt.block_on(async {
             let resp = self
@@ -433,7 +433,7 @@ impl TimeseriesStreamer {
     #[pyo3(signature = (data_id))]
     #[pyo3(text_signature = "(data_id)")]
     fn finalize(&self, data_id: String) -> PyResult<()> {
-        let url = format!("{}/instrument-timeseries/{}/finalize", self.endpoint, data_id);
+        let url = format!("{}/metrology/stream/{}/finalize", self.endpoint, data_id);
 
         let result = self.rt.block_on(async {
             let resp = self
@@ -567,7 +567,7 @@ impl TimeseriesStreamer {
     fn spawn_upload_tracked(&self, payload: ChunkPayload) -> JoinHandle<Result<()>> {
         let client = self.client.clone();
         let api_key = self.api_key.clone();
-        let url = format!("{}/instrument-timeseries/chunk", self.endpoint);
+        let url = format!("{}/metrology/stream/chunk", self.endpoint);
 
         debug!(
             "[timeseries_stream] spawn: chunk {} for channel '{}'",

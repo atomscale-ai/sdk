@@ -221,11 +221,11 @@ class TestTimeseriesStreamerPush:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 2,
-            "/instrument-timeseries/initialize": json.dumps({
+            "/metrology/stream/initialize": json.dumps({
                 "data_id": "test-data-id-123",
                 "processed_data_id": "test-processed-id",
             }),
-            "/instrument-timeseries/chunk": json.dumps({
+            "/metrology/stream/chunk": json.dumps({
                 "data_id": "test-data-id-123",
                 "channel_name": "temperature",
                 "chunk_index": 0,
@@ -256,7 +256,7 @@ class TestTimeseriesStreamerPush:
         requests = server.get_all_requests()
         assert len(requests) == 2
         # Second request should be the chunk
-        assert "/instrument-timeseries/chunk" in requests[1]
+        assert "/metrology/stream/chunk" in requests[1]
 
 
 class TestTimeseriesStreamerRun:
@@ -296,11 +296,11 @@ class TestTimeseriesStreamerRun:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 4,
-            "/instrument-timeseries/initialize": json.dumps({
+            "/metrology/stream/initialize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
             }),
-            "/instrument-timeseries/chunk": json.dumps({
+            "/metrology/stream/chunk": json.dumps({
                 "data_id": "test-data-id",
                 "channel_name": "temperature",
                 "chunk_index": 0,
@@ -329,9 +329,9 @@ class TestTimeseriesStreamerRun:
         # Should have 4 requests: 1 init + 3 chunks
         requests = server.get_all_requests()
         assert len(requests) == 4
-        assert "/instrument-timeseries/initialize" in requests[0]
+        assert "/metrology/stream/initialize" in requests[0]
         # Remaining 3 should be chunks
-        chunk_requests = [r for r in requests if "/instrument-timeseries/chunk" in r]
+        chunk_requests = [r for r in requests if "/metrology/stream/chunk" in r]
         assert len(chunk_requests) == 3
 
 
@@ -364,11 +364,11 @@ class TestTimeseriesStreamerPushMulti:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 3,
-            "/instrument-timeseries/initialize": json.dumps({
+            "/metrology/stream/initialize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
             }),
-            "/instrument-timeseries/chunk": json.dumps({
+            "/metrology/stream/chunk": json.dumps({
                 "data_id": "test-data-id",
                 "chunk_index": 0,
                 "total_points": 2,
@@ -408,11 +408,11 @@ class TestTimeseriesStreamerIntegration:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 4,
-            "/instrument-timeseries/initialize": json.dumps({
+            "/metrology/stream/initialize": json.dumps({
                 "data_id": "workflow-data-id",
                 "processed_data_id": "workflow-processed-id",
             }),
-            "/instrument-timeseries/chunk": json.dumps({
+            "/metrology/stream/chunk": json.dumps({
                 "data_id": "workflow-data-id",
                 "channel_name": "temperature",
                 "chunk_index": 0,
@@ -464,11 +464,11 @@ class TestTimeseriesStreamerFinalize:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 2,
-            "/instrument-timeseries/initialize": json.dumps({
+            "/metrology/stream/initialize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
             }),
-            "/instrument-timeseries/test-data-id/finalize": json.dumps({
+            "/metrology/stream/test-data-id/finalize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
             }),
