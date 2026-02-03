@@ -40,6 +40,46 @@ Initialize a Stream
 The ``rotations_per_min`` parameter determines whether data is classified as
 rotating or stationary RHEED.
 
+Link to a Physical Sample
+-------------------------
+
+The ``physical_sample`` parameter accepts either a **name** or a **UUID**:
+
+**By name** (recommended for new samples):
+
+.. code-block:: python
+
+   data_id = streamer.initialize(
+       fps=120.0,
+       rotations_per_min=15.0,
+       chunk_size=240,
+       physical_sample="Wafer-A1",  # Matched case-insensitively; created if not found
+   )
+
+**By UUID** (for existing samples):
+
+.. code-block:: python
+
+   data_id = streamer.initialize(
+       fps=120.0,
+       rotations_per_min=15.0,
+       chunk_size=240,
+       physical_sample="a1b2c3d4-e5f6-7890-abcd-ef1234567890",  # Must exist
+   )
+
+When you also provide a ``project_id``, the project's ``tracking_physical_sample_id``
+configuration is automatically updated to link the sample for growth monitoring:
+
+.. code-block:: python
+
+   data_id = streamer.initialize(
+       fps=120.0,
+       rotations_per_min=15.0,
+       chunk_size=240,
+       physical_sample="Wafer-A1",
+       project_id="your-project-uuid",
+   )
+
 Push Mode (Live Capture)
 ------------------------
 
