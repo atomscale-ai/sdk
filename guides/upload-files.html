@@ -7,16 +7,16 @@
 <meta content="white" media="(prefers-color-scheme: light)" name="theme-color"/>
 <meta content="black" media="(prefers-color-scheme: dark)" name="theme-color"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>Inspect Analysis Results | Python SDK</title>
-<meta content="Inspect Analysis Results | Python SDK" property="og:title"/>
-<meta content="Inspect Analysis Results | Python SDK" name="twitter:title"/>
+<title>Upload Files | Python SDK</title>
+<meta content="Upload Files | Python SDK" property="og:title"/>
+<meta content="Upload Files | Python SDK" name="twitter:title"/>
 <link href="../_static/pygments.css?v=03e43079" rel="stylesheet" type="text/css"/>
 <link href="../_static/theme.css?v=42baaae4" rel="stylesheet" type="text/css"/>
 <link href="../_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
 <link href="stream-rheed.html" rel="next" title="Stream RHEED Video"/>
-<link href="search-data.html" rel="prev" title="Search the Catalogue"/>
+<link href="quickstart.html" rel="prev" title="Quickstart"/>
 <script>
     <!-- Prevent Flash of wrong theme -->
       const userPreference = localStorage.getItem('darkMode');
@@ -71,17 +71,24 @@
 </a>
 <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
 <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
-<ul class="current">
-<li class="toctree-l1 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="index.html">User Guides<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul class="current" x-show="expanded">
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="poll-trajectory.html">Poll Similarity Trajectory</a></li>
+<p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="../modules.html">Project Modules<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-show="expanded">
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -89,7 +96,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -116,117 +135,119 @@
 <path d="M240 856h120V616h240v240h120V496L480 316 240 496v360Zm-80 80V456l320-240 320 240v480H520V696h-80v240H160Zm320-350Z"></path>
 </svg>
 </a>
-<div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap" href="index.html">User Guides</a>
-<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">Inspect Analysis Results</span>
+<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">Upload Files</span>
 </nav>
 <div id="content" role="main">
-<section id="inspect-analysis-results">
-<h1>Inspect Analysis Results<a class="headerlink" href="#inspect-analysis-results" title="Link to this heading"><span>#</span></a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">general_use.ipynb</span></code> demonstrates how to work with objects returned by
-<code class="xref py py-meth docutils literal notranslate"><span class="pre">atomscale.client.Client.get()</span></code>. This guide walks through the same workflow
-in a linear format.</p>
-<section id="fetch-analysed-items">
-<h2>Fetch analysed items<a class="headerlink" href="#fetch-analysed-items" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#fetch-analysed-items'"><span>#</span></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
-</span><span id="line-2">
-</span><span id="line-3"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_API_KEY"</span><span class="p">)</span>
-</span><span id="line-4"><span class="n">search_results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">keywords</span><span class="o">=</span><span class="s2">"demo"</span><span class="p">,</span> <span class="n">data_type</span><span class="o">=</span><span class="s2">"rheed_stationary"</span><span class="p">)</span>
-</span><span id="line-5">
-</span><span id="line-6"><span class="n">analysed</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">search_results</span><span class="p">[</span><span class="s2">"Data ID"</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">())</span>
-</span></code></pre></div>
-</div>
-<p>Each item in <code class="docutils literal notranslate"><span class="pre">analysed</span></code> is a subclass of
-<code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.results.RHEEDVideoResult</span></code> or
-<code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.results.RHEEDImageResult</span></code>, depending on the source data.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The <code class="xref py py-meth docutils literal notranslate"><span class="pre">get()</span></code> call fetches metadata and analysis artefacts for each ID.
-For large result sets, consider batching or filtering first.</p>
-</div>
-</section>
-<section id="inspect-time-series-data">
-<h2>Inspect time series data<a class="headerlink" href="#inspect-time-series-data" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#inspect-time-series-data'"><span>#</span></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">video_item</span> <span class="o">=</span> <span class="n">analysed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-2"><span class="n">timeseries</span> <span class="o">=</span> <span class="n">video_item</span><span class="o">.</span><span class="n">timeseries_data</span>
-</span><span id="line-3"><span class="nb">print</span><span class="p">(</span><span class="n">timeseries</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
-</span><span id="line-4"><span class="nb">print</span><span class="p">(</span><span class="n">timeseries</span><span class="o">.</span><span class="n">tail</span><span class="p">())</span>
-</span></code></pre></div>
-</div>
-<p>The timeseries frame contains specular intensity, strain metrics, cluster IDs,
-and other summary features for every frame in the video.</p>
-<table class="docutils align-default" id="id1">
-<caption><span class="caption-text">Common timeseries columns</span><a class="headerlink" href="#id1" title="Link to this table"><span>#</span></a></caption>
+<section id="upload-files">
+<h1>Upload Files<a class="headerlink" href="#upload-files" title="Link to this heading"><span>#</span></a></h1>
+<p>Upload RHEED videos, images, or XPS files for analysis. Use this when you have
+existing files on disk. For live instrument data, see <a class="reference internal" href="stream-rheed.html"><span class="doc">Stream RHEED Video</span></a> or
+<a class="reference internal" href="stream-timeseries.html"><span class="doc">Stream Instrument Data</span></a>.</p>
+<section id="supported-formats">
+<h2>Supported Formats<a class="headerlink" href="#supported-formats" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#supported-formats'"><span>#</span></a></h2>
+<table class="docutils align-default">
 <colgroup>
 <col style="width: 30.0%"/>
 <col style="width: 70.0%"/>
 </colgroup>
 <thead>
-<tr class="row-odd"><th class="head"><p>Column</p></th>
-<th class="head"><p>Description</p></th>
+<tr class="row-odd"><th class="head"><p>Type</p></th>
+<th class="head"><p>Extensions</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">timestamp</span></code></p></td>
-<td><p>Frame timestamp in seconds</p></td>
+<tr class="row-even"><td><p>RHEED video</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.mp4</span></code>, <code class="docutils literal notranslate"><span class="pre">.avi</span></code>, <code class="docutils literal notranslate"><span class="pre">.mov</span></code>, <code class="docutils literal notranslate"><span class="pre">.webm</span></code>, <code class="docutils literal notranslate"><span class="pre">.h5</span></code>, <code class="docutils literal notranslate"><span class="pre">.imm</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">specular_intensity</span></code></p></td>
-<td><p>Specular spot brightness</p></td>
+<tr class="row-odd"><td><p>RHEED image</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.png</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpg</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpeg</span></code>, <code class="docutils literal notranslate"><span class="pre">.gif</span></code>, <code class="docutils literal notranslate"><span class="pre">.bmp</span></code>, <code class="docutils literal notranslate"><span class="pre">.img</span></code>, <code class="docutils literal notranslate"><span class="pre">.pdf</span></code></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">strain</span></code></p></td>
-<td><p>Computed strain metric</p></td>
+<tr class="row-even"><td><p>XPS</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.vms</span></code>, <code class="docutils literal notranslate"><span class="pre">.spe</span></code>, <code class="docutils literal notranslate"><span class="pre">.spc</span></code>, <code class="docutils literal notranslate"><span class="pre">.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">.txt</span></code></p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">cluster_id</span></code></p></td>
-<td><p>Pattern cluster assignment</p></td>
+<tr class="row-odd"><td><p>SEM</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.tif</span></code>, <code class="docutils literal notranslate"><span class="pre">.tiff</span></code>, <code class="docutils literal notranslate"><span class="pre">.png</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpg</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpeg</span></code>, <code class="docutils literal notranslate"><span class="pre">.bmp</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Ellipsometry</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.txt</span></code>, <code class="docutils literal notranslate"><span class="pre">.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">.dat</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Optical microscopy</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.png</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpg</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpeg</span></code>, <code class="docutils literal notranslate"><span class="pre">.tiff</span></code>, <code class="docutils literal notranslate"><span class="pre">.tif</span></code>, <code class="docutils literal notranslate"><span class="pre">.gif</span></code>, <code class="docutils literal notranslate"><span class="pre">.bmp</span></code>, <code class="docutils literal notranslate"><span class="pre">.img</span></code>, <code class="docutils literal notranslate"><span class="pre">.pdf</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Raman</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.txt</span></code>, <code class="docutils literal notranslate"><span class="pre">.csv</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Photoluminescence</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.txt</span></code>, <code class="docutils literal notranslate"><span class="pre">.csv</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>SIMS</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.xlsx</span></code>, <code class="docutils literal notranslate"><span class="pre">.xls</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>OES</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.txt</span></code>, <code class="docutils literal notranslate"><span class="pre">.csv</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>Metrology/logs</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.csv</span></code>, <code class="docutils literal notranslate"><span class="pre">.txt</span></code>, <code class="docutils literal notranslate"><span class="pre">.log</span></code>, <code class="docutils literal notranslate"><span class="pre">.dat</span></code>, <code class="docutils literal notranslate"><span class="pre">.xml</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Archives</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">.zip</span></code>, <code class="docutils literal notranslate"><span class="pre">.tar</span></code>, <code class="docutils literal notranslate"><span class="pre">.gz</span></code>, <code class="docutils literal notranslate"><span class="pre">.lzma</span></code>, <code class="docutils literal notranslate"><span class="pre">.7z</span></code>, <code class="docutils literal notranslate"><span class="pre">.rar</span></code></p></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="work-with-extracted-frames">
-<h2>Work with extracted frames<a class="headerlink" href="#work-with-extracted-frames" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#work-with-extracted-frames'"><span>#</span></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">snapshot</span> <span class="o">=</span> <span class="n">video_item</span><span class="o">.</span><span class="n">snapshot_image_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-2"><span class="n">figure</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">get_plot</span><span class="p">()</span>  <span class="c1"># Matplotlib figure</span>
-</span><span id="line-3"><span class="n">fingerprint</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">pattern_graph</span>
-</span><span id="line-4"><span class="n">df</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">get_pattern_dataframe</span><span class="p">()</span>
+<section id="basic-upload">
+<h2>Basic Upload<a class="headerlink" href="#basic-upload" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#basic-upload'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">()</span>
+</span><span id="line-4">
+</span><span id="line-5"><span class="n">client</span><span class="o">.</span><span class="n">upload</span><span class="p">(</span><span class="n">files</span><span class="o">=</span><span class="p">[</span>
+</span><span id="line-6">    <span class="s2">"/data/growths/2025-02-10/sample_001.mp4"</span><span class="p">,</span>
+</span><span id="line-7">    <span class="s2">"/data/growths/2025-02-10/sample_002.mp4"</span><span class="p">,</span>
+</span><span id="line-8"><span class="p">])</span>
 </span></code></pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">pattern_graph</span></code> exposes the detected diffraction network as a NetworkX graph,
-while <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_pattern_dataframe()</span></code> returns a tidy table describing each spot.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>Use <code class="docutils literal notranslate"><span class="pre">figure.savefig("snapshot.png")</span></code> to export plots for reports or
-publications.</p>
-</div>
+<p>You can mix different file types in a single upload call.</p>
 </section>
-<section id="download-processed-videos">
-<h2>Download processed videos<a class="headerlink" href="#download-processed-videos" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#download-processed-videos'"><span>#</span></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">client</span><span class="o">.</span><span class="n">download_videos</span><span class="p">(</span>
-</span><span id="line-2">    <span class="n">data_ids</span><span class="o">=</span><span class="n">search_results</span><span class="p">[</span><span class="s2">"Data ID"</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">(),</span>
-</span><span id="line-3">    <span class="n">dest_dir</span><span class="o">=</span><span class="s2">"processed/"</span><span class="p">,</span>
+<section id="upload-with-sample-name">
+<h2>Upload with Sample Name<a class="headerlink" href="#upload-with-sample-name" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#upload-with-sample-name'"><span>#</span></a></h2>
+<p>Link uploads to a sample for easier organization:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">client</span><span class="o">.</span><span class="n">upload</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">files</span><span class="o">=</span><span class="p">[</span><span class="s2">"growth.mp4"</span><span class="p">],</span>
+</span><span id="line-3">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"GaN-2025-001"</span><span class="p">,</span>
 </span><span id="line-4"><span class="p">)</span>
 </span></code></pre></div>
 </div>
-<p>The files are saved as MP4 (one per data ID) and mirror what you see in the UI.</p>
-<div class="admonition caution">
-<p class="admonition-title">Caution</p>
-<p>Downloaded videos can be large. Ensure you have sufficient disk space and
-consider filtering to only the IDs you need.</p>
+</section>
+<section id="disable-progress-bars">
+<h2>Disable Progress Bars<a class="headerlink" href="#disable-progress-bars" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#disable-progress-bars'"><span>#</span></a></h2>
+<p>For scripts or CI environments:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">mute_bars</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-2"><span class="n">client</span><span class="o">.</span><span class="n">upload</span><span class="p">(</span><span class="n">files</span><span class="o">=</span><span class="p">[</span><span class="s2">"growth.mp4"</span><span class="p">])</span>
+</span></code></pre></div>
 </div>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<ul class="simple">
-<li><p><a class="reference internal" href="poll-timeseries.html"><span class="doc">Poll Time Series Updates</span></a> – Poll for live timeseries updates</p></li>
-<li><p><a class="reference internal" href="poll-trajectory.html"><span class="doc">Poll Similarity Trajectory</span></a> – Poll similarity trajectory data</p></li>
-</ul>
+</section>
+<section id="what-happens-next">
+<h2>What Happens Next<a class="headerlink" href="#what-happens-next" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#what-happens-next'"><span>#</span></a></h2>
+<ol class="arabic simple">
+<li><p>Files upload to Atomscale (large files stream in chunks automatically)</p></li>
+<li><p>Analysis pipelines start processing</p></li>
+<li><p>Results appear in the web app and are searchable via the API</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Processing runs asynchronously. Use <a class="reference internal" href="search-and-download.html"><span class="doc">Search and Download</span></a> to check
+when analysis completes (<code class="docutils literal notranslate"><span class="pre">status="success"</span></code>).</p>
 </div>
 </section>
 </section>
 </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">
 <div class="mr-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="search-data.html">
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="quickstart.html">
 <svg class="mr-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="15 18 9 12 15 6"></polyline>
 </svg>
-        Search the Catalogue
+        Quickstart
       </a>
 </div>
 <div class="ml-auto">
@@ -240,10 +261,11 @@ consider filtering to only the IDs you need.</p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
-<li><a :data-current="activeSection === '#fetch-analysed-items'" class="reference internal" href="#fetch-analysed-items">Fetch analysed items</a></li>
-<li><a :data-current="activeSection === '#inspect-time-series-data'" class="reference internal" href="#inspect-time-series-data">Inspect time series data</a></li>
-<li><a :data-current="activeSection === '#work-with-extracted-frames'" class="reference internal" href="#work-with-extracted-frames">Work with extracted frames</a></li>
-<li><a :data-current="activeSection === '#download-processed-videos'" class="reference internal" href="#download-processed-videos">Download processed videos</a></li>
+<li><a :data-current="activeSection === '#supported-formats'" class="reference internal" href="#supported-formats">Supported Formats</a></li>
+<li><a :data-current="activeSection === '#basic-upload'" class="reference internal" href="#basic-upload">Basic Upload</a></li>
+<li><a :data-current="activeSection === '#upload-with-sample-name'" class="reference internal" href="#upload-with-sample-name">Upload with Sample Name</a></li>
+<li><a :data-current="activeSection === '#disable-progress-bars'" class="reference internal" href="#disable-progress-bars">Disable Progress Bars</a></li>
+<li><a :data-current="activeSection === '#what-happens-next'" class="reference internal" href="#what-happens-next">What Happens Next</a></li>
 </ul>
 </div>
 </aside>

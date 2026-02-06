@@ -102,17 +102,24 @@
 
     <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
       <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../guides/index.html">User Guides</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/poll-trajectory.html">Poll Similarity Trajectory</a></li>
+  <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/quickstart.html">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/upload-files.html">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Project Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -120,7 +127,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -170,298 +189,299 @@
 
     <div id="content" role="main">
       <h1>Source code for atomscale.timeseries.polling</h1><div class="highlight"><pre>
-<span></span><code><span id="line-1"><span class="c1"># polling.py</span>
-</span><span id="line-2"><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="line-3">
-</span><span id="line-4"><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
-</span><span id="line-5"><span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
-</span><span id="line-6"><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
-</span><span id="line-7"><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
-</span><span id="line-8"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncIterator</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span>
-</span><span id="line-9"><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
-</span><span id="line-10">
-</span><span id="line-11"><span class="kn">from</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span>
-</span><span id="line-12">
-</span><span id="line-13"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.timeseries._polling_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">drift_corrected_sleep</span>
-</span><span id="line-14"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.timeseries.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_provider</span>
-</span><span id="line-15">
-</span><span id="line-16"><span class="n">Result</span> <span class="o">=</span> <span class="n">DataFrame</span>
-</span><span id="line-17"><span class="n">DistinctFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span>
-</span><span id="line-18"><span class="n">Predicate</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]</span>
-</span><span id="line-19"><span class="n">ErrorHandler</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="ne">BaseException</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span>
-</span><span id="line-20">
-</span><span id="line-21"><span class="c1"># Re-export for backwards compatibility</span>
-</span><span id="line-22"><span class="n">_drift_corrected_sleep</span> <span class="o">=</span> <span class="n">drift_corrected_sleep</span>
-</span><span id="line-23">
+<span></span><code><span id="line-1"><span class="sd">&quot;&quot;&quot;Polling utilities for timeseries data updates.&quot;&quot;&quot;</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="line-4">
+</span><span id="line-5"><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+</span><span id="line-6"><span class="kn">import</span><span class="w"> </span><span class="nn">random</span>
+</span><span id="line-7"><span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+</span><span id="line-8"><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+</span><span id="line-9"><span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">AsyncIterator</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Iterator</span>
+</span><span id="line-10"><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span>
+</span><span id="line-11">
+</span><span id="line-12"><span class="kn">from</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="kn">import</span> <span class="n">DataFrame</span>
+</span><span id="line-13">
+</span><span id="line-14"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.timeseries._polling_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">drift_corrected_sleep</span>
+</span><span id="line-15"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.timeseries.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_provider</span>
+</span><span id="line-16">
+</span><span id="line-17"><span class="n">Result</span> <span class="o">=</span> <span class="n">DataFrame</span>
+</span><span id="line-18"><span class="n">DistinctFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span>
+</span><span id="line-19"><span class="n">Predicate</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]</span>
+</span><span id="line-20"><span class="n">ErrorHandler</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="ne">BaseException</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span>
+</span><span id="line-21">
+</span><span id="line-22"><span class="c1"># Re-export for backwards compatibility</span>
+</span><span id="line-23"><span class="n">_drift_corrected_sleep</span> <span class="o">=</span> <span class="n">drift_corrected_sleep</span>
 </span><span id="line-24">
-</span><span id="line-25"><span class="k">def</span><span class="w"> </span><span class="nf">_fetch_result</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
-</span><span id="line-26"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a result via provider -&gt; fetch_raw -&gt; to_dataframe.</span>
-</span><span id="line-27">
-</span><span id="line-28"><span class="sd">    Args:</span>
-</span><span id="line-29"><span class="sd">        client: API client instance passed to the provider.</span>
-</span><span id="line-30"><span class="sd">        data_id: Identifier of the resource to fetch.</span>
-</span><span id="line-31"><span class="sd">        last_n: Last number of entries to poll for</span>
-</span><span id="line-32">
-</span><span id="line-33"><span class="sd">    Returns:</span>
-</span><span id="line-34"><span class="sd">        Any: The provider-converted result (typically a pandas.DataFrame).</span>
-</span><span id="line-35"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-36">    <span class="n">provider</span> <span class="o">=</span> <span class="n">get_provider</span><span class="p">(</span><span class="s2">&quot;rheed&quot;</span><span class="p">)</span>
-</span><span id="line-37">    <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;last_n&quot;</span><span class="p">:</span> <span class="n">last_n</span><span class="p">}</span> <span class="k">if</span> <span class="n">last_n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}</span>
-</span><span id="line-38">    <span class="n">raw</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">fetch_raw</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-</span><span id="line-39">    <span class="k">return</span> <span class="n">provider</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
-</span><span id="line-40">
+</span><span id="line-25">
+</span><span id="line-26"><span class="k">def</span><span class="w"> </span><span class="nf">_fetch_result</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
+</span><span id="line-27"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Build a result via provider -&gt; fetch_raw -&gt; to_dataframe.</span>
+</span><span id="line-28">
+</span><span id="line-29"><span class="sd">    Args:</span>
+</span><span id="line-30"><span class="sd">        client: API client instance passed to the provider.</span>
+</span><span id="line-31"><span class="sd">        data_id: Identifier of the resource to fetch.</span>
+</span><span id="line-32"><span class="sd">        last_n: Last number of entries to poll for</span>
+</span><span id="line-33">
+</span><span id="line-34"><span class="sd">    Returns:</span>
+</span><span id="line-35"><span class="sd">        Any: The provider-converted result (typically a pandas.DataFrame).</span>
+</span><span id="line-36"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-37">    <span class="n">provider</span> <span class="o">=</span> <span class="n">get_provider</span><span class="p">(</span><span class="s2">&quot;rheed&quot;</span><span class="p">)</span>
+</span><span id="line-38">    <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;last_n&quot;</span><span class="p">:</span> <span class="n">last_n</span><span class="p">}</span> <span class="k">if</span> <span class="n">last_n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="p">{}</span>
+</span><span id="line-39">    <span class="n">raw</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">fetch_raw</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span id="line-40">    <span class="k">return</span> <span class="n">provider</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
 </span><span id="line-41">
+</span><span id="line-42">
 <div class="viewcode-block" id="iter_poll">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.polling.iter_poll.html#atomscale.timeseries.polling.iter_poll">[docs]</a>
-</span><span id="line-42"><span class="k">def</span><span class="w"> </span><span class="nf">iter_poll</span><span class="p">(</span>
-</span><span id="line-43">    <span class="n">client</span><span class="p">,</span>
-</span><span id="line-44">    <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-45">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-46">    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
-</span><span id="line-47">    <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-48">    <span class="n">distinct_by</span><span class="p">:</span> <span class="n">DistinctFn</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-49">    <span class="n">until</span><span class="p">:</span> <span class="n">Predicate</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-50">    <span class="n">max_polls</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-51">    <span class="n">fire_immediately</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-52">    <span class="n">jitter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-53">    <span class="n">on_error</span><span class="p">:</span> <span class="n">ErrorHandler</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-54"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Result</span><span class="p">]:</span>
-</span><span id="line-55"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="line-56"><span class="sd">    Yield time series results at a fixed cadence.</span>
-</span><span id="line-57">
-</span><span id="line-58"><span class="sd">    Supports deduplication (via a key extractor), stop conditions,</span>
-</span><span id="line-59"><span class="sd">    bounded polling, optional jitter, and non-fatal error handling.</span>
-</span><span id="line-60">
-</span><span id="line-61"><span class="sd">    Args:</span>
-</span><span id="line-62"><span class="sd">        client: API client instance forwarded to the provider.</span>
-</span><span id="line-63"><span class="sd">        data_id: Identifier to fetch data for.</span>
-</span><span id="line-64"><span class="sd">        last_n: Last number of time series data points to poll. None is all.</span>
-</span><span id="line-65"><span class="sd">        interval: Seconds between polls. Defaults to 1.0.</span>
-</span><span id="line-66"><span class="sd">        distinct_by: Optional function mapping a result to a hashable key for</span>
-</span><span id="line-67"><span class="sd">            deduping. If provided, only results with a new key are yielded.</span>
-</span><span id="line-68"><span class="sd">        until: Optional predicate; stop when it returns True for a result.</span>
-</span><span id="line-69"><span class="sd">        max_polls: Optional maximum number of polls before stopping.</span>
-</span><span id="line-70"><span class="sd">        fire_immediately: If True, perform the first poll immediately; otherwise</span>
-</span><span id="line-71"><span class="sd">            wait one interval before the first poll. Defaults to True.</span>
-</span><span id="line-72"><span class="sd">        jitter: Optional random delay (0..jitter) added to each sleep to avoid</span>
-</span><span id="line-73"><span class="sd">            thundering herds. Clamped at `interval`. Defaults to 0.0.</span>
-</span><span id="line-74"><span class="sd">        on_error: Optional error handler called with the raised exception when a</span>
-</span><span id="line-75"><span class="sd">            poll fails. Errors are swallowed so polling continues.</span>
-</span><span id="line-76">
-</span><span id="line-77"><span class="sd">    Yields:</span>
-</span><span id="line-78"><span class="sd">        Any: Each (optionally deduped) time series data frame result.</span>
-</span><span id="line-79">
-</span><span id="line-80"><span class="sd">    Notes:</span>
-</span><span id="line-81"><span class="sd">        - Uses drift-corrected scheduling to maintain the requested cadence</span>
-</span><span id="line-82"><span class="sd">          even if individual polls are slow.</span>
-</span><span id="line-83"><span class="sd">        - Stops when `until` is satisfied or `max_polls` is reached (if set).</span>
-</span><span id="line-84"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-85">    <span class="n">last_key</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
-</span><span id="line-86">    <span class="n">polls</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="line-87">    <span class="n">next_tick</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
-</span><span id="line-88">
-</span><span id="line-89">    <span class="k">if</span> <span class="ow">not</span> <span class="n">fire_immediately</span><span class="p">:</span>
-</span><span id="line-90">        <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">interval</span>
-</span><span id="line-91">
-</span><span id="line-92">    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-</span><span id="line-93">        <span class="n">polls</span> <span class="o">+=</span> <span class="mi">1</span>
-</span><span id="line-94">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-95">            <span class="n">result</span> <span class="o">=</span> <span class="n">_fetch_result</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">last_n</span><span class="p">)</span>
-</span><span id="line-96">        <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="line-97">            <span class="k">if</span> <span class="n">on_error</span><span class="p">:</span>
-</span><span id="line-98">                <span class="n">on_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-</span><span id="line-99">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-100">            <span class="n">key</span> <span class="o">=</span> <span class="n">distinct_by</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="k">if</span> <span class="n">distinct_by</span> <span class="k">else</span> <span class="nb">object</span><span class="p">()</span>
-</span><span id="line-101">            <span class="k">if</span> <span class="n">distinct_by</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">!=</span> <span class="n">last_key</span><span class="p">:</span>
-</span><span id="line-102">                <span class="n">last_key</span> <span class="o">=</span> <span class="n">key</span>
-</span><span id="line-103">                <span class="k">yield</span> <span class="n">result</span>
-</span><span id="line-104">                <span class="k">if</span> <span class="n">until</span> <span class="ow">and</span> <span class="n">until</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
-</span><span id="line-105">                    <span class="k">return</span>
-</span><span id="line-106">        <span class="k">if</span> <span class="n">max_polls</span> <span class="ow">and</span> <span class="n">polls</span> <span class="o">&gt;=</span> <span class="n">max_polls</span><span class="p">:</span>
-</span><span id="line-107">            <span class="k">return</span>
-</span><span id="line-108">
-</span><span id="line-109">        <span class="c1"># timing</span>
-</span><span id="line-110">        <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">interval</span>
-</span><span id="line-111">        <span class="n">delay</span> <span class="o">=</span> <span class="n">_drift_corrected_sleep</span><span class="p">(</span><span class="n">next_tick</span><span class="p">,</span> <span class="n">interval</span><span class="p">)</span>
-</span><span id="line-112">        <span class="k">if</span> <span class="n">jitter</span><span class="p">:</span>
-</span><span id="line-113">            <span class="n">delay</span> <span class="o">+=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">jitter</span><span class="p">,</span> <span class="n">interval</span><span class="p">)))</span>
-</span><span id="line-114">        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span></div>
+</span><span id="line-43"><span class="k">def</span><span class="w"> </span><span class="nf">iter_poll</span><span class="p">(</span>
+</span><span id="line-44">    <span class="n">client</span><span class="p">,</span>
+</span><span id="line-45">    <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-46">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-47">    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+</span><span id="line-48">    <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-49">    <span class="n">distinct_by</span><span class="p">:</span> <span class="n">DistinctFn</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-50">    <span class="n">until</span><span class="p">:</span> <span class="n">Predicate</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-51">    <span class="n">max_polls</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-52">    <span class="n">fire_immediately</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-53">    <span class="n">jitter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-54">    <span class="n">on_error</span><span class="p">:</span> <span class="n">ErrorHandler</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-55"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Result</span><span class="p">]:</span>
+</span><span id="line-56"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="line-57"><span class="sd">    Yield time series results at a fixed cadence.</span>
+</span><span id="line-58">
+</span><span id="line-59"><span class="sd">    Supports deduplication (via a key extractor), stop conditions,</span>
+</span><span id="line-60"><span class="sd">    bounded polling, optional jitter, and non-fatal error handling.</span>
+</span><span id="line-61">
+</span><span id="line-62"><span class="sd">    Args:</span>
+</span><span id="line-63"><span class="sd">        client: API client instance forwarded to the provider.</span>
+</span><span id="line-64"><span class="sd">        data_id: Identifier to fetch data for.</span>
+</span><span id="line-65"><span class="sd">        last_n: Last number of time series data points to poll. None is all.</span>
+</span><span id="line-66"><span class="sd">        interval: Seconds between polls. Defaults to 1.0.</span>
+</span><span id="line-67"><span class="sd">        distinct_by: Optional function mapping a result to a hashable key for</span>
+</span><span id="line-68"><span class="sd">            deduping. If provided, only results with a new key are yielded.</span>
+</span><span id="line-69"><span class="sd">        until: Optional predicate; stop when it returns True for a result.</span>
+</span><span id="line-70"><span class="sd">        max_polls: Optional maximum number of polls before stopping.</span>
+</span><span id="line-71"><span class="sd">        fire_immediately: If True, perform the first poll immediately; otherwise</span>
+</span><span id="line-72"><span class="sd">            wait one interval before the first poll. Defaults to True.</span>
+</span><span id="line-73"><span class="sd">        jitter: Optional random delay (0..jitter) added to each sleep to avoid</span>
+</span><span id="line-74"><span class="sd">            thundering herds. Clamped at `interval`. Defaults to 0.0.</span>
+</span><span id="line-75"><span class="sd">        on_error: Optional error handler called with the raised exception when a</span>
+</span><span id="line-76"><span class="sd">            poll fails. Errors are swallowed so polling continues.</span>
+</span><span id="line-77">
+</span><span id="line-78"><span class="sd">    Yields:</span>
+</span><span id="line-79"><span class="sd">        Any: Each (optionally deduped) time series data frame result.</span>
+</span><span id="line-80">
+</span><span id="line-81"><span class="sd">    Notes:</span>
+</span><span id="line-82"><span class="sd">        - Uses drift-corrected scheduling to maintain the requested cadence</span>
+</span><span id="line-83"><span class="sd">          even if individual polls are slow.</span>
+</span><span id="line-84"><span class="sd">        - Stops when `until` is satisfied or `max_polls` is reached (if set).</span>
+</span><span id="line-85"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-86">    <span class="n">last_key</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+</span><span id="line-87">    <span class="n">polls</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="line-88">    <span class="n">next_tick</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">monotonic</span><span class="p">()</span>
+</span><span id="line-89">
+</span><span id="line-90">    <span class="k">if</span> <span class="ow">not</span> <span class="n">fire_immediately</span><span class="p">:</span>
+</span><span id="line-91">        <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">interval</span>
+</span><span id="line-92">
+</span><span id="line-93">    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+</span><span id="line-94">        <span class="n">polls</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span id="line-95">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-96">            <span class="n">result</span> <span class="o">=</span> <span class="n">_fetch_result</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">last_n</span><span class="p">)</span>
+</span><span id="line-97">        <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="line-98">            <span class="k">if</span> <span class="n">on_error</span><span class="p">:</span>
+</span><span id="line-99">                <span class="n">on_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+</span><span id="line-100">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-101">            <span class="n">key</span> <span class="o">=</span> <span class="n">distinct_by</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="k">if</span> <span class="n">distinct_by</span> <span class="k">else</span> <span class="nb">object</span><span class="p">()</span>
+</span><span id="line-102">            <span class="k">if</span> <span class="n">distinct_by</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">!=</span> <span class="n">last_key</span><span class="p">:</span>
+</span><span id="line-103">                <span class="n">last_key</span> <span class="o">=</span> <span class="n">key</span>
+</span><span id="line-104">                <span class="k">yield</span> <span class="n">result</span>
+</span><span id="line-105">                <span class="k">if</span> <span class="n">until</span> <span class="ow">and</span> <span class="n">until</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+</span><span id="line-106">                    <span class="k">return</span>
+</span><span id="line-107">        <span class="k">if</span> <span class="n">max_polls</span> <span class="ow">and</span> <span class="n">polls</span> <span class="o">&gt;=</span> <span class="n">max_polls</span><span class="p">:</span>
+</span><span id="line-108">            <span class="k">return</span>
+</span><span id="line-109">
+</span><span id="line-110">        <span class="c1"># timing</span>
+</span><span id="line-111">        <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">interval</span>
+</span><span id="line-112">        <span class="n">delay</span> <span class="o">=</span> <span class="n">_drift_corrected_sleep</span><span class="p">(</span><span class="n">next_tick</span><span class="p">,</span> <span class="n">interval</span><span class="p">)</span>
+</span><span id="line-113">        <span class="k">if</span> <span class="n">jitter</span><span class="p">:</span>
+</span><span id="line-114">            <span class="n">delay</span> <span class="o">+=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">jitter</span><span class="p">,</span> <span class="n">interval</span><span class="p">)))</span>
+</span><span id="line-115">        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span></div>
 
-</span><span id="line-115">
 </span><span id="line-116">
+</span><span id="line-117">
 <div class="viewcode-block" id="aiter_poll">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.polling.aiter_poll.html#atomscale.timeseries.polling.aiter_poll">[docs]</a>
-</span><span id="line-117"><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">aiter_poll</span><span class="p">(</span>
-</span><span id="line-118">    <span class="n">client</span><span class="p">,</span>
-</span><span id="line-119">    <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-120">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-121">    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
-</span><span id="line-122">    <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-123">    <span class="n">distinct_by</span><span class="p">:</span> <span class="n">DistinctFn</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-124">    <span class="n">until</span><span class="p">:</span> <span class="n">Predicate</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-125">    <span class="n">max_polls</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-126">    <span class="n">fire_immediately</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-127">    <span class="n">jitter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-128">    <span class="n">on_error</span><span class="p">:</span> <span class="n">ErrorHandler</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-129"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">Result</span><span class="p">]:</span>
-</span><span id="line-130"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="line-131"><span class="sd">    Asynchronously yield time series results without blocking the loop.</span>
-</span><span id="line-132">
-</span><span id="line-133"><span class="sd">    Uses the the same semantics as `iter_poll`.</span>
-</span><span id="line-134">
-</span><span id="line-135"><span class="sd">    Args:</span>
-</span><span id="line-136"><span class="sd">        client: API client instance forwarded to the provider.</span>
-</span><span id="line-137"><span class="sd">        data_id: Identifier to fetch data for.</span>
-</span><span id="line-138"><span class="sd">        interval: Seconds between polls. Defaults to 1.0.</span>
-</span><span id="line-139"><span class="sd">        last_n: Last number of time series data points to poll. None is all.</span>
-</span><span id="line-140"><span class="sd">        distinct_by: Optional function mapping a result to a hashable key for</span>
-</span><span id="line-141"><span class="sd">            deduping. If provided, only results with a new key are yielded.</span>
-</span><span id="line-142"><span class="sd">        until: Optional predicate; stop when it returns True for a result.</span>
-</span><span id="line-143"><span class="sd">        max_polls: Optional maximum number of polls before stopping.</span>
-</span><span id="line-144"><span class="sd">        fire_immediately: If True, perform the first poll immediately; otherwise</span>
-</span><span id="line-145"><span class="sd">            wait one interval before the first poll. Defaults to True.</span>
-</span><span id="line-146"><span class="sd">        jitter: Optional random delay (0..jitter) added to each sleep to avoid</span>
-</span><span id="line-147"><span class="sd">            thundering herds. Clamped at `interval`. Defaults to 0.0.</span>
-</span><span id="line-148"><span class="sd">        on_error: Optional error handler called with the raised exception when a</span>
-</span><span id="line-149"><span class="sd">            poll fails. Errors are swallowed so polling continues.</span>
-</span><span id="line-150">
-</span><span id="line-151"><span class="sd">    Yields:</span>
-</span><span id="line-152"><span class="sd">        Any: Each (optionally deduped) time series data frame result.</span>
-</span><span id="line-153">
-</span><span id="line-154"><span class="sd">    Notes:</span>
-</span><span id="line-155"><span class="sd">        - Uses `asyncio.to_thread` so provider calls never block the event loop.</span>
-</span><span id="line-156"><span class="sd">        - Drift-corrected scheduling preserves cadence even with slow polls.</span>
-</span><span id="line-157"><span class="sd">        - Stops when `until` is satisfied or `max_polls` is reached (if set).</span>
-</span><span id="line-158"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-159">    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_running_loop</span><span class="p">()</span>
-</span><span id="line-160">    <span class="n">last_key</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
-</span><span id="line-161">    <span class="n">polls</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="line-162">    <span class="n">next_tick</span> <span class="o">=</span> <span class="n">loop</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-</span><span id="line-163">
-</span><span id="line-164">    <span class="k">if</span> <span class="ow">not</span> <span class="n">fire_immediately</span><span class="p">:</span>
-</span><span id="line-165">        <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">interval</span>
-</span><span id="line-166">
-</span><span id="line-167">    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-</span><span id="line-168">        <span class="n">polls</span> <span class="o">+=</span> <span class="mi">1</span>
-</span><span id="line-169">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-170">            <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">_fetch_result</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">last_n</span><span class="p">)</span>
-</span><span id="line-171">        <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
-</span><span id="line-172">            <span class="k">if</span> <span class="n">on_error</span><span class="p">:</span>
-</span><span id="line-173">                <span class="n">on_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
-</span><span id="line-174">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-175">            <span class="n">key</span> <span class="o">=</span> <span class="n">distinct_by</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="k">if</span> <span class="n">distinct_by</span> <span class="k">else</span> <span class="nb">object</span><span class="p">()</span>
-</span><span id="line-176">            <span class="k">if</span> <span class="n">distinct_by</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">!=</span> <span class="n">last_key</span><span class="p">:</span>
-</span><span id="line-177">                <span class="n">last_key</span> <span class="o">=</span> <span class="n">key</span>
-</span><span id="line-178">                <span class="k">yield</span> <span class="n">result</span>
-</span><span id="line-179">                <span class="k">if</span> <span class="n">until</span> <span class="ow">and</span> <span class="n">until</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
-</span><span id="line-180">                    <span class="k">return</span>
-</span><span id="line-181">        <span class="k">if</span> <span class="n">max_polls</span> <span class="ow">and</span> <span class="n">polls</span> <span class="o">&gt;=</span> <span class="n">max_polls</span><span class="p">:</span>
-</span><span id="line-182">            <span class="k">return</span>
-</span><span id="line-183">
-</span><span id="line-184">        <span class="c1"># timing</span>
-</span><span id="line-185">        <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">interval</span>
-</span><span id="line-186">        <span class="n">delay</span> <span class="o">=</span> <span class="n">next_tick</span> <span class="o">-</span> <span class="n">loop</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-</span><span id="line-187">        <span class="k">if</span> <span class="n">delay</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-188">            <span class="n">missed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="o">-</span><span class="n">delay</span><span class="p">)</span> <span class="o">//</span> <span class="n">interval</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
-</span><span id="line-189">            <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">missed</span> <span class="o">*</span> <span class="n">interval</span>
-</span><span id="line-190">            <span class="n">delay</span> <span class="o">=</span> <span class="n">next_tick</span> <span class="o">-</span> <span class="n">loop</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-</span><span id="line-191">        <span class="k">if</span> <span class="n">jitter</span><span class="p">:</span>
-</span><span id="line-192">            <span class="n">delay</span> <span class="o">+=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">jitter</span><span class="p">,</span> <span class="n">interval</span><span class="p">)))</span>
-</span><span id="line-193">        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span></div>
+</span><span id="line-118"><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">aiter_poll</span><span class="p">(</span>
+</span><span id="line-119">    <span class="n">client</span><span class="p">,</span>
+</span><span id="line-120">    <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-121">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-122">    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+</span><span id="line-123">    <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-124">    <span class="n">distinct_by</span><span class="p">:</span> <span class="n">DistinctFn</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-125">    <span class="n">until</span><span class="p">:</span> <span class="n">Predicate</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-126">    <span class="n">max_polls</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-127">    <span class="n">fire_immediately</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-128">    <span class="n">jitter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-129">    <span class="n">on_error</span><span class="p">:</span> <span class="n">ErrorHandler</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-130"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">Result</span><span class="p">]:</span>
+</span><span id="line-131"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="line-132"><span class="sd">    Asynchronously yield time series results without blocking the loop.</span>
+</span><span id="line-133">
+</span><span id="line-134"><span class="sd">    Uses the the same semantics as `iter_poll`.</span>
+</span><span id="line-135">
+</span><span id="line-136"><span class="sd">    Args:</span>
+</span><span id="line-137"><span class="sd">        client: API client instance forwarded to the provider.</span>
+</span><span id="line-138"><span class="sd">        data_id: Identifier to fetch data for.</span>
+</span><span id="line-139"><span class="sd">        interval: Seconds between polls. Defaults to 1.0.</span>
+</span><span id="line-140"><span class="sd">        last_n: Last number of time series data points to poll. None is all.</span>
+</span><span id="line-141"><span class="sd">        distinct_by: Optional function mapping a result to a hashable key for</span>
+</span><span id="line-142"><span class="sd">            deduping. If provided, only results with a new key are yielded.</span>
+</span><span id="line-143"><span class="sd">        until: Optional predicate; stop when it returns True for a result.</span>
+</span><span id="line-144"><span class="sd">        max_polls: Optional maximum number of polls before stopping.</span>
+</span><span id="line-145"><span class="sd">        fire_immediately: If True, perform the first poll immediately; otherwise</span>
+</span><span id="line-146"><span class="sd">            wait one interval before the first poll. Defaults to True.</span>
+</span><span id="line-147"><span class="sd">        jitter: Optional random delay (0..jitter) added to each sleep to avoid</span>
+</span><span id="line-148"><span class="sd">            thundering herds. Clamped at `interval`. Defaults to 0.0.</span>
+</span><span id="line-149"><span class="sd">        on_error: Optional error handler called with the raised exception when a</span>
+</span><span id="line-150"><span class="sd">            poll fails. Errors are swallowed so polling continues.</span>
+</span><span id="line-151">
+</span><span id="line-152"><span class="sd">    Yields:</span>
+</span><span id="line-153"><span class="sd">        Any: Each (optionally deduped) time series data frame result.</span>
+</span><span id="line-154">
+</span><span id="line-155"><span class="sd">    Notes:</span>
+</span><span id="line-156"><span class="sd">        - Uses `asyncio.to_thread` so provider calls never block the event loop.</span>
+</span><span id="line-157"><span class="sd">        - Drift-corrected scheduling preserves cadence even with slow polls.</span>
+</span><span id="line-158"><span class="sd">        - Stops when `until` is satisfied or `max_polls` is reached (if set).</span>
+</span><span id="line-159"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-160">    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_running_loop</span><span class="p">()</span>
+</span><span id="line-161">    <span class="n">last_key</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
+</span><span id="line-162">    <span class="n">polls</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="line-163">    <span class="n">next_tick</span> <span class="o">=</span> <span class="n">loop</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span><span id="line-164">
+</span><span id="line-165">    <span class="k">if</span> <span class="ow">not</span> <span class="n">fire_immediately</span><span class="p">:</span>
+</span><span id="line-166">        <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">interval</span>
+</span><span id="line-167">
+</span><span id="line-168">    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+</span><span id="line-169">        <span class="n">polls</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span id="line-170">        <span class="k">try</span><span class="p">:</span>
+</span><span id="line-171">            <span class="n">result</span> <span class="o">=</span> <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">to_thread</span><span class="p">(</span><span class="n">_fetch_result</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">last_n</span><span class="p">)</span>
+</span><span id="line-172">        <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+</span><span id="line-173">            <span class="k">if</span> <span class="n">on_error</span><span class="p">:</span>
+</span><span id="line-174">                <span class="n">on_error</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+</span><span id="line-175">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-176">            <span class="n">key</span> <span class="o">=</span> <span class="n">distinct_by</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="k">if</span> <span class="n">distinct_by</span> <span class="k">else</span> <span class="nb">object</span><span class="p">()</span>
+</span><span id="line-177">            <span class="k">if</span> <span class="n">distinct_by</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">!=</span> <span class="n">last_key</span><span class="p">:</span>
+</span><span id="line-178">                <span class="n">last_key</span> <span class="o">=</span> <span class="n">key</span>
+</span><span id="line-179">                <span class="k">yield</span> <span class="n">result</span>
+</span><span id="line-180">                <span class="k">if</span> <span class="n">until</span> <span class="ow">and</span> <span class="n">until</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+</span><span id="line-181">                    <span class="k">return</span>
+</span><span id="line-182">        <span class="k">if</span> <span class="n">max_polls</span> <span class="ow">and</span> <span class="n">polls</span> <span class="o">&gt;=</span> <span class="n">max_polls</span><span class="p">:</span>
+</span><span id="line-183">            <span class="k">return</span>
+</span><span id="line-184">
+</span><span id="line-185">        <span class="c1"># timing</span>
+</span><span id="line-186">        <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">interval</span>
+</span><span id="line-187">        <span class="n">delay</span> <span class="o">=</span> <span class="n">next_tick</span> <span class="o">-</span> <span class="n">loop</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span><span id="line-188">        <span class="k">if</span> <span class="n">delay</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="line-189">            <span class="n">missed</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="o">-</span><span class="n">delay</span><span class="p">)</span> <span class="o">//</span> <span class="n">interval</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+</span><span id="line-190">            <span class="n">next_tick</span> <span class="o">+=</span> <span class="n">missed</span> <span class="o">*</span> <span class="n">interval</span>
+</span><span id="line-191">            <span class="n">delay</span> <span class="o">=</span> <span class="n">next_tick</span> <span class="o">-</span> <span class="n">loop</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</span><span id="line-192">        <span class="k">if</span> <span class="n">jitter</span><span class="p">:</span>
+</span><span id="line-193">            <span class="n">delay</span> <span class="o">+=</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">jitter</span><span class="p">,</span> <span class="n">interval</span><span class="p">)))</span>
+</span><span id="line-194">        <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">delay</span><span class="p">)</span></div>
 
-</span><span id="line-194">
 </span><span id="line-195">
+</span><span id="line-196">
 <div class="viewcode-block" id="start_polling_thread">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.polling.start_polling_thread.html#atomscale.timeseries.polling.start_polling_thread">[docs]</a>
-</span><span id="line-196"><span class="k">def</span><span class="w"> </span><span class="nf">start_polling_thread</span><span class="p">(</span>
-</span><span id="line-197">    <span class="n">client</span><span class="p">,</span>
-</span><span id="line-198">    <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-199">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-200">    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
-</span><span id="line-201">    <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-202">    <span class="n">on_result</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="kc">None</span><span class="p">],</span>
-</span><span id="line-203">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-</span><span id="line-204"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">:</span>
-</span><span id="line-205"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Start the sync poller in a background thread and stream results to a callback.</span>
-</span><span id="line-206">
-</span><span id="line-207"><span class="sd">    Wraps `iter_poll` in a daemon thread and invokes `on_result(result)` for</span>
-</span><span id="line-208"><span class="sd">    each yielded item. Returns a `threading.Event` that can be set to stop</span>
-</span><span id="line-209"><span class="sd">    polling gracefully.</span>
-</span><span id="line-210">
-</span><span id="line-211"><span class="sd">    Args:</span>
-</span><span id="line-212"><span class="sd">        client: API client instance forwarded to the provider.</span>
-</span><span id="line-213"><span class="sd">        data_id: Identifier to fetch data for.</span>
-</span><span id="line-214"><span class="sd">        interval: Seconds between polls. Defaults to 1.0.</span>
-</span><span id="line-215"><span class="sd">        last_n: Last number of time series data points to poll for. None is all.</span>
-</span><span id="line-216"><span class="sd">        on_result: Callback invoked with each yielded result.</span>
-</span><span id="line-217"><span class="sd">        **kwargs: Additional keyword arguments forwarded to `iter_poll`</span>
-</span><span id="line-218"><span class="sd">            (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,</span>
-</span><span id="line-219"><span class="sd">            `jitter`, `on_error`).</span>
-</span><span id="line-220">
-</span><span id="line-221"><span class="sd">    Returns:</span>
-</span><span id="line-222"><span class="sd">        threading.Event: Event that, when set, requests the polling thread to stop.</span>
-</span><span id="line-223"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-224">    <span class="n">stop</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
-</span><span id="line-225">
-</span><span id="line-226">    <span class="k">def</span><span class="w"> </span><span class="nf">_runner</span><span class="p">():</span>
-</span><span id="line-227">        <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">iter_poll</span><span class="p">(</span>
-</span><span id="line-228">            <span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="n">interval</span><span class="p">,</span> <span class="n">last_n</span><span class="o">=</span><span class="n">last_n</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
-</span><span id="line-229">        <span class="p">):</span>
-</span><span id="line-230">            <span class="k">if</span> <span class="n">stop</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
-</span><span id="line-231">                <span class="k">break</span>
-</span><span id="line-232">            <span class="n">on_result</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
-</span><span id="line-233">
-</span><span id="line-234">    <span class="n">t</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">_runner</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;poll:</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-235">    <span class="n">t</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-</span><span id="line-236">    <span class="k">return</span> <span class="n">stop</span></div>
+</span><span id="line-197"><span class="k">def</span><span class="w"> </span><span class="nf">start_polling_thread</span><span class="p">(</span>
+</span><span id="line-198">    <span class="n">client</span><span class="p">,</span>
+</span><span id="line-199">    <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-200">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-201">    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+</span><span id="line-202">    <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-203">    <span class="n">on_result</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="kc">None</span><span class="p">],</span>
+</span><span id="line-204">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span><span id="line-205"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">:</span>
+</span><span id="line-206"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Start the sync poller in a background thread and stream results to a callback.</span>
+</span><span id="line-207">
+</span><span id="line-208"><span class="sd">    Wraps `iter_poll` in a daemon thread and invokes `on_result(result)` for</span>
+</span><span id="line-209"><span class="sd">    each yielded item. Returns a `threading.Event` that can be set to stop</span>
+</span><span id="line-210"><span class="sd">    polling gracefully.</span>
+</span><span id="line-211">
+</span><span id="line-212"><span class="sd">    Args:</span>
+</span><span id="line-213"><span class="sd">        client: API client instance forwarded to the provider.</span>
+</span><span id="line-214"><span class="sd">        data_id: Identifier to fetch data for.</span>
+</span><span id="line-215"><span class="sd">        interval: Seconds between polls. Defaults to 1.0.</span>
+</span><span id="line-216"><span class="sd">        last_n: Last number of time series data points to poll for. None is all.</span>
+</span><span id="line-217"><span class="sd">        on_result: Callback invoked with each yielded result.</span>
+</span><span id="line-218"><span class="sd">        **kwargs: Additional keyword arguments forwarded to `iter_poll`</span>
+</span><span id="line-219"><span class="sd">            (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,</span>
+</span><span id="line-220"><span class="sd">            `jitter`, `on_error`).</span>
+</span><span id="line-221">
+</span><span id="line-222"><span class="sd">    Returns:</span>
+</span><span id="line-223"><span class="sd">        threading.Event: Event that, when set, requests the polling thread to stop.</span>
+</span><span id="line-224"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-225">    <span class="n">stop</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
+</span><span id="line-226">
+</span><span id="line-227">    <span class="k">def</span><span class="w"> </span><span class="nf">_runner</span><span class="p">():</span>
+</span><span id="line-228">        <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">iter_poll</span><span class="p">(</span>
+</span><span id="line-229">            <span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="n">interval</span><span class="p">,</span> <span class="n">last_n</span><span class="o">=</span><span class="n">last_n</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+</span><span id="line-230">        <span class="p">):</span>
+</span><span id="line-231">            <span class="k">if</span> <span class="n">stop</span><span class="o">.</span><span class="n">is_set</span><span class="p">():</span>
+</span><span id="line-232">                <span class="k">break</span>
+</span><span id="line-233">            <span class="n">on_result</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</span><span id="line-234">
+</span><span id="line-235">    <span class="n">t</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">_runner</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;poll:</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-236">    <span class="n">t</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</span><span id="line-237">    <span class="k">return</span> <span class="n">stop</span></div>
 
-</span><span id="line-237">
 </span><span id="line-238">
+</span><span id="line-239">
 <div class="viewcode-block" id="start_polling_task">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.polling.start_polling_task.html#atomscale.timeseries.polling.start_polling_task">[docs]</a>
-</span><span id="line-239"><span class="k">def</span><span class="w"> </span><span class="nf">start_polling_task</span><span class="p">(</span>
-</span><span id="line-240">    <span class="n">client</span><span class="p">,</span>
-</span><span id="line-241">    <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-242">    <span class="o">*</span><span class="p">,</span>
-</span><span id="line-243">    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
-</span><span id="line-244">    <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-245">    <span class="n">on_result</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-246">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-</span><span id="line-247"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Task</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
-</span><span id="line-248"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Start the async poller as an `asyncio.Task` and stream results to a callback.</span>
-</span><span id="line-249">
-</span><span id="line-250"><span class="sd">    Wraps `aiter_poll` in a background Task. If `on_result` returns a coroutine,</span>
-</span><span id="line-251"><span class="sd">    it will be awaited before the next iteration.</span>
-</span><span id="line-252">
-</span><span id="line-253"><span class="sd">    Args:</span>
-</span><span id="line-254"><span class="sd">        client: API client instance forwarded to the provider.</span>
-</span><span id="line-255"><span class="sd">        data_id: Identifier to fetch data for.</span>
-</span><span id="line-256"><span class="sd">        interval: Seconds between polls. Defaults to 1.0.</span>
-</span><span id="line-257"><span class="sd">        last_n: Last number of time series data points to poll for. None is all.</span>
-</span><span id="line-258"><span class="sd">        on_result: Optional callback invoked with each yielded result. If it</span>
-</span><span id="line-259"><span class="sd">            returns a coroutine, it will be awaited.</span>
-</span><span id="line-260"><span class="sd">        **kwargs: Additional keyword arguments forwarded to `aiter_poll`</span>
-</span><span id="line-261"><span class="sd">            (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,</span>
-</span><span id="line-262"><span class="sd">            `jitter`, `on_error`).</span>
-</span><span id="line-263">
-</span><span id="line-264"><span class="sd">    Returns:</span>
-</span><span id="line-265"><span class="sd">        asyncio.Task[None]: A created and started Task. Cancel it to stop polling.</span>
-</span><span id="line-266">
-</span><span id="line-267"><span class="sd">    Raises:</span>
-</span><span id="line-268"><span class="sd">        RuntimeError: If no running event loop is available when called.</span>
-</span><span id="line-269"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-270">
-</span><span id="line-271">    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_runner</span><span class="p">():</span>
-</span><span id="line-272">        <span class="k">async</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">aiter_poll</span><span class="p">(</span>
-</span><span id="line-273">            <span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="n">interval</span><span class="p">,</span> <span class="n">last_n</span><span class="o">=</span><span class="n">last_n</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
-</span><span id="line-274">        <span class="p">):</span>
-</span><span id="line-275">            <span class="k">if</span> <span class="n">on_result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-276">                <span class="k">continue</span>
-</span><span id="line-277">            <span class="n">maybe</span> <span class="o">=</span> <span class="n">on_result</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
-</span><span id="line-278">            <span class="k">if</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">iscoroutine</span><span class="p">(</span><span class="n">maybe</span><span class="p">):</span>
-</span><span id="line-279">                <span class="k">await</span> <span class="n">maybe</span>
-</span><span id="line-280">
-</span><span id="line-281">    <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">_runner</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;poll:</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+</span><span id="line-240"><span class="k">def</span><span class="w"> </span><span class="nf">start_polling_task</span><span class="p">(</span>
+</span><span id="line-241">    <span class="n">client</span><span class="p">,</span>
+</span><span id="line-242">    <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-243">    <span class="o">*</span><span class="p">,</span>
+</span><span id="line-244">    <span class="n">interval</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
+</span><span id="line-245">    <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-246">    <span class="n">on_result</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-247">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span><span id="line-248"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Task</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+</span><span id="line-249"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Start the async poller as an `asyncio.Task` and stream results to a callback.</span>
+</span><span id="line-250">
+</span><span id="line-251"><span class="sd">    Wraps `aiter_poll` in a background Task. If `on_result` returns a coroutine,</span>
+</span><span id="line-252"><span class="sd">    it will be awaited before the next iteration.</span>
+</span><span id="line-253">
+</span><span id="line-254"><span class="sd">    Args:</span>
+</span><span id="line-255"><span class="sd">        client: API client instance forwarded to the provider.</span>
+</span><span id="line-256"><span class="sd">        data_id: Identifier to fetch data for.</span>
+</span><span id="line-257"><span class="sd">        interval: Seconds between polls. Defaults to 1.0.</span>
+</span><span id="line-258"><span class="sd">        last_n: Last number of time series data points to poll for. None is all.</span>
+</span><span id="line-259"><span class="sd">        on_result: Optional callback invoked with each yielded result. If it</span>
+</span><span id="line-260"><span class="sd">            returns a coroutine, it will be awaited.</span>
+</span><span id="line-261"><span class="sd">        **kwargs: Additional keyword arguments forwarded to `aiter_poll`</span>
+</span><span id="line-262"><span class="sd">            (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,</span>
+</span><span id="line-263"><span class="sd">            `jitter`, `on_error`).</span>
+</span><span id="line-264">
+</span><span id="line-265"><span class="sd">    Returns:</span>
+</span><span id="line-266"><span class="sd">        asyncio.Task[None]: A created and started Task. Cancel it to stop polling.</span>
+</span><span id="line-267">
+</span><span id="line-268"><span class="sd">    Raises:</span>
+</span><span id="line-269"><span class="sd">        RuntimeError: If no running event loop is available when called.</span>
+</span><span id="line-270"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-271">
+</span><span id="line-272">    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_runner</span><span class="p">():</span>
+</span><span id="line-273">        <span class="k">async</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">aiter_poll</span><span class="p">(</span>
+</span><span id="line-274">            <span class="n">client</span><span class="p">,</span> <span class="n">data_id</span><span class="p">,</span> <span class="n">interval</span><span class="o">=</span><span class="n">interval</span><span class="p">,</span> <span class="n">last_n</span><span class="o">=</span><span class="n">last_n</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+</span><span id="line-275">        <span class="p">):</span>
+</span><span id="line-276">            <span class="k">if</span> <span class="n">on_result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-277">                <span class="k">continue</span>
+</span><span id="line-278">            <span class="n">maybe</span> <span class="o">=</span> <span class="n">on_result</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+</span><span id="line-279">            <span class="k">if</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">iscoroutine</span><span class="p">(</span><span class="n">maybe</span><span class="p">):</span>
+</span><span id="line-280">                <span class="k">await</span> <span class="n">maybe</span>
+</span><span id="line-281">
+</span><span id="line-282">    <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">_runner</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;poll:</span><span class="si">{</span><span class="n">data_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
 
 </span></code></pre></div>
     </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">

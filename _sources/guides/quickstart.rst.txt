@@ -1,67 +1,79 @@
 Quickstart
 ==========
 
-This quickstart mirrors ``general_use.ipynb`` and walks through the essentials
-for calling the Atomscale API.
+Get up and running with the Atomscale SDK in under 5 minutes.
 
-Prerequisites
--------------
-
-.. important::
-
-   Before you begin, make sure you have:
-
-   - Python 3.10 or newer
-   - An active Atomscale account
-   - An API key from the Atomscale web app (Profile → Account Management)
-
-Install the client
-------------------
+Install
+-------
 
 .. code-block:: bash
 
    pip install atomscale
 
-Create a client
----------------
+Get Your API Key
+----------------
 
-The :class:`atomscale.client.Client` reads ``AS_API_KEY`` and
-``AS_API_ENDPOINT`` from the environment. Export the variables, or pass values
-explicitly if you prefer.
+1. Log in to the `Atomscale web app <https://app.atomscale.ai>`_
+2. Go to **Profile > Account Management**
+3. Copy your API key
+
+Set it as an environment variable:
+
+.. code-block:: bash
+
+   export AS_API_KEY="your-api-key"
+
+Or pass it directly in code (not recommended for production):
 
 .. code-block:: python
 
-   import os
-   from atomscale.client import Client
+   from atomscale import Client
+   client = Client(api_key="your-api-key")
 
-   os.environ["AS_API_KEY"] = "YOUR_API_KEY"
+Create a Client
+---------------
+
+.. code-block:: python
+
+   from atomscale import Client
 
    client = Client()
 
-.. tip::
+The client handles authentication automatically using the ``AS_API_KEY``
+environment variable.
 
-   Set ``AS_API_KEY`` in your shell profile (e.g., ``.bashrc`` or ``.zshrc``)
-   to avoid hardcoding credentials in scripts.
-
-Override the endpoint when pointing at staging or a private deployment:
+Upload Your First File
+----------------------
 
 .. code-block:: python
 
-   client = Client(
-       api_key="YOUR_API_KEY",
-       endpoint="https://api.atomscale.ai/",
-   )
+   client.upload(files=["my_rheed_video.mp4"])
 
-.. warning::
+Supported formats: ``.mp4``, ``.imm``, ``.png``, ``.jpg``, and XPS data files.
 
-   Never commit API keys to version control. Use environment variables or a
-   secrets manager instead.
+Find Your Data
+--------------
 
-Next steps
+.. code-block:: python
+
+   results = client.search(keywords=["my_sample"])
+   print(results[["Data ID", "Status", "Sample Name"]])
+
+Access Analysis Results
+-----------------------
+
+.. code-block:: python
+
+   analysed = client.get(results["Data ID"].to_list())
+
+   # Get timeseries data (intensity, strain, etc.)
+   df = analysed[0].timeseries_data
+   print(df.columns)
+
+Next Steps
 ----------
 
-.. seealso::
-
-   - :doc:`upload-data` – Upload RHEED videos, images, or XPS files
-   - :doc:`search-data` – Find items in the catalogue
-   - :doc:`inspect-results` – Explore results and plots
+- :doc:`upload-files` - Upload RHEED videos, images, or XPS files
+- :doc:`stream-rheed` - Stream live RHEED from your instrument
+- :doc:`stream-timeseries` - Stream instrument sensor data (temperature, pressure)
+- :doc:`search-and-download` - Find and download processed data

@@ -17,10 +17,13 @@ atomscale.client.Client
    .. autosummary::
    
       ~Client.__init__
+      ~Client.create_growth_instrument
+      ~Client.delete_growth_instrument
       ~Client.download_videos
       ~Client.get
       ~Client.get_physical_sample
       ~Client.get_project
+      ~Client.list_growth_instruments
       ~Client.list_physical_samples
       ~Client.list_projects
       ~Client.search

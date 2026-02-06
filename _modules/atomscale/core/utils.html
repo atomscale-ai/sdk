@@ -102,17 +102,24 @@
 
     <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
       <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../guides/index.html">User Guides</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/poll-trajectory.html">Poll Similarity Trajectory</a></li>
+  <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/quickstart.html">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/upload-files.html">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Project Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -120,7 +127,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -170,300 +189,302 @@
 
     <div id="content" role="main">
       <h1>Source code for atomscale.core.utils</h1><div class="highlight"><pre>
-<span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="line-2"><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
-</span><span id="line-3"><span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
-</span><span id="line-4"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-</span><span id="line-5">
-</span><span id="line-6"><span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
-</span><span id="line-7"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-</span><span id="line-8"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">npt</span>
-</span><span id="line-9"><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
-</span><span id="line-10"><span class="kn">from</span><span class="w"> </span><span class="nn">rich.progress</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-</span><span id="line-11">    <span class="n">BarColumn</span><span class="p">,</span>
-</span><span id="line-12">    <span class="n">Progress</span><span class="p">,</span>
-</span><span id="line-13">    <span class="n">ProgressColumn</span><span class="p">,</span>
-</span><span id="line-14">    <span class="n">SpinnerColumn</span><span class="p">,</span>
-</span><span id="line-15">    <span class="n">TaskProgressColumn</span><span class="p">,</span>
-</span><span id="line-16">    <span class="n">TextColumn</span><span class="p">,</span>
-</span><span id="line-17">    <span class="n">TimeElapsedColumn</span><span class="p">,</span>
-</span><span id="line-18"><span class="p">)</span>
-</span><span id="line-19"><span class="kn">from</span><span class="w"> </span><span class="nn">rich.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">Text</span>
-</span><span id="line-20">
-</span><span id="line-21">
+<span></span><code><span id="line-1"><span class="sd">&quot;&quot;&quot;Utility functions for coordinate transforms and graph operations.&quot;&quot;&quot;</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+</span><span id="line-4"><span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+</span><span id="line-5"><span class="kn">import</span><span class="w"> </span><span class="nn">unicodedata</span>
+</span><span id="line-6"><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+</span><span id="line-7">
+</span><span id="line-8"><span class="kn">import</span><span class="w"> </span><span class="nn">networkx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">nx</span>
+</span><span id="line-9"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="line-10"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy.typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">npt</span>
+</span><span id="line-11"><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+</span><span id="line-12"><span class="kn">from</span><span class="w"> </span><span class="nn">rich.progress</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+</span><span id="line-13">    <span class="n">BarColumn</span><span class="p">,</span>
+</span><span id="line-14">    <span class="n">Progress</span><span class="p">,</span>
+</span><span id="line-15">    <span class="n">ProgressColumn</span><span class="p">,</span>
+</span><span id="line-16">    <span class="n">SpinnerColumn</span><span class="p">,</span>
+</span><span id="line-17">    <span class="n">TaskProgressColumn</span><span class="p">,</span>
+</span><span id="line-18">    <span class="n">TextColumn</span><span class="p">,</span>
+</span><span id="line-19">    <span class="n">TimeElapsedColumn</span><span class="p">,</span>
+</span><span id="line-20"><span class="p">)</span>
+</span><span id="line-21"><span class="kn">from</span><span class="w"> </span><span class="nn">rich.text</span><span class="w"> </span><span class="kn">import</span> <span class="n">Text</span>
+</span><span id="line-22">
+</span><span id="line-23">
 <div class="viewcode-block" id="normalize_pixel_dimensions">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.core.utils.normalize_pixel_dimensions.html#atomscale.core.utils.normalize_pixel_dimensions">[docs]</a>
-</span><span id="line-22"><span class="k">def</span><span class="w"> </span><span class="nf">normalize_pixel_dimensions</span><span class="p">(</span>
-</span><span id="line-23">    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">image_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
-</span><span id="line-24"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
-</span><span id="line-25"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="line-26"><span class="sd">    Rescale pixel dimensions to a new image shape.</span>
-</span><span id="line-27">
-</span><span id="line-28"><span class="sd">    Args:</span>
-</span><span id="line-29"><span class="sd">        points (NDArray): Numpy array containing a list of points with columns width, height.</span>
-</span><span id="line-30"><span class="sd">        image_shape (tuple[int, int]): Image shape.</span>
-</span><span id="line-31">
-</span><span id="line-32"><span class="sd">    Returns:</span>
-</span><span id="line-33"><span class="sd">        NDArray: Numpy array containing the rescaled points.</span>
-</span><span id="line-34"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-35">    <span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">image_shape</span>
-</span><span id="line-36">
-</span><span id="line-37">    <span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">width</span>
-</span><span id="line-38">    <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">height</span>
-</span><span id="line-39">
-</span><span id="line-40">    <span class="k">return</span> <span class="n">points</span></div>
-
+</span><span id="line-24"><span class="k">def</span><span class="w"> </span><span class="nf">normalize_pixel_dimensions</span><span class="p">(</span>
+</span><span id="line-25">    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">image_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+</span><span id="line-26"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
+</span><span id="line-27"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="line-28"><span class="sd">    Rescale pixel dimensions to a new image shape.</span>
+</span><span id="line-29">
+</span><span id="line-30"><span class="sd">    Args:</span>
+</span><span id="line-31"><span class="sd">        points (NDArray): Numpy array containing a list of points with columns width, height.</span>
+</span><span id="line-32"><span class="sd">        image_shape (tuple[int, int]): Image shape.</span>
+</span><span id="line-33">
+</span><span id="line-34"><span class="sd">    Returns:</span>
+</span><span id="line-35"><span class="sd">        NDArray: Numpy array containing the rescaled points.</span>
+</span><span id="line-36"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-37">    <span class="n">height</span><span class="p">,</span> <span class="n">width</span> <span class="o">=</span> <span class="n">image_shape</span>
+</span><span id="line-38">
+</span><span id="line-39">    <span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">width</span>
+</span><span id="line-40">    <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">height</span>
 </span><span id="line-41">
-</span><span id="line-42">
+</span><span id="line-42">    <span class="k">return</span> <span class="n">points</span></div>
+
+</span><span id="line-43">
+</span><span id="line-44">
 <div class="viewcode-block" id="boxes_overlap">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.core.utils.boxes_overlap.html#atomscale.core.utils.boxes_overlap">[docs]</a>
-</span><span id="line-43"><span class="k">def</span><span class="w"> </span><span class="nf">boxes_overlap</span><span class="p">(</span><span class="n">box1</span><span class="p">,</span> <span class="n">box2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="line-44"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if two bounding boxes overlap</span>
-</span><span id="line-45">
-</span><span id="line-46"><span class="sd">    Args:</span>
-</span><span id="line-47"><span class="sd">        box1 (list[float]): List of xmin, ymin, xmax, ymax coordinates defining first box</span>
-</span><span id="line-48"><span class="sd">        box2 (list[float]): List of xmin, ymin, xmax, ymax coordinates defining second box</span>
-</span><span id="line-49">
-</span><span id="line-50"><span class="sd">    Returns:</span>
-</span><span id="line-51"><span class="sd">        (bool): True if the boxes overlap</span>
-</span><span id="line-52"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-53">    <span class="c1"># Unpack coordinates</span>
-</span><span id="line-54">    <span class="n">xmin1</span><span class="p">,</span> <span class="n">ymin1</span><span class="p">,</span> <span class="n">xmax1</span><span class="p">,</span> <span class="n">ymax1</span> <span class="o">=</span> <span class="n">box1</span>
-</span><span id="line-55">    <span class="n">xmin2</span><span class="p">,</span> <span class="n">ymin2</span><span class="p">,</span> <span class="n">xmax2</span><span class="p">,</span> <span class="n">ymax2</span> <span class="o">=</span> <span class="n">box2</span>
-</span><span id="line-56">
-</span><span id="line-57">    <span class="c1"># Check for overlap</span>
-</span><span id="line-58">    <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="n">xmax1</span> <span class="o">&lt;</span> <span class="n">xmin2</span> <span class="ow">or</span> <span class="n">xmax2</span> <span class="o">&lt;</span> <span class="n">xmin1</span> <span class="ow">or</span> <span class="n">ymax1</span> <span class="o">&lt;</span> <span class="n">ymin2</span> <span class="ow">or</span> <span class="n">ymax2</span> <span class="o">&lt;</span> <span class="n">ymin1</span><span class="p">)</span></div>
+</span><span id="line-45"><span class="k">def</span><span class="w"> </span><span class="nf">boxes_overlap</span><span class="p">(</span><span class="n">box1</span><span class="p">,</span> <span class="n">box2</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-46"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if two bounding boxes overlap</span>
+</span><span id="line-47">
+</span><span id="line-48"><span class="sd">    Args:</span>
+</span><span id="line-49"><span class="sd">        box1 (list[float]): List of xmin, ymin, xmax, ymax coordinates defining first box</span>
+</span><span id="line-50"><span class="sd">        box2 (list[float]): List of xmin, ymin, xmax, ymax coordinates defining second box</span>
+</span><span id="line-51">
+</span><span id="line-52"><span class="sd">    Returns:</span>
+</span><span id="line-53"><span class="sd">        (bool): True if the boxes overlap</span>
+</span><span id="line-54"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-55">    <span class="c1"># Unpack coordinates</span>
+</span><span id="line-56">    <span class="n">xmin1</span><span class="p">,</span> <span class="n">ymin1</span><span class="p">,</span> <span class="n">xmax1</span><span class="p">,</span> <span class="n">ymax1</span> <span class="o">=</span> <span class="n">box1</span>
+</span><span id="line-57">    <span class="n">xmin2</span><span class="p">,</span> <span class="n">ymin2</span><span class="p">,</span> <span class="n">xmax2</span><span class="p">,</span> <span class="n">ymax2</span> <span class="o">=</span> <span class="n">box2</span>
+</span><span id="line-58">
+</span><span id="line-59">    <span class="c1"># Check for overlap</span>
+</span><span id="line-60">    <span class="k">return</span> <span class="ow">not</span> <span class="p">(</span><span class="n">xmax1</span> <span class="o">&lt;</span> <span class="n">xmin2</span> <span class="ow">or</span> <span class="n">xmax2</span> <span class="o">&lt;</span> <span class="n">xmin1</span> <span class="ow">or</span> <span class="n">ymax1</span> <span class="o">&lt;</span> <span class="n">ymin2</span> <span class="ow">or</span> <span class="n">ymax2</span> <span class="o">&lt;</span> <span class="n">ymin1</span><span class="p">)</span></div>
 
-</span><span id="line-59">
-</span><span id="line-60">
+</span><span id="line-61">
+</span><span id="line-62">
 <div class="viewcode-block" id="regions_horizontal_overlapping">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.core.utils.regions_horizontal_overlapping.html#atomscale.core.utils.regions_horizontal_overlapping">[docs]</a>
-</span><span id="line-61"><span class="k">def</span><span class="w"> </span><span class="nf">regions_horizontal_overlapping</span><span class="p">(</span>
-</span><span id="line-62">    <span class="n">node_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">start_node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">end_node</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="line-63"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="line-64"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if two regions are horizontally overlapping&quot;&quot;&quot;</span>
-</span><span id="line-65">    <span class="n">start_node_row</span> <span class="o">=</span> <span class="n">node_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">node_df</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_node</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-66">    <span class="n">end_node_row</span> <span class="o">=</span> <span class="n">node_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">node_df</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_node</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-67">
-</span><span id="line-68">    <span class="n">left_node</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-69">        <span class="n">start_node_row</span>
-</span><span id="line-70">        <span class="k">if</span> <span class="n">start_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">end_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
-</span><span id="line-71">        <span class="k">else</span> <span class="n">end_node_row</span>
-</span><span id="line-72">    <span class="p">)</span>
-</span><span id="line-73">    <span class="n">right_node</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-74">        <span class="n">start_node_row</span>
-</span><span id="line-75">        <span class="k">if</span> <span class="n">start_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">end_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
-</span><span id="line-76">        <span class="k">else</span> <span class="n">end_node_row</span>
-</span><span id="line-77">    <span class="p">)</span>
-</span><span id="line-78">    <span class="n">left_node_max</span> <span class="o">=</span> <span class="n">left_node</span><span class="p">[</span><span class="s2">&quot;bbox_maxc&quot;</span><span class="p">]</span>
-</span><span id="line-79">    <span class="n">right_node_min</span> <span class="o">=</span> <span class="n">right_node</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
-</span><span id="line-80">    <span class="k">return</span> <span class="n">left_node_max</span> <span class="o">&gt;</span> <span class="n">right_node_min</span></div>
+</span><span id="line-63"><span class="k">def</span><span class="w"> </span><span class="nf">regions_horizontal_overlapping</span><span class="p">(</span>
+</span><span id="line-64">    <span class="n">node_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">start_node</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">end_node</span><span class="p">:</span> <span class="nb">int</span>
+</span><span id="line-65"><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="line-66"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if two regions are horizontally overlapping&quot;&quot;&quot;</span>
+</span><span id="line-67">    <span class="n">start_node_row</span> <span class="o">=</span> <span class="n">node_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">node_df</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">start_node</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-68">    <span class="n">end_node_row</span> <span class="o">=</span> <span class="n">node_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">node_df</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">end_node</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+</span><span id="line-69">
+</span><span id="line-70">    <span class="n">left_node</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-71">        <span class="n">start_node_row</span>
+</span><span id="line-72">        <span class="k">if</span> <span class="n">start_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">end_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
+</span><span id="line-73">        <span class="k">else</span> <span class="n">end_node_row</span>
+</span><span id="line-74">    <span class="p">)</span>
+</span><span id="line-75">    <span class="n">right_node</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-76">        <span class="n">start_node_row</span>
+</span><span id="line-77">        <span class="k">if</span> <span class="n">start_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">end_node_row</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
+</span><span id="line-78">        <span class="k">else</span> <span class="n">end_node_row</span>
+</span><span id="line-79">    <span class="p">)</span>
+</span><span id="line-80">    <span class="n">left_node_max</span> <span class="o">=</span> <span class="n">left_node</span><span class="p">[</span><span class="s2">&quot;bbox_maxc&quot;</span><span class="p">]</span>
+</span><span id="line-81">    <span class="n">right_node_min</span> <span class="o">=</span> <span class="n">right_node</span><span class="p">[</span><span class="s2">&quot;bbox_minc&quot;</span><span class="p">]</span>
+</span><span id="line-82">    <span class="k">return</span> <span class="n">left_node_max</span> <span class="o">&gt;</span> <span class="n">right_node_min</span></div>
 
-</span><span id="line-81">
-</span><span id="line-82">
+</span><span id="line-83">
+</span><span id="line-84">
 <div class="viewcode-block" id="rescale_cartesian_coordinates">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.core.utils.rescale_cartesian_coordinates.html#atomscale.core.utils.rescale_cartesian_coordinates">[docs]</a>
-</span><span id="line-83"><span class="k">def</span><span class="w"> </span><span class="nf">rescale_cartesian_coordinates</span><span class="p">(</span>
-</span><span id="line-84">    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
-</span><span id="line-85"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
-</span><span id="line-86"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="line-87"><span class="sd">    Normalize radius in polar coordinates, then convert back to cartesian to get rescaled cartesian coordinates in image dimensions.</span>
-</span><span id="line-88"><span class="sd">    Args:</span>
-</span><span id="line-89"><span class="sd">        points (NDArray): Numpy array containing a list of points.</span>
-</span><span id="line-90"><span class="sd">        origin (tuple[int, int]): Origin point.</span>
-</span><span id="line-91"><span class="sd">        scale (float): Scaling number.</span>
-</span><span id="line-92"><span class="sd">    Returns:</span>
-</span><span id="line-93"><span class="sd">        NDArray: Numpy array containing the rescaled points.</span>
-</span><span id="line-94"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-95">
-</span><span id="line-96">    <span class="c1"># Convert the points to polar coordinates</span>
-</span><span id="line-97">    <span class="n">polar_coordinates</span> <span class="o">=</span> <span class="n">convert_to_polar_coordinates</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">origin</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
-</span><span id="line-98">
-</span><span id="line-99">    <span class="n">scaled_1</span> <span class="o">=</span> <span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
-</span><span id="line-100">    <span class="n">scaled_0</span> <span class="o">=</span> <span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
-</span><span id="line-101">
-</span><span id="line-102">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">scaled_0</span><span class="p">,</span> <span class="n">scaled_1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
-
+</span><span id="line-85"><span class="k">def</span><span class="w"> </span><span class="nf">rescale_cartesian_coordinates</span><span class="p">(</span>
+</span><span id="line-86">    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
+</span><span id="line-87"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
+</span><span id="line-88"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="line-89"><span class="sd">    Normalize radius in polar coordinates, then convert back to cartesian to get rescaled cartesian coordinates in image dimensions.</span>
+</span><span id="line-90"><span class="sd">    Args:</span>
+</span><span id="line-91"><span class="sd">        points (NDArray): Numpy array containing a list of points.</span>
+</span><span id="line-92"><span class="sd">        origin (tuple[int, int]): Origin point.</span>
+</span><span id="line-93"><span class="sd">        scale (float): Scaling number.</span>
+</span><span id="line-94"><span class="sd">    Returns:</span>
+</span><span id="line-95"><span class="sd">        NDArray: Numpy array containing the rescaled points.</span>
+</span><span id="line-96"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-97">
+</span><span id="line-98">    <span class="c1"># Convert the points to polar coordinates</span>
+</span><span id="line-99">    <span class="n">polar_coordinates</span> <span class="o">=</span> <span class="n">convert_to_polar_coordinates</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="n">origin</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
+</span><span id="line-100">
+</span><span id="line-101">    <span class="n">scaled_1</span> <span class="o">=</span> <span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
+</span><span id="line-102">    <span class="n">scaled_0</span> <span class="o">=</span> <span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">polar_coordinates</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">])</span>
 </span><span id="line-103">
-</span><span id="line-104">
+</span><span id="line-104">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">scaled_0</span><span class="p">,</span> <span class="n">scaled_1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+</span><span id="line-105">
+</span><span id="line-106">
 <div class="viewcode-block" id="convert_to_polar_coordinates">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.core.utils.convert_to_polar_coordinates.html#atomscale.core.utils.convert_to_polar_coordinates">[docs]</a>
-</span><span id="line-105"><span class="k">def</span><span class="w"> </span><span class="nf">convert_to_polar_coordinates</span><span class="p">(</span>
-</span><span id="line-106">    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span>
-</span><span id="line-107"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
-</span><span id="line-108"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="line-109"><span class="sd">    Convert a set of 2D points to polar coordinates with radius and angle.</span>
-</span><span id="line-110">
-</span><span id="line-111"><span class="sd">    Args:</span>
-</span><span id="line-112"><span class="sd">        points (NDArray): Numpy array containing a list of points.</span>
-</span><span id="line-113"><span class="sd">        origin (tuple[int, int]): Origin point.</span>
-</span><span id="line-114"><span class="sd">        scale (float): Scaling number.</span>
-</span><span id="line-115"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-116">
-</span><span id="line-117">    <span class="c1"># Calculate the relative position of the points to the origin</span>
-</span><span id="line-118">    <span class="n">relative_points</span> <span class="o">=</span> <span class="n">points</span> <span class="o">-</span> <span class="n">origin</span>
-</span><span id="line-119">
-</span><span id="line-120">    <span class="c1"># Calculate the radius and angle of the points</span>
-</span><span id="line-121">    <span class="n">intermediate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">relative_points</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="line-122">    <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">intermediate</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span>
-</span><span id="line-123">    <span class="n">angle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">relative_points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">relative_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
-</span><span id="line-124">
-</span><span id="line-125">    <span class="c1"># Stack the radius and angle into a single array</span>
-</span><span id="line-126">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">radius</span><span class="p">,</span> <span class="n">angle</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+</span><span id="line-107"><span class="k">def</span><span class="w"> </span><span class="nf">convert_to_polar_coordinates</span><span class="p">(</span>
+</span><span id="line-108">    <span class="n">points</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span>
+</span><span id="line-109"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">:</span>
+</span><span id="line-110"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="line-111"><span class="sd">    Convert a set of 2D points to polar coordinates with radius and angle.</span>
+</span><span id="line-112">
+</span><span id="line-113"><span class="sd">    Args:</span>
+</span><span id="line-114"><span class="sd">        points (NDArray): Numpy array containing a list of points.</span>
+</span><span id="line-115"><span class="sd">        origin (tuple[int, int]): Origin point.</span>
+</span><span id="line-116"><span class="sd">        scale (float): Scaling number.</span>
+</span><span id="line-117"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-118">
+</span><span id="line-119">    <span class="c1"># Calculate the relative position of the points to the origin</span>
+</span><span id="line-120">    <span class="n">relative_points</span> <span class="o">=</span> <span class="n">points</span> <span class="o">-</span> <span class="n">origin</span>
+</span><span id="line-121">
+</span><span id="line-122">    <span class="c1"># Calculate the radius and angle of the points</span>
+</span><span id="line-123">    <span class="n">intermediate</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">square</span><span class="p">(</span><span class="n">relative_points</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-124">    <span class="n">radius</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">intermediate</span><span class="p">)</span> <span class="o">/</span> <span class="n">scale</span>
+</span><span id="line-125">    <span class="n">angle</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">relative_points</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">relative_points</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">])</span>
+</span><span id="line-126">
+</span><span id="line-127">    <span class="c1"># Stack the radius and angle into a single array</span>
+</span><span id="line-128">    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">radius</span><span class="p">,</span> <span class="n">angle</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
 
-</span><span id="line-127">
-</span><span id="line-128">
+</span><span id="line-129">
+</span><span id="line-130">
 <div class="viewcode-block" id="generate_graph_from_nodes">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.core.utils.generate_graph_from_nodes.html#atomscale.core.utils.generate_graph_from_nodes">[docs]</a>
-</span><span id="line-129"><span class="k">def</span><span class="w"> </span><span class="nf">generate_graph_from_nodes</span><span class="p">(</span><span class="n">node_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">:</span>
-</span><span id="line-130"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Update a pattern graph with new node data from a DataFrame object&quot;&quot;&quot;</span>
-</span><span id="line-131">
-</span><span id="line-132">    <span class="n">pattern_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+</span><span id="line-131"><span class="k">def</span><span class="w"> </span><span class="nf">generate_graph_from_nodes</span><span class="p">(</span><span class="n">node_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">:</span>
+</span><span id="line-132"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Update a pattern graph with new node data from a DataFrame object&quot;&quot;&quot;</span>
 </span><span id="line-133">
-</span><span id="line-134">    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">node_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
-</span><span id="line-135">        <span class="n">node_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span>
-</span><span id="line-136">        <span class="c1"># Use all other columns as attributes</span>
-</span><span id="line-137">        <span class="n">attributes</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;node_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
-</span><span id="line-138">        <span class="n">pattern_graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="o">**</span><span class="n">attributes</span><span class="p">)</span>
-</span><span id="line-139">
-</span><span id="line-140">    <span class="n">edge_df</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-141">        <span class="n">node_df</span><span class="p">[[</span><span class="s2">&quot;node_id&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_1&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_0&quot;</span><span class="p">]]</span>
-</span><span id="line-142">        <span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-143">        <span class="o">.</span><span class="n">merge</span><span class="p">(</span>
-</span><span id="line-144">            <span class="n">node_df</span><span class="p">[[</span><span class="s2">&quot;node_id&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_1&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_0&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="line-145">            <span class="n">how</span><span class="o">=</span><span class="s2">&quot;cross&quot;</span><span class="p">,</span>
-</span><span id="line-146">        <span class="p">)</span>
-</span><span id="line-147">    <span class="p">)</span>
-</span><span id="line-148">    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;node_id_x&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;node_id_y&quot;</span><span class="p">]]</span>
-</span><span id="line-149">    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
-</span><span id="line-150">        <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;node_id_x&quot;</span><span class="p">:</span> <span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;node_id_y&quot;</span><span class="p">:</span> <span class="s2">&quot;end_node&quot;</span><span class="p">}</span>
-</span><span id="line-151">    <span class="p">)</span>
-</span><span id="line-152">
-</span><span id="line-153">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-154">        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-</span><span id="line-155">    <span class="k">else</span><span class="p">:</span>
-</span><span id="line-156">        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
-</span><span id="line-157">            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">regions_horizontal_overlapping</span><span class="p">(</span>
-</span><span id="line-158">                <span class="n">node_df</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;start_node&quot;</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;end_node&quot;</span><span class="p">]</span>
-</span><span id="line-159">            <span class="p">),</span>
-</span><span id="line-160">            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-</span><span id="line-161">        <span class="p">)</span>
-</span><span id="line-162">
-</span><span id="line-163">    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
-</span><span id="line-164">        <span class="p">(</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_y&quot;</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
-</span><span id="line-165">        <span class="o">+</span> <span class="p">(</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_y&quot;</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
-</span><span id="line-166">    <span class="p">)</span>
-</span><span id="line-167">    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
-</span><span id="line-168">        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_y&quot;</span><span class="p">]</span>
-</span><span id="line-169">    <span class="p">)</span>
-</span><span id="line-170">    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;vertical_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
-</span><span id="line-171">        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_y&quot;</span><span class="p">]</span>
-</span><span id="line-172">    <span class="p">)</span>
-</span><span id="line-173">    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="p">[</span>
-</span><span id="line-174">        <span class="p">[</span>
-</span><span id="line-175">            <span class="s2">&quot;start_node&quot;</span><span class="p">,</span>
-</span><span id="line-176">            <span class="s2">&quot;end_node&quot;</span><span class="p">,</span>
-</span><span id="line-177">            <span class="s2">&quot;weight&quot;</span><span class="p">,</span>
-</span><span id="line-178">            <span class="s2">&quot;horizontal_weight&quot;</span><span class="p">,</span>
-</span><span id="line-179">            <span class="s2">&quot;vertical_weight&quot;</span><span class="p">,</span>
-</span><span id="line-180">            <span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">,</span>
-</span><span id="line-181">        <span class="p">]</span>
-</span><span id="line-182">    <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-</span><span id="line-183">
-</span><span id="line-184">    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span>
-</span><span id="line-185">        <span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;end_node&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span>
-</span><span id="line-186">    <span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-187">
-</span><span id="line-188">    <span class="n">pattern_graph</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">edge_df</span><span class="p">[[</span><span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;end_node&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
+</span><span id="line-134">    <span class="n">pattern_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">()</span>
+</span><span id="line-135">
+</span><span id="line-136">    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">node_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+</span><span id="line-137">        <span class="n">node_id</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;node_id&quot;</span><span class="p">]</span>
+</span><span id="line-138">        <span class="c1"># Use all other columns as attributes</span>
+</span><span id="line-139">        <span class="n">attributes</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s2">&quot;node_id&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+</span><span id="line-140">        <span class="n">pattern_graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">node_id</span><span class="p">,</span> <span class="o">**</span><span class="n">attributes</span><span class="p">)</span>
+</span><span id="line-141">
+</span><span id="line-142">    <span class="n">edge_df</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-143">        <span class="n">node_df</span><span class="p">[[</span><span class="s2">&quot;node_id&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_1&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_0&quot;</span><span class="p">]]</span>
+</span><span id="line-144">        <span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-145">        <span class="o">.</span><span class="n">merge</span><span class="p">(</span>
+</span><span id="line-146">            <span class="n">node_df</span><span class="p">[[</span><span class="s2">&quot;node_id&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_1&quot;</span><span class="p">,</span> <span class="s2">&quot;centroid_0&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="line-147">            <span class="n">how</span><span class="o">=</span><span class="s2">&quot;cross&quot;</span><span class="p">,</span>
+</span><span id="line-148">        <span class="p">)</span>
+</span><span id="line-149">    <span class="p">)</span>
+</span><span id="line-150">    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;node_id_x&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;node_id_y&quot;</span><span class="p">]]</span>
+</span><span id="line-151">    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+</span><span id="line-152">        <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;node_id_x&quot;</span><span class="p">:</span> <span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;node_id_y&quot;</span><span class="p">:</span> <span class="s2">&quot;end_node&quot;</span><span class="p">}</span>
+</span><span id="line-153">    <span class="p">)</span>
+</span><span id="line-154">
+</span><span id="line-155">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="line-156">        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span id="line-157">    <span class="k">else</span><span class="p">:</span>
+</span><span id="line-158">        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+</span><span id="line-159">            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">regions_horizontal_overlapping</span><span class="p">(</span>
+</span><span id="line-160">                <span class="n">node_df</span><span class="p">,</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;start_node&quot;</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;end_node&quot;</span><span class="p">]</span>
+</span><span id="line-161">            <span class="p">),</span>
+</span><span id="line-162">            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="line-163">        <span class="p">)</span>
+</span><span id="line-164">
+</span><span id="line-165">    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span>
+</span><span id="line-166">        <span class="p">(</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_y&quot;</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+</span><span id="line-167">        <span class="o">+</span> <span class="p">(</span><span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_y&quot;</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span>
+</span><span id="line-168">    <span class="p">)</span>
+</span><span id="line-169">    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;horizontal_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
+</span><span id="line-170">        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_1_y&quot;</span><span class="p">]</span>
+</span><span id="line-171">    <span class="p">)</span>
+</span><span id="line-172">    <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;vertical_weight&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span>
+</span><span id="line-173">        <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_x&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">edge_df</span><span class="p">[</span><span class="s2">&quot;centroid_0_y&quot;</span><span class="p">]</span>
+</span><span id="line-174">    <span class="p">)</span>
+</span><span id="line-175">    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="p">[</span>
+</span><span id="line-176">        <span class="p">[</span>
+</span><span id="line-177">            <span class="s2">&quot;start_node&quot;</span><span class="p">,</span>
+</span><span id="line-178">            <span class="s2">&quot;end_node&quot;</span><span class="p">,</span>
+</span><span id="line-179">            <span class="s2">&quot;weight&quot;</span><span class="p">,</span>
+</span><span id="line-180">            <span class="s2">&quot;horizontal_weight&quot;</span><span class="p">,</span>
+</span><span id="line-181">            <span class="s2">&quot;vertical_weight&quot;</span><span class="p">,</span>
+</span><span id="line-182">            <span class="s2">&quot;horizontal_overlap&quot;</span><span class="p">,</span>
+</span><span id="line-183">        <span class="p">]</span>
+</span><span id="line-184">    <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</span><span id="line-185">
+</span><span id="line-186">    <span class="n">edge_df</span> <span class="o">=</span> <span class="n">edge_df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span>
+</span><span id="line-187">        <span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;end_node&quot;</span><span class="p">],</span> <span class="n">keep</span><span class="o">=</span><span class="s2">&quot;first&quot;</span>
+</span><span id="line-188">    <span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </span><span id="line-189">
-</span><span id="line-190">    <span class="k">return</span> <span class="n">pattern_graph</span></div>
-
+</span><span id="line-190">    <span class="n">pattern_graph</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">(</span><span class="n">edge_df</span><span class="p">[[</span><span class="s2">&quot;start_node&quot;</span><span class="p">,</span> <span class="s2">&quot;end_node&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">())</span>
 </span><span id="line-191">
-</span><span id="line-192">
-</span><span id="line-193"><span class="k">def</span><span class="w"> </span><span class="nf">_make_progress</span><span class="p">(</span><span class="n">mute</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">transient</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Progress</span><span class="p">:</span>
-</span><span id="line-194"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-</span><span id="line-195"><span class="sd">    If `muted` is True return (nullcontext(), None),</span>
-</span><span id="line-196"><span class="sd">    else return (progress, progress).</span>
-</span><span id="line-197">
-</span><span id="line-198"><span class="sd">    Transient determines if it hides after completion.</span>
-</span><span id="line-199"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-200">    <span class="k">if</span> <span class="n">mute</span><span class="p">:</span>
-</span><span id="line-201">        <span class="k">return</span> <span class="n">Progress</span><span class="p">(</span><span class="n">disable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-202">
-</span><span id="line-203">    <span class="k">class</span><span class="w"> </span><span class="nc">PercentOrTotal</span><span class="p">(</span><span class="n">ProgressColumn</span><span class="p">):</span>
-</span><span id="line-204"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Render either % or completed/total depending on task flags.&quot;&quot;&quot;</span>
-</span><span id="line-205">
-</span><span id="line-206">        <span class="n">_percent</span> <span class="o">=</span> <span class="n">TaskProgressColumn</span><span class="p">()</span>
+</span><span id="line-192">    <span class="k">return</span> <span class="n">pattern_graph</span></div>
+
+</span><span id="line-193">
+</span><span id="line-194">
+</span><span id="line-195"><span class="k">def</span><span class="w"> </span><span class="nf">_make_progress</span><span class="p">(</span><span class="n">mute</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">transient</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Progress</span><span class="p">:</span>
+</span><span id="line-196"><span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+</span><span id="line-197"><span class="sd">    If `muted` is True return (nullcontext(), None),</span>
+</span><span id="line-198"><span class="sd">    else return (progress, progress).</span>
+</span><span id="line-199">
+</span><span id="line-200"><span class="sd">    Transient determines if it hides after completion.</span>
+</span><span id="line-201"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-202">    <span class="k">if</span> <span class="n">mute</span><span class="p">:</span>
+</span><span id="line-203">        <span class="k">return</span> <span class="n">Progress</span><span class="p">(</span><span class="n">disable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span><span id="line-204">
+</span><span id="line-205">    <span class="k">class</span><span class="w"> </span><span class="nc">PercentOrTotal</span><span class="p">(</span><span class="n">ProgressColumn</span><span class="p">):</span>
+</span><span id="line-206"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Render either % or completed/total depending on task flags.&quot;&quot;&quot;</span>
 </span><span id="line-207">
-</span><span id="line-208">        <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
-</span><span id="line-209">            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_percent&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>  <span class="c1"># 42.0</span>
-</span><span id="line-210">                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_percent</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
-</span><span id="line-211">            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_total&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>  <span class="c1"># 12/37</span>
-</span><span id="line-212">                <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">completed</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">total</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-</span><span id="line-213">            <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># blank cell</span>
-</span><span id="line-214">
-</span><span id="line-215">    <span class="k">class</span><span class="w"> </span><span class="nc">MaybeSpinner</span><span class="p">(</span><span class="n">SpinnerColumn</span><span class="p">):</span>
-</span><span id="line-216"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Show the spinner only when task.fields[&#39;show_spinner&#39;] is truthy.&quot;&quot;&quot;</span>
-</span><span id="line-217">
-</span><span id="line-218">        <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
-</span><span id="line-219">            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_spinner&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
-</span><span id="line-220">                <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-</span><span id="line-221">            <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
-</span><span id="line-222">
-</span><span id="line-223">    <span class="k">return</span> <span class="n">Progress</span><span class="p">(</span>
-</span><span id="line-224">        <span class="n">MaybeSpinner</span><span class="p">(),</span>
-</span><span id="line-225">        <span class="n">TextColumn</span><span class="p">(</span><span class="s2">&quot;[bold]</span><span class="si">{task.fields[pad]}{task.description}</span><span class="s2">&quot;</span><span class="p">),</span>
-</span><span id="line-226">        <span class="n">BarColumn</span><span class="p">(),</span>
-</span><span id="line-227">        <span class="n">PercentOrTotal</span><span class="p">(),</span>
-</span><span id="line-228">        <span class="n">TimeElapsedColumn</span><span class="p">(),</span>
-</span><span id="line-229">        <span class="n">transient</span><span class="o">=</span><span class="n">transient</span><span class="p">,</span>
-</span><span id="line-230">        <span class="n">refresh_per_second</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
-</span><span id="line-231">    <span class="p">)</span>
-</span><span id="line-232">
-</span><span id="line-233">
+</span><span id="line-208">        <span class="n">_percent</span> <span class="o">=</span> <span class="n">TaskProgressColumn</span><span class="p">()</span>
+</span><span id="line-209">
+</span><span id="line-210">        <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
+</span><span id="line-211">            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_percent&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>  <span class="c1"># 42.0</span>
+</span><span id="line-212">                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_percent</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+</span><span id="line-213">            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_total&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>  <span class="c1"># 12/37</span>
+</span><span id="line-214">                <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">completed</span><span class="p">)</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">int</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">total</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+</span><span id="line-215">            <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>  <span class="c1"># blank cell</span>
+</span><span id="line-216">
+</span><span id="line-217">    <span class="k">class</span><span class="w"> </span><span class="nc">MaybeSpinner</span><span class="p">(</span><span class="n">SpinnerColumn</span><span class="p">):</span>
+</span><span id="line-218"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Show the spinner only when task.fields[&#39;show_spinner&#39;] is truthy.&quot;&quot;&quot;</span>
+</span><span id="line-219">
+</span><span id="line-220">        <span class="k">def</span><span class="w"> </span><span class="nf">render</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">task</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Text</span><span class="p">:</span>
+</span><span id="line-221">            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">fields</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;show_spinner&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+</span><span id="line-222">                <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+</span><span id="line-223">            <span class="k">return</span> <span class="n">Text</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="line-224">
+</span><span id="line-225">    <span class="k">return</span> <span class="n">Progress</span><span class="p">(</span>
+</span><span id="line-226">        <span class="n">MaybeSpinner</span><span class="p">(),</span>
+</span><span id="line-227">        <span class="n">TextColumn</span><span class="p">(</span><span class="s2">&quot;[bold]</span><span class="si">{task.fields[pad]}{task.description}</span><span class="s2">&quot;</span><span class="p">),</span>
+</span><span id="line-228">        <span class="n">BarColumn</span><span class="p">(),</span>
+</span><span id="line-229">        <span class="n">PercentOrTotal</span><span class="p">(),</span>
+</span><span id="line-230">        <span class="n">TimeElapsedColumn</span><span class="p">(),</span>
+</span><span id="line-231">        <span class="n">transient</span><span class="o">=</span><span class="n">transient</span><span class="p">,</span>
+</span><span id="line-232">        <span class="n">refresh_per_second</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+</span><span id="line-233">    <span class="p">)</span>
+</span><span id="line-234">
+</span><span id="line-235">
 <div class="viewcode-block" id="normalize_path">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.core.utils.normalize_path.html#atomscale.core.utils.normalize_path">[docs]</a>
-</span><span id="line-234"><span class="k">def</span><span class="w"> </span><span class="nf">normalize_path</span><span class="p">(</span><span class="n">path_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
-</span><span id="line-235"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize a file path string for use with pathlib.</span>
-</span><span id="line-236">
-</span><span id="line-237"><span class="sd">    This will:</span>
-</span><span id="line-238"><span class="sd">      1. Remove control characters and convert “smart” quotes into plain quotes.</span>
-</span><span id="line-239"><span class="sd">      2. Strip leading/trailing whitespace and any surrounding quotes.</span>
-</span><span id="line-240"><span class="sd">      3. Expand user (~) and environment variables.</span>
-</span><span id="line-241"><span class="sd">      4. Normalize Unicode, unify separators, and collapse “..”/“.” segments.</span>
-</span><span id="line-242">
-</span><span id="line-243"><span class="sd">    Args:</span>
-</span><span id="line-244"><span class="sd">        path_str: Raw path string copied from Windows (may contain spaces,</span>
-</span><span id="line-245"><span class="sd">                  smart quotes, stray control chars, etc.)</span>
-</span><span id="line-246">
-</span><span id="line-247"><span class="sd">    Returns:</span>
-</span><span id="line-248"><span class="sd">        A pathlib.Path pointing to the normalized path.</span>
-</span><span id="line-249"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-250">    <span class="c1"># 1. Drop control characters</span>
-</span><span id="line-251">    <span class="n">filtered</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ch</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">path_str</span> <span class="k">if</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">category</span><span class="p">(</span><span class="n">ch</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;C&quot;</span><span class="p">)</span>
-</span><span id="line-252">
-</span><span id="line-253">    <span class="c1"># 2. Convert smart quotes to plain ones</span>
-</span><span id="line-254">    <span class="n">smart_quotes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;</span><span class="se">\u201c</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u201d</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u2018</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u2019</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">}</span>
-</span><span id="line-255">    <span class="k">for</span> <span class="n">smart</span><span class="p">,</span> <span class="n">plain</span> <span class="ow">in</span> <span class="n">smart_quotes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-</span><span id="line-256">        <span class="n">filtered</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">smart</span><span class="p">,</span> <span class="n">plain</span><span class="p">)</span>
-</span><span id="line-257">
-</span><span id="line-258">    <span class="c1"># 3. Trim whitespace and surrounding quotes</span>
-</span><span id="line-259">    <span class="n">filtered</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
-</span><span id="line-260">    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^[</span><span class="se">\&#39;</span><span class="s1">&quot;](.*)[</span><span class="se">\&#39;</span><span class="s1">&quot;]$&#39;</span><span class="p">,</span> <span class="n">filtered</span><span class="p">)</span>
-</span><span id="line-261">    <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
-</span><span id="line-262">        <span class="n">filtered</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="line-263">
-</span><span id="line-264">    <span class="c1"># 4. Expand ~ and env vars</span>
-</span><span id="line-265">    <span class="n">expanded</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">filtered</span><span class="p">))</span>  <span class="c1"># noqa: PTH111</span>
-</span><span id="line-266">
-</span><span id="line-267">    <span class="c1"># 5. Normalize Unicode and separators</span>
-</span><span id="line-268">    <span class="n">normalized_unicode</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s2">&quot;NFC&quot;</span><span class="p">,</span> <span class="n">expanded</span><span class="p">)</span>
-</span><span id="line-269">    <span class="n">unified_sep</span> <span class="o">=</span> <span class="n">normalized_unicode</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
-</span><span id="line-270">
-</span><span id="line-271">    <span class="c1"># 6. Collapse redundant segments</span>
-</span><span id="line-272">    <span class="n">final_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">unified_sep</span><span class="p">)</span>
-</span><span id="line-273">
-</span><span id="line-274">    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">final_path</span><span class="p">)</span></div>
+</span><span id="line-236"><span class="k">def</span><span class="w"> </span><span class="nf">normalize_path</span><span class="p">(</span><span class="n">path_str</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+</span><span id="line-237"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize a file path string for use with pathlib.</span>
+</span><span id="line-238">
+</span><span id="line-239"><span class="sd">    This will:</span>
+</span><span id="line-240"><span class="sd">      1. Remove control characters and convert “smart” quotes into plain quotes.</span>
+</span><span id="line-241"><span class="sd">      2. Strip leading/trailing whitespace and any surrounding quotes.</span>
+</span><span id="line-242"><span class="sd">      3. Expand user (~) and environment variables.</span>
+</span><span id="line-243"><span class="sd">      4. Normalize Unicode, unify separators, and collapse “..”/“.” segments.</span>
+</span><span id="line-244">
+</span><span id="line-245"><span class="sd">    Args:</span>
+</span><span id="line-246"><span class="sd">        path_str: Raw path string copied from Windows (may contain spaces,</span>
+</span><span id="line-247"><span class="sd">                  smart quotes, stray control chars, etc.)</span>
+</span><span id="line-248">
+</span><span id="line-249"><span class="sd">    Returns:</span>
+</span><span id="line-250"><span class="sd">        A pathlib.Path pointing to the normalized path.</span>
+</span><span id="line-251"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-252">    <span class="c1"># 1. Drop control characters</span>
+</span><span id="line-253">    <span class="n">filtered</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ch</span> <span class="k">for</span> <span class="n">ch</span> <span class="ow">in</span> <span class="n">path_str</span> <span class="k">if</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">category</span><span class="p">(</span><span class="n">ch</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;C&quot;</span><span class="p">)</span>
+</span><span id="line-254">
+</span><span id="line-255">    <span class="c1"># 2. Convert smart quotes to plain ones</span>
+</span><span id="line-256">    <span class="n">smart_quotes</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;</span><span class="se">\u201c</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u201d</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u2018</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\u2019</span><span class="s2">&quot;</span><span class="p">:</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">}</span>
+</span><span id="line-257">    <span class="k">for</span> <span class="n">smart</span><span class="p">,</span> <span class="n">plain</span> <span class="ow">in</span> <span class="n">smart_quotes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+</span><span id="line-258">        <span class="n">filtered</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">smart</span><span class="p">,</span> <span class="n">plain</span><span class="p">)</span>
+</span><span id="line-259">
+</span><span id="line-260">    <span class="c1"># 3. Trim whitespace and surrounding quotes</span>
+</span><span id="line-261">    <span class="n">filtered</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</span><span id="line-262">    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^[</span><span class="se">\&#39;</span><span class="s1">&quot;](.*)[</span><span class="se">\&#39;</span><span class="s1">&quot;]$&#39;</span><span class="p">,</span> <span class="n">filtered</span><span class="p">)</span>
+</span><span id="line-263">    <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+</span><span id="line-264">        <span class="n">filtered</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-265">
+</span><span id="line-266">    <span class="c1"># 4. Expand ~ and env vars</span>
+</span><span id="line-267">    <span class="n">expanded</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">filtered</span><span class="p">))</span>  <span class="c1"># noqa: PTH111</span>
+</span><span id="line-268">
+</span><span id="line-269">    <span class="c1"># 5. Normalize Unicode and separators</span>
+</span><span id="line-270">    <span class="n">normalized_unicode</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="s2">&quot;NFC&quot;</span><span class="p">,</span> <span class="n">expanded</span><span class="p">)</span>
+</span><span id="line-271">    <span class="n">unified_sep</span> <span class="o">=</span> <span class="n">normalized_unicode</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
+</span><span id="line-272">
+</span><span id="line-273">    <span class="c1"># 6. Collapse redundant segments</span>
+</span><span id="line-274">    <span class="n">final_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">unified_sep</span><span class="p">)</span>
+</span><span id="line-275">
+</span><span id="line-276">    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">final_path</span><span class="p">)</span></div>
 
 </span></code></pre></div>
     </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">

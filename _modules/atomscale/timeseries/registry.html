@@ -102,17 +102,24 @@
 
     <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
       <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../guides/index.html">User Guides</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../guides/poll-trajectory.html">Poll Similarity Trajectory</a></li>
+  <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/quickstart.html">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/upload-files.html">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../guides/monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../modules.html">Project Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -120,7 +127,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -170,30 +189,32 @@
 
     <div id="content" role="main">
       <h1>Source code for atomscale.timeseries.registry</h1><div class="highlight"><pre>
-<span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+<span></span><code><span id="line-1"><span class="sd">&quot;&quot;&quot;Registry for data providers.&quot;&quot;&quot;</span>
 </span><span id="line-2">
-</span><span id="line-3"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.similarity.provider</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimilarityTrajectoryProvider</span>
+</span><span id="line-3"><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 </span><span id="line-4">
-</span><span id="line-5"><span class="kn">from</span><span class="w"> </span><span class="nn">.metrology</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetrologyProvider</span>
-</span><span id="line-6"><span class="kn">from</span><span class="w"> </span><span class="nn">.optical</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpticalProvider</span>
-</span><span id="line-7"><span class="kn">from</span><span class="w"> </span><span class="nn">.provider</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeseriesProvider</span>
-</span><span id="line-8"><span class="kn">from</span><span class="w"> </span><span class="nn">.rheed</span><span class="w"> </span><span class="kn">import</span> <span class="n">RHEEDProvider</span>
-</span><span id="line-9">
-</span><span id="line-10"><span class="n">_PROVIDER_CLASSES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">[</span><span class="n">TimeseriesProvider</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-11">    <span class="n">RHEEDProvider</span><span class="o">.</span><span class="n">TYPE</span><span class="p">:</span> <span class="n">RHEEDProvider</span><span class="p">,</span>
-</span><span id="line-12">    <span class="n">OpticalProvider</span><span class="o">.</span><span class="n">TYPE</span><span class="p">:</span> <span class="n">OpticalProvider</span><span class="p">,</span>
-</span><span id="line-13">    <span class="n">MetrologyProvider</span><span class="o">.</span><span class="n">TYPE</span><span class="p">:</span> <span class="n">MetrologyProvider</span><span class="p">,</span>
-</span><span id="line-14">    <span class="n">SimilarityTrajectoryProvider</span><span class="o">.</span><span class="n">TYPE</span><span class="p">:</span> <span class="n">SimilarityTrajectoryProvider</span><span class="p">,</span>
-</span><span id="line-15"><span class="p">}</span>
-</span><span id="line-16">
-</span><span id="line-17">
+</span><span id="line-5"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.similarity.provider</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimilarityTrajectoryProvider</span>
+</span><span id="line-6">
+</span><span id="line-7"><span class="kn">from</span><span class="w"> </span><span class="nn">.metrology</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetrologyProvider</span>
+</span><span id="line-8"><span class="kn">from</span><span class="w"> </span><span class="nn">.optical</span><span class="w"> </span><span class="kn">import</span> <span class="n">OpticalProvider</span>
+</span><span id="line-9"><span class="kn">from</span><span class="w"> </span><span class="nn">.provider</span><span class="w"> </span><span class="kn">import</span> <span class="n">TimeseriesProvider</span>
+</span><span id="line-10"><span class="kn">from</span><span class="w"> </span><span class="nn">.rheed</span><span class="w"> </span><span class="kn">import</span> <span class="n">RHEEDProvider</span>
+</span><span id="line-11">
+</span><span id="line-12"><span class="n">_PROVIDER_CLASSES</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">type</span><span class="p">[</span><span class="n">TimeseriesProvider</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-13">    <span class="n">RHEEDProvider</span><span class="o">.</span><span class="n">TYPE</span><span class="p">:</span> <span class="n">RHEEDProvider</span><span class="p">,</span>
+</span><span id="line-14">    <span class="n">OpticalProvider</span><span class="o">.</span><span class="n">TYPE</span><span class="p">:</span> <span class="n">OpticalProvider</span><span class="p">,</span>
+</span><span id="line-15">    <span class="n">MetrologyProvider</span><span class="o">.</span><span class="n">TYPE</span><span class="p">:</span> <span class="n">MetrologyProvider</span><span class="p">,</span>
+</span><span id="line-16">    <span class="n">SimilarityTrajectoryProvider</span><span class="o">.</span><span class="n">TYPE</span><span class="p">:</span> <span class="n">SimilarityTrajectoryProvider</span><span class="p">,</span>
+</span><span id="line-17"><span class="p">}</span>
+</span><span id="line-18">
+</span><span id="line-19">
 <div class="viewcode-block" id="get_provider">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.registry.get_provider.html#atomscale.timeseries.registry.get_provider">[docs]</a>
-</span><span id="line-18"><span class="k">def</span><span class="w"> </span><span class="nf">get_provider</span><span class="p">(</span><span class="n">data_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TimeseriesProvider</span><span class="p">:</span>
-</span><span id="line-19">    <span class="k">try</span><span class="p">:</span>
-</span><span id="line-20">        <span class="k">return</span> <span class="n">_PROVIDER_CLASSES</span><span class="p">[</span><span class="n">data_type</span><span class="p">]()</span>  <span class="c1"># type: ignore[call-arg]</span>
-</span><span id="line-21">    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
-</span><span id="line-22">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported timeseries type: &#39;</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>  <span class="c1"># noqa: B904</span></div>
+</span><span id="line-20"><span class="k">def</span><span class="w"> </span><span class="nf">get_provider</span><span class="p">(</span><span class="n">data_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TimeseriesProvider</span><span class="p">:</span>
+</span><span id="line-21">    <span class="k">try</span><span class="p">:</span>
+</span><span id="line-22">        <span class="k">return</span> <span class="n">_PROVIDER_CLASSES</span><span class="p">[</span><span class="n">data_type</span><span class="p">]()</span>  <span class="c1"># type: ignore[call-arg]</span>
+</span><span id="line-23">    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+</span><span id="line-24">        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported timeseries type: &#39;</span><span class="si">{</span><span class="n">data_type</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>  <span class="c1"># noqa: B904</span></div>
 
 </span></code></pre></div>
     </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">

@@ -15,7 +15,7 @@
 <link href="_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="search.html" rel="search" title="Search"/>
 <link href="genindex.html" rel="index" title="Index"/>
-<link href="guides/index.html" rel="next" title="User Guides"/>
+<link href="guides/quickstart.html" rel="next" title="Quickstart"/>
 <script>
     <!-- Prevent Flash of wrong theme -->
       const userPreference = localStorage.getItem('darkMode');
@@ -70,17 +70,24 @@
 </a>
 <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
 <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
+<p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul>
-<li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="guides/index.html">User Guides<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-show="expanded">
-<li class="toctree-l2"><a class="reference internal" href="guides/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/poll-trajectory.html">Poll Similarity Trajectory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/quickstart.html">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="guides/upload-files.html">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="guides/search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="modules.html">Project Modules<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-show="expanded">
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -88,7 +95,19 @@
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -112,52 +131,83 @@
 <section id="atomscale-python-sdk">
 <h1>Atomscale Python SDK<a class="headerlink" href="#atomscale-python-sdk" title="Link to this heading"><span>#</span></a></h1>
 <p><a class="reference external" href="https://github.com/atomscale-ai/sdk/actions/workflows/testing.yml?query=branch%3Amain"><img alt="Testing status" src="https://github.com/atomscale-ai/sdk/actions/workflows/testing.yml/badge.svg?branch=main"/></a> <a class="reference external" href="https://github.com/atomscale-ai/sdk/releases/"><img alt="Latest tag" src="https://img.shields.io/github/tag/atomscale-ai/sdk?include_prereleases=&amp;sort=semver&amp;color=blue"/></a> <img alt="Supported Python versions" src="https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python&amp;logoColor=white"/> <a class="reference external" href="https://github.com/atomscale-ai/sdk/blob/main/LICENSE"><img alt="License: MPL 2.0" src="https://img.shields.io/badge/License-MPL_2.0-blue"/></a></p>
-<p><code class="docutils literal notranslate"><span class="pre">atomscale</span></code> is the Python SDK for the Atomscale platform. Use these docs to
-install the client, move data, and integrate streaming or polling workflows.
-The material is split into:</p>
-<ul class="simple">
-<li><p>Task-focused guides that mirror the published notebooks.</p></li>
-<li><p>Auto-generated API references pulled directly from the source.</p></li>
-</ul>
-<p>If you need help from a human, open an issue on
-<a class="reference external" href="https://github.com/atomscale-ai/sdk">GitHub</a> or email
-<a class="reference external" href="mailto:support%40atomscale.ai">support<span>@</span>atomscale<span>.</span>ai</a>.</p>
-<section id="features">
-<h2>Features<a class="headerlink" href="#features" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#features'"><span>#</span></a></h2>
-<ul class="simple">
-<li><p>Unified <code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.client.Client</span></code> for uploads, catalogue search, and downloads.</p></li>
-<li><p>Streaming helpers for live RHEED capture via push or generator-style interfaces.</p></li>
-<li><p>Fine-grained search filters for IDs, data types, lifecycle states, and time bounds.</p></li>
-<li><p>Rich result objects exposing timeseries, diffraction graphs, and processed videos.</p></li>
-<li><p>Polling utilities for synchronous, threaded, or async consumption of updates.</p></li>
-</ul>
-</section>
+<p>The <code class="docutils literal notranslate"><span class="pre">atomscale</span></code> package connects your Python code to the Atomscale platform
+for RHEED analysis, XPS processing, and instrument data management.</p>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#installation'"><span>#</span></a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">pip<span class="w"> </span>install<span class="w"> </span>atomscale
 </span></code></pre></div>
 </div>
-<p>Much of the functionality of the package requires an API key. It can be provided using
-the <code class="docutils literal notranslate"><span class="pre">AS_API_KEY</span></code> environment variable before creating a <code class="xref py py-class docutils literal notranslate"><span class="pre">Client</span></code>,
-or passed in directly when constructing the client in your code.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The package was renamed from <code class="docutils literal notranslate"><span class="pre">atomicds</span></code>. Importing <code class="docutils literal notranslate"><span class="pre">atomicds</span></code> still
-works for backward compatibility but emits a <code class="xref py py-class docutils literal notranslate"><span class="pre">DeprecationWarning</span></code>
-and internally depends on the <code class="docutils literal notranslate"><span class="pre">atomscale</span></code> package.</p>
+<p>Set your API key (from Profile &gt; Account Management in the web app):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="nb">export</span><span class="w"> </span><span class="nv">AS_API_KEY</span><span class="o">=</span><span class="s2">"your-api-key"</span>
+</span></code></pre></div>
+</div>
+</section>
+<section id="quick-example">
+<h2>Quick Example<a class="headerlink" href="#quick-example" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#quick-example'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">()</span>
+</span><span id="line-4">
+</span><span id="line-5"><span class="c1"># Upload a RHEED video for analysis</span>
+</span><span id="line-6"><span class="n">client</span><span class="o">.</span><span class="n">upload</span><span class="p">(</span><span class="n">files</span><span class="o">=</span><span class="p">[</span><span class="s2">"growth_001.mp4"</span><span class="p">])</span>
+</span><span id="line-7">
+</span><span id="line-8"><span class="c1"># Find your data</span>
+</span><span id="line-9"><span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">keywords</span><span class="o">=</span><span class="p">[</span><span class="s2">"GaN"</span><span class="p">])</span>
+</span><span id="line-10">
+</span><span id="line-11"><span class="c1"># Get analysis results</span>
+</span><span id="line-12"><span class="n">analysed</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">"Data ID"</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">())</span>
+</span><span id="line-13"><span class="nb">print</span><span class="p">(</span><span class="n">analysed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">timeseries_data</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+</section>
+<section id="what-can-you-do">
+<h2>What Can You Do?<a class="headerlink" href="#what-can-you-do" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#what-can-you-do'"><span>#</span></a></h2>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25.0%"/>
+<col style="width: 75.0%"/>
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>Send data</strong></p></td>
+<td><p>Upload files or stream live RHEED/instrument data to Atomscale</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Get results</strong></p></td>
+<td><p>Search the catalogue, download processed videos, access analysis data</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Monitor live</strong></p></td>
+<td><p>Poll for real-time updates during active streaming sessions</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="guides">
+<h2>Guides<a class="headerlink" href="#guides" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#guides'"><span>#</span></a></h2>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="guides/quickstart.html">Quickstart</a></li>
+</ul>
 </div>
 <div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="guides/index.html">User Guides</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="guides/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="guides/poll-trajectory.html">Poll Similarity Trajectory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/upload-files.html">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/stream-timeseries.html">Stream Instrument Data</a></li>
 </ul>
-</li>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="guides/search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guides/monitor-live.html">Monitor Live Results</a></li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="modules.html">Project Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -165,7 +215,7 @@ and internally depends on the <code class="docutils literal notranslate"><span c
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -176,19 +226,18 @@ and internally depends on the <code class="docutils literal notranslate"><span c
 </ul>
 </div>
 </section>
-<section id="indices-and-tables">
-<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#indices-and-tables'"><span>#</span></a></h2>
+<section id="support">
+<h2>Support<a class="headerlink" href="#support" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#support'"><span>#</span></a></h2>
 <ul class="simple">
-<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
-<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
-<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+<li><p><strong>Issues</strong>: <a class="reference external" href="https://github.com/atomscale-ai/sdk">GitHub</a></p></li>
+<li><p><strong>Email</strong>: <a class="reference external" href="mailto:support%40atomscale.ai">support<span>@</span>atomscale<span>.</span>ai</a></p></li>
 </ul>
 </section>
 </section>
 </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">
 <div class="ml-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="guides/index.html">
-        User Guides
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="guides/quickstart.html">
+        Quickstart
         <svg class="ml-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="9 18 15 12 9 6"></polyline>
 </svg>
@@ -197,9 +246,13 @@ and internally depends on the <code class="docutils literal notranslate"><span c
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
-<li><a :data-current="activeSection === '#features'" class="reference internal" href="#features">Features</a></li>
 <li><a :data-current="activeSection === '#installation'" class="reference internal" href="#installation">Installation</a></li>
-<li><a :data-current="activeSection === '#indices-and-tables'" class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+<li><a :data-current="activeSection === '#quick-example'" class="reference internal" href="#quick-example">Quick Example</a></li>
+<li><a :data-current="activeSection === '#what-can-you-do'" class="reference internal" href="#what-can-you-do">What Can You Do?</a></li>
+<li><a :data-current="activeSection === '#guides'" class="reference internal" href="#guides">Guides</a><ul>
+</ul>
+</li>
+<li><a :data-current="activeSection === '#support'" class="reference internal" href="#support">Support</a></li>
 </ul>
 </div>
 </aside>

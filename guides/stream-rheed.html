@@ -15,8 +15,8 @@
 <link href="../_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="poll-timeseries.html" rel="next" title="Poll Time Series Updates"/>
-<link href="inspect-results.html" rel="prev" title="Inspect Analysis Results"/>
+<link href="stream-timeseries.html" rel="next" title="Stream Instrument Data"/>
+<link href="upload-files.html" rel="prev" title="Upload Files"/>
 <script>
     <!-- Prevent Flash of wrong theme -->
       const userPreference = localStorage.getItem('darkMode');
@@ -71,17 +71,24 @@
 </a>
 <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
 <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
-<ul class="current">
-<li class="toctree-l1 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="index.html">User Guides<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul class="current" x-show="expanded">
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="poll-trajectory.html">Poll Similarity Trajectory</a></li>
+<p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="upload-files.html">Upload Files</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="../modules.html">Project Modules<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-show="expanded">
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -89,7 +96,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -116,113 +135,138 @@
 <path d="M240 856h120V616h240v240h120V496L480 316 240 496v360Zm-80 80V456l320-240 320 240v480H520V696h-80v240H160Zm320-350Z"></path>
 </svg>
 </a>
-<div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap" href="index.html">User Guides</a>
 <div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">Stream RHEED Video</span>
 </nav>
 <div id="content" role="main">
 <section id="stream-rheed-video">
 <h1>Stream RHEED Video<a class="headerlink" href="#stream-rheed-video" title="Link to this heading"><span>#</span></a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">rheed_streaming.ipynb</span></code> demonstrates both push (callback) and pull (generator)
-streaming with <code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.streaming.rheed_stream.RHEEDStreamer</span></code>. This
-guide condenses the notebook into a quick reference and explains when to choose
-each style:</p>
+<p>Stream live RHEED frames directly from your instrument to Atomscale. Analysis
+runs in real-time as data arrives.</p>
+<section id="when-to-use-this">
+<h2>When to Use This<a class="headerlink" href="#when-to-use-this" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#when-to-use-this'"><span>#</span></a></h2>
 <ul class="simple">
-<li><p><strong>Callback / push mode</strong> – the camera or SDK hands you fresh frames and you
-upload each chunk immediately.</p></li>
-<li><p><strong>Generator / pull mode</strong> – you already have frames buffered (from disk,
-memory, or a simulated source) and want the helper to pace the upload for you.</p></li>
+<li><p>Your camera SDK provides frames as numpy arrays</p></li>
+<li><p>You want real-time analysis during growth</p></li>
+<li><p>You need results before the growth completes</p></li>
 </ul>
-<section id="prerequisites">
-<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#prerequisites'"><span>#</span></a></h2>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Before streaming, ensure you have:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code> installed</p></li>
-<li><p>RHEED frames as <code class="docutils literal notranslate"><span class="pre">uint8</span></code> arrays shaped <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">H,</span> <span class="pre">W)</span></code> or <code class="docutils literal notranslate"><span class="pre">(H,</span> <span class="pre">W)</span></code></p></li>
-<li><p>A stable clock so you can honour the capture cadence</p></li>
-</ul>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>For pre-recorded videos, use <a class="reference internal" href="upload-files.html"><span class="doc">Upload Files</span></a> instead.</p>
 </div>
 </section>
 <section id="create-a-streamer">
-<h2>Create a streamer<a class="headerlink" href="#create-a-streamer" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#create-a-streamer'"><span>#</span></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.streaming.rheed_stream</span><span class="w"> </span><span class="kn">import</span> <span class="n">RHEEDStreamer</span>
+<h2>Create a Streamer<a class="headerlink" href="#create-a-streamer" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#create-a-streamer'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.streaming</span><span class="w"> </span><span class="kn">import</span> <span class="n">RHEEDStreamer</span>
 </span><span id="line-2">
 </span><span id="line-3"><span class="n">streamer</span> <span class="o">=</span> <span class="n">RHEEDStreamer</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_API_KEY"</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
-<p>Optional keyword arguments tune chunking and logging. For example,
-<code class="docutils literal notranslate"><span class="pre">verbosity=4</span></code> emits detailed progress, and <code class="docutils literal notranslate"><span class="pre">max_workers</span></code> caps concurrency.</p>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>Pass a <code class="docutils literal notranslate"><span class="pre">physical_sample</span></code> name to <code class="xref py py-meth docutils literal notranslate"><span class="pre">initialize()</span></code> so the data links to
-the right sample. Names are matched case-insensitively or created on the fly.</p>
+</section>
+<section id="initialize-a-stream">
+<h2>Initialize a Stream<a class="headerlink" href="#initialize-a-stream" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#initialize-a-stream'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
+</span><span id="line-3">    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>  <span class="c1"># Use 0.0 for stationary RHEED</span>
+</span><span id="line-4">    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span>          <span class="c1"># Frames per chunk (2 seconds at 120fps)</span>
+</span><span id="line-5">    <span class="n">stream_name</span><span class="o">=</span><span class="s2">"Growth 001"</span><span class="p">,</span>
+</span><span id="line-6">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"GaN-2025-001"</span><span class="p">,</span>
+</span><span id="line-7"><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">rotations_per_min</span></code> parameter determines whether data is classified as
+rotating or stationary RHEED.</p>
+</section>
+<section id="link-to-a-physical-sample">
+<h2>Link to a Physical Sample<a class="headerlink" href="#link-to-a-physical-sample" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#link-to-a-physical-sample'"><span>#</span></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">physical_sample</span></code> parameter accepts either a <strong>name</strong> or a <strong>UUID</strong>:</p>
+<p><strong>By name</strong> (recommended for new samples):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
+</span><span id="line-3">    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+</span><span id="line-4">    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span>
+</span><span id="line-5">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"Wafer-A1"</span><span class="p">,</span>  <span class="c1"># Matched case-insensitively; created if not found</span>
+</span><span id="line-6"><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<p><strong>By UUID</strong> (for existing samples):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
+</span><span id="line-3">    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+</span><span id="line-4">    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span>
+</span><span id="line-5">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"a1b2c3d4-e5f6-7890-abcd-ef1234567890"</span><span class="p">,</span>  <span class="c1"># Must exist</span>
+</span><span id="line-6"><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<p>When you also provide a <code class="docutils literal notranslate"><span class="pre">project_id</span></code>, the project’s <code class="docutils literal notranslate"><span class="pre">tracking_physical_sample_id</span></code>
+configuration is automatically updated to link the sample for growth monitoring:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
+</span><span id="line-3">    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>
+</span><span id="line-4">    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span>
+</span><span id="line-5">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"Wafer-A1"</span><span class="p">,</span>
+</span><span id="line-6">    <span class="n">project_id</span><span class="o">=</span><span class="s2">"your-project-uuid"</span><span class="p">,</span>
+</span><span id="line-7"><span class="p">)</span>
+</span></code></pre></div>
 </div>
 </section>
-<section id="callback-push-mode">
-<h2>Callback / push mode<a class="headerlink" href="#callback-push-mode" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#callback-push-mode'"><span>#</span></a></h2>
-<p>Use this variant when frames arrive live from the instrument. The outer loop is
-your acquisition callback: once a chunk is ready, send it to the API and wait
-just long enough to match the capture cadence.</p>
+<section id="push-mode-live-capture">
+<h2>Push Mode (Live Capture)<a class="headerlink" href="#push-mode-live-capture" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#push-mode-live-capture'"><span>#</span></a></h2>
+<p>Use when your camera SDK delivers frames in real-time:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 </span><span id="line-2"><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 </span><span id="line-3">
 </span><span id="line-4"><span class="n">fps</span> <span class="o">=</span> <span class="mf">120.0</span>
-</span><span id="line-5"><span class="n">chunk_size</span> <span class="o">=</span> <span class="mi">240</span>  <span class="c1"># ≥ 2 seconds of frames is recommended</span>
+</span><span id="line-5"><span class="n">chunk_size</span> <span class="o">=</span> <span class="mi">240</span>
 </span><span id="line-6"><span class="n">seconds_per_chunk</span> <span class="o">=</span> <span class="n">chunk_size</span> <span class="o">/</span> <span class="n">fps</span>
 </span><span id="line-7">
-</span><span id="line-8"><span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
-</span><span id="line-9">    <span class="n">fps</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span>
-</span><span id="line-10">    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>  <span class="c1"># set to 0.0 for stationary</span>
-</span><span id="line-11">    <span class="n">chunk_size</span><span class="o">=</span><span class="n">chunk_size</span><span class="p">,</span>
-</span><span id="line-12">    <span class="n">stream_name</span><span class="o">=</span><span class="s2">"Demo (callback mode)"</span><span class="p">,</span>
-</span><span id="line-13">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"Demo wafer"</span><span class="p">,</span>
-</span><span id="line-14"><span class="p">)</span>
-</span><span id="line-15">
-</span><span id="line-16"><span class="k">for</span> <span class="n">chunk_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
-</span><span id="line-17">    <span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
-</span><span id="line-18">    <span class="n">streamer</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">data_id</span><span class="p">,</span> <span class="n">chunk_idx</span><span class="p">,</span> <span class="n">frames</span><span class="p">)</span>
-</span><span id="line-19">    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">seconds_per_chunk</span><span class="p">)</span>
-</span><span id="line-20">
-</span><span id="line-21"><span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>  <span class="c1"># let in-flight uploads finish</span>
-</span><span id="line-22"><span class="n">streamer</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
+</span><span id="line-8"><span class="k">for</span> <span class="n">chunk_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_chunks</span><span class="p">):</span>
+</span><span id="line-9">    <span class="c1"># Get frames from your camera (shape: [chunk_size, height, width])</span>
+</span><span id="line-10">    <span class="n">frames</span> <span class="o">=</span> <span class="n">camera</span><span class="o">.</span><span class="n">capture</span><span class="p">(</span><span class="n">chunk_size</span><span class="p">)</span>  <span class="c1"># Your camera SDK</span>
+</span><span id="line-11">
+</span><span id="line-12">    <span class="n">streamer</span><span class="o">.</span><span class="n">push</span><span class="p">(</span><span class="n">data_id</span><span class="p">,</span> <span class="n">chunk_idx</span><span class="p">,</span> <span class="n">frames</span><span class="p">)</span>
+</span><span id="line-13">    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">seconds_per_chunk</span><span class="p">)</span>
+</span><span id="line-14">
+</span><span id="line-15"><span class="n">streamer</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
 </span></code></pre></div>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The <code class="docutils literal notranslate"><span class="pre">rotations_per_min</span></code> parameter determines whether the stream is
-classified as rotating or stationary RHEED.</p>
 </div>
 </section>
-<section id="generator-pull-mode">
-<h2>Generator / pull mode<a class="headerlink" href="#generator-pull-mode" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#generator-pull-mode'"><span>#</span></a></h2>
-<p>Use this form when frames are already buffered (for example, saved by the
-instrument or simulated offline). Provide an iterator that yields chunks and
-the helper will take care of pacing and retry logic.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="k">def</span><span class="w"> </span><span class="nf">frame_chunks</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">):</span>
-</span><span id="line-2">    <span class="n">seconds_per_chunk</span> <span class="o">=</span> <span class="n">chunk_size</span> <span class="o">/</span> <span class="n">fps</span>
-</span><span id="line-3">    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">frames</span><span class="p">),</span> <span class="n">chunk_size</span><span class="p">):</span>
-</span><span id="line-4">        <span class="k">yield</span> <span class="n">frames</span><span class="p">[</span><span class="n">start</span> <span class="p">:</span> <span class="n">start</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">]</span>
-</span><span id="line-5">        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">seconds_per_chunk</span><span class="p">)</span>
-</span><span id="line-6">
-</span><span id="line-7">
-</span><span id="line-8"><span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">256</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">1200</span><span class="p">,</span> <span class="mi">300</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+<section id="run-mode-buffered-data">
+<h2>Run Mode (Buffered Data)<a class="headerlink" href="#run-mode-buffered-data" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#run-mode-buffered-data'"><span>#</span></a></h2>
+<p>Use when frames are already in memory:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+</span><span id="line-2"><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+</span><span id="line-3">
+</span><span id="line-4"><span class="k">def</span><span class="w"> </span><span class="nf">frame_generator</span><span class="p">(</span><span class="n">all_frames</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">,</span> <span class="n">fps</span><span class="p">):</span>
+</span><span id="line-5"><span class="w">    </span><span class="sd">"""Yield chunks at the correct pace."""</span>
+</span><span id="line-6">    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">all_frames</span><span class="p">),</span> <span class="n">chunk_size</span><span class="p">):</span>
+</span><span id="line-7">        <span class="k">yield</span> <span class="n">all_frames</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">start</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">]</span>
+</span><span id="line-8">        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">chunk_size</span> <span class="o">/</span> <span class="n">fps</span><span class="p">)</span>
 </span><span id="line-9">
-</span><span id="line-10"><span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
-</span><span id="line-11">    <span class="n">fps</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>
-</span><span id="line-12">    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
-</span><span id="line-13">    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-</span><span id="line-14">    <span class="n">stream_name</span><span class="o">=</span><span class="s2">"Demo (generator mode)"</span><span class="p">,</span>
-</span><span id="line-15">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"Demo wafer"</span><span class="p">,</span>
-</span><span id="line-16"><span class="p">)</span>
-</span><span id="line-17">
-</span><span id="line-18"><span class="n">streamer</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">data_id</span><span class="p">,</span> <span class="n">frame_chunks</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mf">10.0</span><span class="p">))</span>
-</span><span id="line-19"><span class="n">streamer</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
+</span><span id="line-10"><span class="c1"># Frames already in memory</span>
+</span><span id="line-11"><span class="n">frames</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">"recorded_frames.npy"</span><span class="p">)</span>
+</span><span id="line-12">
+</span><span id="line-13"><span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
+</span><span id="line-14">    <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
+</span><span id="line-15">    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+</span><span id="line-16">    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span>
+</span><span id="line-17">    <span class="n">stream_name</span><span class="o">=</span><span class="s2">"Playback"</span><span class="p">,</span>
+</span><span id="line-18"><span class="p">)</span>
+</span><span id="line-19">
+</span><span id="line-20"><span class="n">streamer</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">data_id</span><span class="p">,</span> <span class="n">frame_generator</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">))</span>
+</span><span id="line-21"><span class="n">streamer</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
+</section>
+<section id="frame-requirements">
+<h2>Frame Requirements<a class="headerlink" href="#frame-requirements" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#frame-requirements'"><span>#</span></a></h2>
+<ul class="simple">
+<li><p><strong>Data type</strong>: <code class="docutils literal notranslate"><span class="pre">uint8</span></code> grayscale</p></li>
+<li><p><strong>Shape</strong>: <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">height,</span> <span class="pre">width)</span></code> for chunks, <code class="docutils literal notranslate"><span class="pre">(height,</span> <span class="pre">width)</span></code> for single frames</p></li>
+<li><p><strong>Timing</strong>: Maintain real-time pacing for accurate analysis</p></li>
+</ul>
 </section>
 <section id="best-practices">
-<h2>Best practices<a class="headerlink" href="#best-practices" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#best-practices'"><span>#</span></a></h2>
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#best-practices'"><span>#</span></a></h2>
 <table class="docutils align-default">
 <colgroup>
 <col style="width: 30.0%"/>
@@ -230,50 +274,43 @@ the helper will take care of pacing and retry logic.</p>
 </colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Practice</p></th>
-<th class="head"><p>Reason</p></th>
+<th class="head"><p>Why</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>Maintain capture cadence</p></td>
-<td><p>Server expects real-time pacing for proper analysis</p></td>
-</tr>
-<tr class="row-odd"><td><p>Use ≥2 second chunks</p></td>
+<tr class="row-even"><td><p>Chunk size &gt;= 2 seconds</p></td>
 <td><p>Balances upload overhead with latency</p></td>
 </tr>
-<tr class="row-even"><td><p>Always call <code class="docutils literal notranslate"><span class="pre">finalize()</span></code></p></td>
-<td><p>Lets the pipeline clean up, even after partial failures</p></td>
+<tr class="row-odd"><td><p>Maintain capture cadence</p></td>
+<td><p>Server expects real-time pacing</p></td>
 </tr>
-<tr class="row-odd"><td><p>Use distinct <code class="docutils literal notranslate"><span class="pre">stream_name</span></code> values</p></td>
-<td><p>Makes it easier to find test runs later</p></td>
+<tr class="row-even"><td><p>Always call <code class="docutils literal notranslate"><span class="pre">finalize()</span></code></p></td>
+<td><p>Signals stream is complete so processing can finish</p></td>
+</tr>
+<tr class="row-odd"><td><p>Use descriptive <code class="docutils literal notranslate"><span class="pre">stream_name</span></code></p></td>
+<td><p>Makes data easier to find later</p></td>
 </tr>
 </tbody>
 </table>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Failing to call <code class="xref py py-meth docutils literal notranslate"><span class="pre">finalize()</span></code> may leave the stream in an incomplete state,
-preventing proper analysis completion.</p>
-</div>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<ul class="simple">
-<li><p><a class="reference internal" href="poll-timeseries.html"><span class="doc">Poll Time Series Updates</span></a> – Monitor analysis results as they arrive</p></li>
-<li><p><a class="reference internal" href="poll-trajectory.html"><span class="doc">Poll Similarity Trajectory</span></a> – Track similarity trajectory during growth</p></li>
-</ul>
+<p>Failing to call <code class="docutils literal notranslate"><span class="pre">finalize()</span></code> leaves the stream incomplete and may prevent
+analysis from completing.</p>
 </div>
 </section>
 </section>
 </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">
 <div class="mr-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="inspect-results.html">
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="upload-files.html">
 <svg class="mr-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="15 18 9 12 15 6"></polyline>
 </svg>
-        Inspect Analysis Results
+        Upload Files
       </a>
 </div>
 <div class="ml-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="poll-timeseries.html">
-        Poll Time Series Updates
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="stream-timeseries.html">
+        Stream Instrument Data
         <svg class="ml-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="9 18 15 12 9 6"></polyline>
 </svg>
@@ -282,11 +319,14 @@ preventing proper analysis completion.</p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
-<li><a :data-current="activeSection === '#prerequisites'" class="reference internal" href="#prerequisites">Prerequisites</a></li>
-<li><a :data-current="activeSection === '#create-a-streamer'" class="reference internal" href="#create-a-streamer">Create a streamer</a></li>
-<li><a :data-current="activeSection === '#callback-push-mode'" class="reference internal" href="#callback-push-mode">Callback / push mode</a></li>
-<li><a :data-current="activeSection === '#generator-pull-mode'" class="reference internal" href="#generator-pull-mode">Generator / pull mode</a></li>
-<li><a :data-current="activeSection === '#best-practices'" class="reference internal" href="#best-practices">Best practices</a></li>
+<li><a :data-current="activeSection === '#when-to-use-this'" class="reference internal" href="#when-to-use-this">When to Use This</a></li>
+<li><a :data-current="activeSection === '#create-a-streamer'" class="reference internal" href="#create-a-streamer">Create a Streamer</a></li>
+<li><a :data-current="activeSection === '#initialize-a-stream'" class="reference internal" href="#initialize-a-stream">Initialize a Stream</a></li>
+<li><a :data-current="activeSection === '#link-to-a-physical-sample'" class="reference internal" href="#link-to-a-physical-sample">Link to a Physical Sample</a></li>
+<li><a :data-current="activeSection === '#push-mode-live-capture'" class="reference internal" href="#push-mode-live-capture">Push Mode (Live Capture)</a></li>
+<li><a :data-current="activeSection === '#run-mode-buffered-data'" class="reference internal" href="#run-mode-buffered-data">Run Mode (Buffered Data)</a></li>
+<li><a :data-current="activeSection === '#frame-requirements'" class="reference internal" href="#frame-requirements">Frame Requirements</a></li>
+<li><a :data-current="activeSection === '#best-practices'" class="reference internal" href="#best-practices">Best Practices</a></li>
 </ul>
 </div>
 </aside>

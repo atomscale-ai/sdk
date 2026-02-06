@@ -7,16 +7,16 @@
 <meta content="white" media="(prefers-color-scheme: light)" name="theme-color"/>
 <meta content="black" media="(prefers-color-scheme: dark)" name="theme-color"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>Search the Catalogue | Python SDK</title>
-<meta content="Search the Catalogue | Python SDK" property="og:title"/>
-<meta content="Search the Catalogue | Python SDK" name="twitter:title"/>
+<title>Search and Download | Python SDK</title>
+<meta content="Search and Download | Python SDK" property="og:title"/>
+<meta content="Search and Download | Python SDK" name="twitter:title"/>
 <link href="../_static/pygments.css?v=03e43079" rel="stylesheet" type="text/css"/>
 <link href="../_static/theme.css?v=42baaae4" rel="stylesheet" type="text/css"/>
 <link href="../_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="inspect-results.html" rel="next" title="Inspect Analysis Results"/>
-<link href="upload-data.html" rel="prev" title="Upload Data"/>
+<link href="analysis-results.html" rel="next" title="Analysis Results"/>
+<link href="stream-timeseries.html" rel="prev" title="Stream Instrument Data"/>
 <script>
     <!-- Prevent Flash of wrong theme -->
       const userPreference = localStorage.getItem('darkMode');
@@ -71,17 +71,24 @@
 </a>
 <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
 <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
-<ul class="current">
-<li class="toctree-l1 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="index.html">User Guides<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul class="current" x-show="expanded">
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upload-data.html">Upload Data</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="poll-trajectory.html">Poll Similarity Trajectory</a></li>
+<p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="upload-files.html">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="../modules.html">Project Modules<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-show="expanded">
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -89,7 +96,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -116,134 +135,127 @@
 <path d="M240 856h120V616h240v240h120V496L480 316 240 496v360Zm-80 80V456l320-240 320 240v480H520V696h-80v240H160Zm320-350Z"></path>
 </svg>
 </a>
-<div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap" href="index.html">User Guides</a>
-<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">Search the Catalogue</span>
+<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">Search and Download</span>
 </nav>
 <div id="content" role="main">
-<section id="search-the-catalogue">
-<h1>Search the Catalogue<a class="headerlink" href="#search-the-catalogue" title="Link to this heading"><span>#</span></a></h1>
-<p>Use <code class="xref py py-meth docutils literal notranslate"><span class="pre">atomscale.client.Client.search()</span></code> to locate uploaded data. The examples
-below mirror <code class="docutils literal notranslate"><span class="pre">general_use.ipynb</span></code> and add a few extra filters you can combine.</p>
+<section id="search-and-download">
+<h1>Search and Download<a class="headerlink" href="#search-and-download" title="Link to this heading"><span>#</span></a></h1>
+<p>Find data in the Atomscale catalogue and download processed results.</p>
 <section id="basic-search">
-<h2>Basic search<a class="headerlink" href="#basic-search" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#basic-search'"><span>#</span></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
+<h2>Basic Search<a class="headerlink" href="#basic-search" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#basic-search'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
 </span><span id="line-2">
-</span><span id="line-3"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_API_KEY"</span><span class="p">)</span>
+</span><span id="line-3"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">()</span>
+</span><span id="line-4"><span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">keywords</span><span class="o">=</span><span class="p">[</span><span class="s2">"GaN"</span><span class="p">])</span>
+</span><span id="line-5">
+</span><span id="line-6"><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">[[</span><span class="s2">"Data ID"</span><span class="p">,</span> <span class="s2">"Status"</span><span class="p">,</span> <span class="s2">"Sample Name"</span><span class="p">]])</span>
+</span></code></pre></div>
+</div>
+<p>The search returns a DataFrame with matching entries from your organization.</p>
+</section>
+<section id="filter-by-data-type">
+<h2>Filter by Data Type<a class="headerlink" href="#filter-by-data-type" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#filter-by-data-type'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="c1"># Only RHEED videos</span>
+</span><span id="line-2"><span class="n">rotating</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">data_type</span><span class="o">=</span><span class="s2">"rheed_rotating"</span><span class="p">)</span>
+</span><span id="line-3"><span class="n">stationary</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">data_type</span><span class="o">=</span><span class="s2">"rheed_stationary"</span><span class="p">)</span>
 </span><span id="line-4">
-</span><span id="line-5"><span class="n">rheed_runs</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">keywords</span><span class="o">=</span><span class="p">[</span><span class="s2">"WSe2"</span><span class="p">])</span>
-</span><span id="line-6"><span class="nb">print</span><span class="p">(</span><span class="n">rheed_runs</span><span class="p">[[</span><span class="s2">"Data ID"</span><span class="p">,</span> <span class="s2">"Status"</span><span class="p">,</span> <span class="s2">"Sample Name"</span><span class="p">]])</span>
-</span></code></pre></div>
-</div>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>Keywords are matched against sample names, file names, and metadata fields.
-Use specific terms for more precise results.</p>
-</div>
-</section>
-<section id="limit-to-your-uploads">
-<h2>Limit to your uploads<a class="headerlink" href="#limit-to-your-uploads" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#limit-to-your-uploads'"><span>#</span></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">personal_only</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
-</span><span id="line-2">    <span class="n">keywords</span><span class="o">=</span><span class="s2">"demo"</span><span class="p">,</span>
-</span><span id="line-3">    <span class="n">include_organization_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-</span><span id="line-4"><span class="p">)</span>
+</span><span id="line-5"><span class="c1"># Only images</span>
+</span><span id="line-6"><span class="n">images</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">data_type</span><span class="o">=</span><span class="s2">"rheed_image"</span><span class="p">)</span>
+</span><span id="line-7">
+</span><span id="line-8"><span class="c1"># Only XPS</span>
+</span><span id="line-9"><span class="n">xps</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">data_type</span><span class="o">=</span><span class="s2">"xps"</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 </section>
-<section id="filter-by-ids-or-type">
-<h2>Filter by IDs or type<a class="headerlink" href="#filter-by-ids-or-type" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#filter-by-ids-or-type'"><span>#</span></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">exact</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">data_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">"44fa63b0-74da-4d25-a362-2276c80a670a"</span><span class="p">])</span>
-</span><span id="line-2">
-</span><span id="line-3"><span class="n">rotating</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">data_type</span><span class="o">=</span><span class="s2">"rheed_rotating"</span><span class="p">)</span>
+<section id="filter-by-status">
+<h2>Filter by Status<a class="headerlink" href="#filter-by-status" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#filter-by-status'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="c1"># Completed analysis</span>
+</span><span id="line-2"><span class="n">completed</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"success"</span><span class="p">)</span>
+</span><span id="line-3">
+</span><span id="line-4"><span class="c1"># Currently processing</span>
+</span><span id="line-5"><span class="n">processing</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"running"</span><span class="p">)</span>
+</span><span id="line-6">
+</span><span id="line-7"><span class="c1"># Active streams</span>
+</span><span id="line-8"><span class="n">streaming</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"stream_active"</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
-<table class="docutils align-default" id="id1">
-<caption><span class="caption-text">Available data types</span><a class="headerlink" href="#id1" title="Link to this table"><span>#</span></a></caption>
-<colgroup>
-<col style="width: 30.0%"/>
-<col style="width: 70.0%"/>
-</colgroup>
-<thead>
-<tr class="row-odd"><th class="head"><p>Type</p></th>
-<th class="head"><p>Description</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rheed_stationary</span></code></p></td>
-<td><p>Stationary RHEED video</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">rheed_rotating</span></code></p></td>
-<td><p>Rotating RHEED video</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">rheed_image</span></code></p></td>
-<td><p>Single RHEED image</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">xps</span></code></p></td>
-<td><p>XPS spectrum data</p></td>
-</tr>
-</tbody>
-</table>
+<p>Available statuses: <code class="docutils literal notranslate"><span class="pre">success</span></code>, <code class="docutils literal notranslate"><span class="pre">pending</span></code>, <code class="docutils literal notranslate"><span class="pre">running</span></code>, <code class="docutils literal notranslate"><span class="pre">error</span></code>,
+<code class="docutils literal notranslate"><span class="pre">stream_active</span></code>, <code class="docutils literal notranslate"><span class="pre">stream_interrupted</span></code>, <code class="docutils literal notranslate"><span class="pre">stream_finalizing</span></code>, <code class="docutils literal notranslate"><span class="pre">stream_error</span></code></p>
 </section>
-<section id="filter-by-lifecycle-state">
-<h2>Filter by lifecycle state<a class="headerlink" href="#filter-by-lifecycle-state" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#filter-by-lifecycle-state'"><span>#</span></a></h2>
-<p><code class="docutils literal notranslate"><span class="pre">status</span></code> accepts <code class="docutils literal notranslate"><span class="pre">"success"</span></code>, <code class="docutils literal notranslate"><span class="pre">"pending"</span></code>, <code class="docutils literal notranslate"><span class="pre">"running"</span></code>, <code class="docutils literal notranslate"><span class="pre">"error"</span></code>, and
-the streaming-specific values <code class="docutils literal notranslate"><span class="pre">"stream_active"</span></code>, <code class="docutils literal notranslate"><span class="pre">"stream_interrupted"</span></code>,
-<code class="docutils literal notranslate"><span class="pre">"stream_finalizing"</span></code>, and <code class="docutils literal notranslate"><span class="pre">"stream_error"</span></code>.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">completed</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="s2">"success"</span><span class="p">)</span>
-</span></code></pre></div>
-</div>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Use <code class="docutils literal notranslate"><span class="pre">status="stream_active"</span></code> to find live streaming sessions that are
-currently receiving data.</p>
-</div>
-</section>
-<section id="apply-numeric-or-datetime-bounds">
-<h2>Apply numeric or datetime bounds<a class="headerlink" href="#apply-numeric-or-datetime-bounds" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#apply-numeric-or-datetime-bounds'"><span>#</span></a></h2>
-<p>You can pass <code class="docutils literal notranslate"><span class="pre">(min,</span> <span class="pre">max)</span></code> tuples for growth length (seconds),
-upload timestamp, or last-accessed timestamp. Use <code class="docutils literal notranslate"><span class="pre">None</span></code> for an open bound.</p>
+<section id="filter-by-date-or-duration">
+<h2>Filter by Date or Duration<a class="headerlink" href="#filter-by-date-or-duration" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#filter-by-date-or-duration'"><span>#</span></a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
 </span><span id="line-2">
-</span><span id="line-3"><span class="n">recent</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
-</span><span id="line-4">    <span class="n">upload_datetime</span><span class="o">=</span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2025</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="kc">None</span><span class="p">),</span>
-</span><span id="line-5">    <span class="n">growth_length</span><span class="o">=</span><span class="p">(</span><span class="mi">3000</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+</span><span id="line-3"><span class="c1"># Uploaded after Jan 1, 2025</span>
+</span><span id="line-4"><span class="n">recent</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+</span><span id="line-5">    <span class="n">upload_datetime</span><span class="o">=</span><span class="p">(</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2025</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="kc">None</span><span class="p">),</span>
 </span><span id="line-6"><span class="p">)</span>
+</span><span id="line-7">
+</span><span id="line-8"><span class="c1"># Growth longer than 30 minutes (1800 seconds)</span>
+</span><span id="line-9"><span class="n">long_growths</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+</span><span id="line-10">    <span class="n">growth_length</span><span class="o">=</span><span class="p">(</span><span class="mi">1800</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+</span><span id="line-11"><span class="p">)</span>
 </span></code></pre></div>
 </div>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>Combine multiple filters in a single call for precise queries:</p>
+</section>
+<section id="combine-filters">
+<h2>Combine Filters<a class="headerlink" href="#combine-filters" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#combine-filters'"><span>#</span></a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
-</span><span id="line-2">    <span class="n">keywords</span><span class="o">=</span><span class="s2">"GaN"</span><span class="p">,</span>
+</span><span id="line-2">    <span class="n">keywords</span><span class="o">=</span><span class="p">[</span><span class="s2">"GaN"</span><span class="p">],</span>
 </span><span id="line-3">    <span class="n">data_type</span><span class="o">=</span><span class="s2">"rheed_stationary"</span><span class="p">,</span>
 </span><span id="line-4">    <span class="n">status</span><span class="o">=</span><span class="s2">"success"</span><span class="p">,</span>
 </span><span id="line-5">    <span class="n">growth_length</span><span class="o">=</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">5000</span><span class="p">),</span>
 </span><span id="line-6"><span class="p">)</span>
 </span></code></pre></div>
 </div>
+</section>
+<section id="search-by-id">
+<h2>Search by ID<a class="headerlink" href="#search-by-id" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#search-by-id'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">exact</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">data_ids</span><span class="o">=</span><span class="p">[</span><span class="s2">"44fa63b0-74da-4d25-a362-2276c80a670a"</span><span class="p">]</span>
+</span><span id="line-3"><span class="p">)</span>
+</span></code></pre></div>
 </div>
 </section>
-<section id="next-steps">
-<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#next-steps'"><span>#</span></a></h2>
-<p>Pass the <code class="docutils literal notranslate"><span class="pre">Data</span> <span class="pre">ID</span></code> column to <code class="xref py py-meth docutils literal notranslate"><span class="pre">atomscale.client.Client.get()</span></code> to fetch
-analysis artefacts.</p>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><a class="reference internal" href="inspect-results.html"><span class="doc">Inspect Analysis Results</span></a> – Work with timeseries, diffraction graphs, and videos</p>
+<section id="limit-to-personal-uploads">
+<h2>Limit to Personal Uploads<a class="headerlink" href="#limit-to-personal-uploads" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#limit-to-personal-uploads'"><span>#</span></a></h2>
+<p>By default, search includes all data from your organization. To see only your
+own uploads:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">my_data</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">keywords</span><span class="o">=</span><span class="p">[</span><span class="s2">"demo"</span><span class="p">],</span>
+</span><span id="line-3">    <span class="n">include_organization_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="line-4"><span class="p">)</span>
+</span></code></pre></div>
+</div>
+</section>
+<section id="download-processed-videos">
+<h2>Download Processed Videos<a class="headerlink" href="#download-processed-videos" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#download-processed-videos'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">client</span><span class="o">.</span><span class="n">download_videos</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">data_ids</span><span class="o">=</span><span class="n">results</span><span class="p">[</span><span class="s2">"Data ID"</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">(),</span>
+</span><span id="line-3">    <span class="n">dest_dir</span><span class="o">=</span><span class="s2">"processed/"</span><span class="p">,</span>
+</span><span id="line-4"><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<p>Files are saved as MP4 with the data ID as the filename.</p>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>Processed videos can be large. Filter to only the IDs you need before
+downloading.</p>
 </div>
 </section>
 </section>
 </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">
 <div class="mr-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="upload-data.html">
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="stream-timeseries.html">
 <svg class="mr-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="15 18 9 12 15 6"></polyline>
 </svg>
-        Upload Data
+        Stream Instrument Data
       </a>
 </div>
 <div class="ml-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="inspect-results.html">
-        Inspect Analysis Results
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="analysis-results.html">
+        Analysis Results
         <svg class="ml-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="9 18 15 12 9 6"></polyline>
 </svg>
@@ -252,12 +264,14 @@ analysis artefacts.</p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
-<li><a :data-current="activeSection === '#basic-search'" class="reference internal" href="#basic-search">Basic search</a></li>
-<li><a :data-current="activeSection === '#limit-to-your-uploads'" class="reference internal" href="#limit-to-your-uploads">Limit to your uploads</a></li>
-<li><a :data-current="activeSection === '#filter-by-ids-or-type'" class="reference internal" href="#filter-by-ids-or-type">Filter by IDs or type</a></li>
-<li><a :data-current="activeSection === '#filter-by-lifecycle-state'" class="reference internal" href="#filter-by-lifecycle-state">Filter by lifecycle state</a></li>
-<li><a :data-current="activeSection === '#apply-numeric-or-datetime-bounds'" class="reference internal" href="#apply-numeric-or-datetime-bounds">Apply numeric or datetime bounds</a></li>
-<li><a :data-current="activeSection === '#next-steps'" class="reference internal" href="#next-steps">Next steps</a></li>
+<li><a :data-current="activeSection === '#basic-search'" class="reference internal" href="#basic-search">Basic Search</a></li>
+<li><a :data-current="activeSection === '#filter-by-data-type'" class="reference internal" href="#filter-by-data-type">Filter by Data Type</a></li>
+<li><a :data-current="activeSection === '#filter-by-status'" class="reference internal" href="#filter-by-status">Filter by Status</a></li>
+<li><a :data-current="activeSection === '#filter-by-date-or-duration'" class="reference internal" href="#filter-by-date-or-duration">Filter by Date or Duration</a></li>
+<li><a :data-current="activeSection === '#combine-filters'" class="reference internal" href="#combine-filters">Combine Filters</a></li>
+<li><a :data-current="activeSection === '#search-by-id'" class="reference internal" href="#search-by-id">Search by ID</a></li>
+<li><a :data-current="activeSection === '#limit-to-personal-uploads'" class="reference internal" href="#limit-to-personal-uploads">Limit to Personal Uploads</a></li>
+<li><a :data-current="activeSection === '#download-processed-videos'" class="reference internal" href="#download-processed-videos">Download Processed Videos</a></li>
 </ul>
 </div>
 </aside>

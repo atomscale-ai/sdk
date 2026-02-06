@@ -15,8 +15,8 @@
 <link href="../_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="upload-data.html" rel="next" title="Upload Data"/>
-<link href="index.html" rel="prev" title="User Guides"/>
+<link href="upload-files.html" rel="next" title="Upload Files"/>
+<link href="../index.html" rel="prev" title="Atomscale Python SDK"/>
 <script>
     <!-- Prevent Flash of wrong theme -->
       const userPreference = localStorage.getItem('darkMode');
@@ -71,17 +71,24 @@
 </a>
 <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
 <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
+<p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
 <ul class="current">
-<li class="toctree-l1 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="index.html">User Guides<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul class="current" x-show="expanded">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="poll-trajectory.html">Poll Similarity Trajectory</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="upload-files.html">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="../modules.html">Project Modules<button @click.prevent.stop="expanded = !expanded" type="button"><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul x-show="expanded">
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -89,7 +96,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -116,87 +135,91 @@
 <path d="M240 856h120V616h240v240h120V496L480 316 240 496v360Zm-80 80V456l320-240 320 240v480H520V696h-80v240H160Zm320-350Z"></path>
 </svg>
 </a>
-<div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap" href="index.html">User Guides</a>
 <div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">Quickstart</span>
 </nav>
 <div id="content" role="main">
 <section id="quickstart">
 <h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading"><span>#</span></a></h1>
-<p>This quickstart mirrors <code class="docutils literal notranslate"><span class="pre">general_use.ipynb</span></code> and walks through the essentials
-for calling the Atomscale API.</p>
-<section id="prerequisites">
-<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#prerequisites'"><span>#</span></a></h2>
-<div class="admonition important">
-<p class="admonition-title">Important</p>
-<p>Before you begin, make sure you have:</p>
-<ul class="simple">
-<li><p>Python 3.10 or newer</p></li>
-<li><p>An active Atomscale account</p></li>
-<li><p>An API key from the Atomscale web app (Profile → Account Management)</p></li>
-</ul>
-</div>
-</section>
-<section id="install-the-client">
-<h2>Install the client<a class="headerlink" href="#install-the-client" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#install-the-client'"><span>#</span></a></h2>
+<p>Get up and running with the Atomscale SDK in under 5 minutes.</p>
+<section id="install">
+<h2>Install<a class="headerlink" href="#install" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#install'"><span>#</span></a></h2>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1">pip<span class="w"> </span>install<span class="w"> </span>atomscale
 </span></code></pre></div>
 </div>
 </section>
+<section id="get-your-api-key">
+<h2>Get Your API Key<a class="headerlink" href="#get-your-api-key" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#get-your-api-key'"><span>#</span></a></h2>
+<ol class="arabic simple">
+<li><p>Log in to the <a class="reference external" href="https://app.atomscale.ai">Atomscale web app</a></p></li>
+<li><p>Go to <strong>Profile &gt; Account Management</strong></p></li>
+<li><p>Copy your API key</p></li>
+</ol>
+<p>Set it as an environment variable:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="nb">export</span><span class="w"> </span><span class="nv">AS_API_KEY</span><span class="o">=</span><span class="s2">"your-api-key"</span>
+</span></code></pre></div>
+</div>
+<p>Or pass it directly in code (not recommended for production):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
+</span><span id="line-2"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">"your-api-key"</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+</section>
 <section id="create-a-client">
-<h2>Create a client<a class="headerlink" href="#create-a-client" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#create-a-client'"><span>#</span></a></h2>
-<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.client.Client</span></code> reads <code class="docutils literal notranslate"><span class="pre">AS_API_KEY</span></code> and
-<code class="docutils literal notranslate"><span class="pre">AS_API_ENDPOINT</span></code> from the environment. Export the variables, or pass values
-explicitly if you prefer.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-</span><span id="line-2"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
-</span><span id="line-3">
-</span><span id="line-4"><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">"AS_API_KEY"</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"YOUR_API_KEY"</span>
-</span><span id="line-5">
-</span><span id="line-6"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">()</span>
+<h2>Create a Client<a class="headerlink" href="#create-a-client" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#create-a-client'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">()</span>
 </span></code></pre></div>
 </div>
-<div class="admonition tip">
-<p class="admonition-title">Tip</p>
-<p>Set <code class="docutils literal notranslate"><span class="pre">AS_API_KEY</span></code> in your shell profile (e.g., <code class="docutils literal notranslate"><span class="pre">.bashrc</span></code> or <code class="docutils literal notranslate"><span class="pre">.zshrc</span></code>)
-to avoid hardcoding credentials in scripts.</p>
-</div>
-<p>Override the endpoint when pointing at staging or a private deployment:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span>
-</span><span id="line-2">    <span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_API_KEY"</span><span class="p">,</span>
-</span><span id="line-3">    <span class="n">endpoint</span><span class="o">=</span><span class="s2">"https://api.atomscale.ai/"</span><span class="p">,</span>
-</span><span id="line-4"><span class="p">)</span>
+<p>The client handles authentication automatically using the <code class="docutils literal notranslate"><span class="pre">AS_API_KEY</span></code>
+environment variable.</p>
+</section>
+<section id="upload-your-first-file">
+<h2>Upload Your First File<a class="headerlink" href="#upload-your-first-file" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#upload-your-first-file'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">client</span><span class="o">.</span><span class="n">upload</span><span class="p">(</span><span class="n">files</span><span class="o">=</span><span class="p">[</span><span class="s2">"my_rheed_video.mp4"</span><span class="p">])</span>
 </span></code></pre></div>
 </div>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>Never commit API keys to version control. Use environment variables or a
-secrets manager instead.</p>
+<p>Supported formats: <code class="docutils literal notranslate"><span class="pre">.mp4</span></code>, <code class="docutils literal notranslate"><span class="pre">.imm</span></code>, <code class="docutils literal notranslate"><span class="pre">.png</span></code>, <code class="docutils literal notranslate"><span class="pre">.jpg</span></code>, and XPS data files.</p>
+</section>
+<section id="find-your-data">
+<h2>Find Your Data<a class="headerlink" href="#find-your-data" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#find-your-data'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">results</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">keywords</span><span class="o">=</span><span class="p">[</span><span class="s2">"my_sample"</span><span class="p">])</span>
+</span><span id="line-2"><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="p">[[</span><span class="s2">"Data ID"</span><span class="p">,</span> <span class="s2">"Status"</span><span class="p">,</span> <span class="s2">"Sample Name"</span><span class="p">]])</span>
+</span></code></pre></div>
+</div>
+</section>
+<section id="access-analysis-results">
+<h2>Access Analysis Results<a class="headerlink" href="#access-analysis-results" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#access-analysis-results'"><span>#</span></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">analysed</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">"Data ID"</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">())</span>
+</span><span id="line-2">
+</span><span id="line-3"><span class="c1"># Get timeseries data (intensity, strain, etc.)</span>
+</span><span id="line-4"><span class="n">df</span> <span class="o">=</span> <span class="n">analysed</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">timeseries_data</span>
+</span><span id="line-5"><span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+</span></code></pre></div>
 </div>
 </section>
 <section id="next-steps">
-<h2>Next steps<a class="headerlink" href="#next-steps" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#next-steps'"><span>#</span></a></h2>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
+<h2>Next Steps<a class="headerlink" href="#next-steps" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#next-steps'"><span>#</span></a></h2>
 <ul class="simple">
-<li><p><a class="reference internal" href="upload-data.html"><span class="doc">Upload Data</span></a> – Upload RHEED videos, images, or XPS files</p></li>
-<li><p><a class="reference internal" href="search-data.html"><span class="doc">Search the Catalogue</span></a> – Find items in the catalogue</p></li>
-<li><p><a class="reference internal" href="inspect-results.html"><span class="doc">Inspect Analysis Results</span></a> – Explore results and plots</p></li>
+<li><p><a class="reference internal" href="upload-files.html"><span class="doc">Upload Files</span></a> - Upload RHEED videos, images, or XPS files</p></li>
+<li><p><a class="reference internal" href="stream-rheed.html"><span class="doc">Stream RHEED Video</span></a> - Stream live RHEED from your instrument</p></li>
+<li><p><a class="reference internal" href="stream-timeseries.html"><span class="doc">Stream Instrument Data</span></a> - Stream instrument sensor data (temperature, pressure)</p></li>
+<li><p><a class="reference internal" href="search-and-download.html"><span class="doc">Search and Download</span></a> - Find and download processed data</p></li>
 </ul>
-</div>
 </section>
 </section>
 </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">
 <div class="mr-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="index.html">
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="../index.html">
 <svg class="mr-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="15 18 9 12 15 6"></polyline>
 </svg>
-        User Guides
+        Atomscale Python SDK
       </a>
 </div>
 <div class="ml-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="upload-data.html">
-        Upload Data
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="upload-files.html">
+        Upload Files
         <svg class="ml-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="9 18 15 12 9 6"></polyline>
 </svg>
@@ -205,10 +228,13 @@ secrets manager instead.</p>
 </div></div><aside class="hidden text-sm xl:block" id="right-sidebar">
 <div class="sticky top-16 -mt-10 max-h-[calc(100vh-5rem)] overflow-y-auto pt-6 space-y-2"><p class="font-medium">On this page</p>
 <ul>
-<li><a :data-current="activeSection === '#prerequisites'" class="reference internal" href="#prerequisites">Prerequisites</a></li>
-<li><a :data-current="activeSection === '#install-the-client'" class="reference internal" href="#install-the-client">Install the client</a></li>
-<li><a :data-current="activeSection === '#create-a-client'" class="reference internal" href="#create-a-client">Create a client</a></li>
-<li><a :data-current="activeSection === '#next-steps'" class="reference internal" href="#next-steps">Next steps</a></li>
+<li><a :data-current="activeSection === '#install'" class="reference internal" href="#install">Install</a></li>
+<li><a :data-current="activeSection === '#get-your-api-key'" class="reference internal" href="#get-your-api-key">Get Your API Key</a></li>
+<li><a :data-current="activeSection === '#create-a-client'" class="reference internal" href="#create-a-client">Create a Client</a></li>
+<li><a :data-current="activeSection === '#upload-your-first-file'" class="reference internal" href="#upload-your-first-file">Upload Your First File</a></li>
+<li><a :data-current="activeSection === '#find-your-data'" class="reference internal" href="#find-your-data">Find Your Data</a></li>
+<li><a :data-current="activeSection === '#access-analysis-results'" class="reference internal" href="#access-analysis-results">Access Analysis Results</a></li>
+<li><a :data-current="activeSection === '#next-steps'" class="reference internal" href="#next-steps">Next Steps</a></li>
 </ul>
 </div>
 </aside>

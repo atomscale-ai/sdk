@@ -102,17 +102,24 @@
 
     <div class="relative overflow-hidden md:overflow-auto my-4 md:my-0 h-[calc(100vh-8rem)] md:h-auto">
       <div class="overflow-y-auto h-full w-full relative pr-6"><nav class="table w-full min-w-full my-6 lg:my-8">
-  <ul>
-<li class="toctree-l1"><a class="reference internal" href="../guides/index.html">User Guides</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../guides/quickstart.html">Quickstart</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../guides/upload-data.html">Upload Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../guides/search-data.html">Search the Catalogue</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../guides/inspect-results.html">Inspect Analysis Results</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../guides/stream-rheed.html">Stream RHEED Video</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../guides/poll-timeseries.html">Poll Time Series Updates</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../guides/poll-trajectory.html">Poll Similarity Trajectory</a></li>
+  <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../guides/quickstart.html">Quickstart</a></li>
 </ul>
-</li>
+<p class="caption" role="heading"><span class="caption-text">Send Data to Atomscale</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../guides/upload-files.html">Upload Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/stream-rheed.html">Stream RHEED Video</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/stream-timeseries.html">Stream Instrument Data</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Retrieve Results</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../guides/search-and-download.html">Search and Download</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/analysis-results.html">Analysis Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../guides/monitor-live.html">Monitor Live Results</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Reference</span></p>
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="../modules.html">Project Modules</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
@@ -120,7 +127,19 @@
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.client.html">atomscale.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.polling.html">atomscale.timeseries.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../_autosummary/atomscale.timeseries.registry.html">atomscale.timeseries.registry</a></li>
@@ -175,10 +194,10 @@
 <li><a href="atomscale/results/xps.html">atomscale.results.xps</a></li>
 <li><a href="atomscale/similarity/polling.html">atomscale.similarity.polling</a></li>
 <li><a href="atomscale/similarity/provider.html">atomscale.similarity.provider</a></li>
-<li><a href="atomscale/streaming/rheed_stream.html">atomscale.streaming.rheed_stream</a></li>
 <li><a href="atomscale/timeseries/polling.html">atomscale.timeseries.polling</a></li>
 <li><a href="atomscale/timeseries/provider.html">atomscale.timeseries.provider</a></li>
 <li><a href="atomscale/timeseries/registry.html">atomscale.timeseries.registry</a></li>
+<li><a href="builtins.html">builtins</a></li>
 </ul>
     </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">
 </div></div>
