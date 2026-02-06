@@ -1,4 +1,5 @@
-# polling.py
+"""Polling utilities for timeseries data updates."""
+
 from __future__ import annotations
 
 import asyncio

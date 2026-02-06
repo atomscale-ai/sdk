@@ -1,3 +1,5 @@
+"""Main client for interacting with the Atomscale API."""
+
 from __future__ import annotations
 
 import os
@@ -902,3 +904,84 @@ class Client(BaseClient):
                     fut.result()
                     if master_task is not None:
                         progress.update(master_task, advance=1, refresh=True)
+
+    # -------------------------------------------------------------------------
+    # Growth Instrument Management
+    # -------------------------------------------------------------------------
+
+    def list_growth_instruments(self) -> list[dict[str, Any]]:
+        """List all growth instruments accessible by the user.
+
+        Returns instruments within the user's organization.
+
+        Returns:
+            list[dict]: List of instruments with keys including:
+                - synth_source_id (int): Unique instrument ID
+                - source_name (str): Display name
+                - synth_source_type (str): Instrument type (mbe, cvd, etc.)
+                - source_manufacturer (str | None): Manufacturer name
+                - source_model (str | None): Model name
+
+        Example:
+            >>> instruments = client.list_growth_instruments()
+            >>> for inst in instruments:
+            ...     print(f"{inst['synth_source_id']}: {inst['source_name']}")
+        """
+        result = self._get(sub_url="instruments/synthesis")
+        return result if result else []
+
+    def create_growth_instrument(
+        self,
+        label: str,
+        name: str,
+        instrument_type: Literal["mbe", "cvd", "pvd", "sputter", "ald", "pld"],
+        serial_id: str | None = None,
+    ) -> int:
+        """Create a new growth instrument.
+
+        Args:
+            label: Display name for the instrument (e.g., "Main MBE").
+            name: Manufacturer and model (e.g., "Veeco GEN10").
+            instrument_type: Type of instrument.
+            serial_id: Optional serial number or identifier.
+
+        Returns:
+            int: The synth_source_id of the created instrument.
+
+        Example:
+            >>> instrument_id = client.create_growth_instrument(
+            ...     label="Main MBE",
+            ...     name="Veeco GEN10",
+            ...     instrument_type="mbe",
+            ...     serial_id="SN-12345",
+            ... )
+        """
+        body = {
+            "label": label,
+            "name": name,
+            "type": instrument_type,
+            "serial_id": serial_id,
+        }
+        result = self._post_or_put(
+            method="POST",
+            sub_url="instruments/synthesis",
+            body=body,
+        )
+        return result["synth_source_id"]
+
+    def delete_growth_instrument(self, synth_source_id: int) -> None:
+        """Delete a growth instrument.
+
+        Args:
+            synth_source_id: ID of the instrument to delete.
+
+        Raises:
+            ClientError: If the instrument is not found or not accessible.
+
+        Example:
+            >>> client.delete_growth_instrument(synth_source_id=42)
+        """
+        self._delete(
+            sub_url="instruments/synthesis",
+            params={"synthesis_instrument_ids": synth_source_id},
+        )

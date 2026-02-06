@@ -1,3 +1,5 @@
+"""Utility functions for coordinate transforms and graph operations."""
+
 import os
 import re
 import unicodedata

@@ -1,5 +1,5 @@
 Atomscale Python SDK
-===================
+====================
 
 |testing-badge| |tag-badge| |python-badge| |license-badge|
 
@@ -15,52 +15,88 @@ Atomscale Python SDK
    :target: https://github.com/atomscale-ai/sdk/blob/main/LICENSE
    :alt: License: MPL 2.0
 
-``atomscale`` is the Python SDK for the Atomscale platform. Use these docs to
-install the client, move data, and integrate streaming or polling workflows.
-The material is split into:
-
-* Task-focused guides that mirror the published notebooks.
-* Auto-generated API references pulled directly from the source.
-
-If you need help from a human, open an issue on
-`GitHub <https://github.com/atomscale-ai/sdk>`_ or email
-support@atomscale.ai.
-
-Features
---------
-
-- Unified :class:`atomscale.client.Client` for uploads, catalogue search, and downloads.
-- Streaming helpers for live RHEED capture via push or generator-style interfaces.
-- Fine-grained search filters for IDs, data types, lifecycle states, and time bounds.
-- Rich result objects exposing timeseries, diffraction graphs, and processed videos.
-- Polling utilities for synchronous, threaded, or async consumption of updates.
+The ``atomscale`` package connects your Python code to the Atomscale platform
+for RHEED analysis, XPS processing, and instrument data management.
 
 Installation
 ------------
 
 .. code-block:: bash
 
-  pip install atomscale
+   pip install atomscale
 
-Much of the functionality of the package requires an API key. It can be provided using
-the ``AS_API_KEY`` environment variable before creating a :class:`~atomscale.client.Client`,
-or passed in directly when constructing the client in your code.
+Set your API key (from Profile > Account Management in the web app):
 
-.. note::
+.. code-block:: bash
 
-   The package was renamed from ``atomicds``. Importing ``atomicds`` still
-   works for backward compatibility but emits a :class:`DeprecationWarning`
-   and internally depends on the ``atomscale`` package.
+   export AS_API_KEY="your-api-key"
+
+Quick Example
+-------------
+
+.. code-block:: python
+
+   from atomscale import Client
+
+   client = Client()
+
+   # Upload a RHEED video for analysis
+   client.upload(files=["growth_001.mp4"])
+
+   # Find your data
+   results = client.search(keywords=["GaN"])
+
+   # Get analysis results
+   analysed = client.get(results["Data ID"].to_list())
+   print(analysed[0].timeseries_data)
+
+What Can You Do?
+----------------
+
+.. list-table::
+   :widths: 25 75
+   :header-rows: 0
+
+   * - **Send data**
+     - Upload files or stream live RHEED/instrument data to Atomscale
+   * - **Get results**
+     - Search the catalogue, download processed videos, access analysis data
+   * - **Monitor live**
+     - Poll for real-time updates during active streaming sessions
+
+Guides
+------
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Getting Started
+
+   guides/quickstart
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Send Data to Atomscale
+
+   guides/upload-files
+   guides/stream-rheed
+   guides/stream-timeseries
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Retrieve Results
+
+   guides/search-and-download
+   guides/analysis-results
+   guides/monitor-live
 
 .. toctree::
    :maxdepth: 2
+   :caption: API Reference
 
-   guides/index
    modules
 
-Indices and tables
-------------------
+Support
+-------
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+- **Issues**: `GitHub <https://github.com/atomscale-ai/sdk>`_
+- **Email**: support@atomscale.ai
