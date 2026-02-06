@@ -51,7 +51,6 @@ class RHEEDStreamer:
         Returns:
             The data_id for this stream.
         """
-        ...
     def run(
         self,
         data_id: str,
@@ -94,7 +93,6 @@ class TimeseriesStreamer:
             points_per_chunk: Expected points per chunk for array positioning.
             verbosity: Logging verbosity (0-4). Higher = more detail.
         """
-        ...
 
     def initialize(
         self,
@@ -124,7 +122,6 @@ class TimeseriesStreamer:
         Returns:
             The data_id for this stream.
         """
-        ...
 
     def push(
         self,
@@ -147,7 +144,6 @@ class TimeseriesStreamer:
             values: Measured values corresponding to timestamps.
             units: Optional units for the values (e.g., "C", "mbar").
         """
-        ...
 
     def push_multi(
         self,
@@ -169,7 +165,6 @@ class TimeseriesStreamer:
             ...     "pressure": {"timestamps": [0.0, 0.1], "values": [1.0, 1.1]},
             ... })
         """
-        ...
 
     def run(
         self,
@@ -189,7 +184,6 @@ class TimeseriesStreamer:
             data_iter: Iterator yielding (timestamps, values) tuples.
             units: Optional units for the values.
         """
-        ...
 
     def finalize(self, data_id: str) -> None:
         """Finalize the stream, marking it as complete.
@@ -200,4 +194,3 @@ class TimeseriesStreamer:
         Args:
             data_id: Stream identifier from initialize().
         """
-        ...
