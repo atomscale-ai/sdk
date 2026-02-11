@@ -64,7 +64,8 @@ def test_include_org_search(client: Client):
 
 def test_data_ids_search(client: Client):
     user_data = client.search(include_organization_data=False)
-    data_ids = list(user_data["Data ID"].values)
+    # Keep request size bounded when this test runs against live catalogue data.
+    data_ids = list(user_data["Data ID"].values)[:20]
     data = client.search(data_ids=data_ids)
     assert len(data["Data ID"].values) == len(data_ids)
 
