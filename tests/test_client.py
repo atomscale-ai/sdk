@@ -133,7 +133,9 @@ def test_get(client: Client):
             for include_org in (False, True):
                 try:
                     data = client.search(  # type: ignore[arg-type]
-                        data_type=alias, include_organization_data=include_org
+                        data_type=alias,
+                        include_organization_data=include_org,
+                        status="success",
                     )
 
                 except ClientError:
