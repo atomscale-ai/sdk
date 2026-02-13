@@ -47,6 +47,7 @@ def test_generic_search(client: Client):
             "Sample Notes Last Updated",
             "Project ID",
             "Project Name",
+            "sha256",
         ]
     )
     assert not len(set(orig_data.keys().values) - column_names)

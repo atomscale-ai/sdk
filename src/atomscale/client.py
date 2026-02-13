@@ -156,6 +156,7 @@ class Client(BaseClient):
             "workspaces": "Workspaces",
             "project_ids": "Project ID",
             "project_names": "Project Name",
+            "sha3_256": "sha256",
         }
 
         columns_to_drop = [
@@ -207,6 +208,7 @@ class Client(BaseClient):
             "Tags",
             "Owner",
             "Workspaces",
+            "sha256",
         ]
         ordered_cols = [col for col in desired_order if col in catalogue.columns] + [
             col for col in catalogue.columns if col not in desired_order
