@@ -47,7 +47,7 @@ dev = [
   "pytest-httpserver",
   "pytest-cov",
   "pytest-order",
-  "pytest-dependency",
+  "pytest-dependency>=0.6.1",
   "pytest-asyncio",
   "ruff>=0.9.0",
   "ty",
