@@ -8,6 +8,7 @@ from .rheed_video import RHEEDVideoResult
 from .similarity_trajectory import SimilarityTrajectoryResult
 from .unknown import UnknownResult
 from .xps import XPSResult
+from .xrd import XRDResult
 
 __all__ = [
     "MetrologyResult",
@@ -22,5 +23,6 @@ __all__ = [
     "SimilarityTrajectoryResult",
     "UnknownResult",
     "XPSResult",
+    "XRDResult",
     "_get_rheed_image_result",
 ]

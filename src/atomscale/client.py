@@ -20,6 +20,7 @@ from atomscale.results import (
     RHEEDVideoResult,
     UnknownResult,
     XPSResult,
+    XRDResult,
     _get_rheed_image_result,
 )
 from atomscale.results.group import PhysicalSampleResult, ProjectResult
@@ -552,6 +553,7 @@ class Client(BaseClient):
         data_id: str,
         data_type: Literal[
             "xps",
+            "xrd",
             "photoluminescence",
             "pl",
             "raman",
@@ -570,20 +572,35 @@ class Client(BaseClient):
         | XPSResult
         | PhotoluminescenceResult
         | RamanResult
+        | XRDResult
         | UnknownResult
         | None
     ):
         if data_type == "xps":
-            result: dict = self._get(sub_url=f"xps/{data_id}")  # type: ignore  # noqa: PGH003
+            result: dict = self._get(sub_url=f"xps/{data_id}") or {}  # type: ignore  # noqa: PGH003
 
             return XPSResult(
                 data_id=data_id,
-                xps_id=result["xps_id"],
-                binding_energies=result["binding_energies"],
-                intensities=result["intensities"],
-                predicted_composition=result["predicted_composition"],
-                detected_peaks=result["detected_peaks"],
-                elements_manually_set=bool(result["set_elements"]),
+                xps_id=result.get("xps_id"),
+                binding_energies=result.get("binding_energies", []),
+                intensities=result.get("intensities", []),
+                predicted_composition=result.get("predicted_composition", {}),
+                detected_peaks=result.get("detected_peaks", {}),
+                elements_manually_set=bool(result.get("set_elements", False)),
+            )
+
+        if data_type == "xrd":
+            result = self._get(sub_url=f"xrd/{data_id}") or {}  # type: ignore  # noqa: PGH003
+            return XRDResult(
+                data_id=data_id,
+                xrd_id=result.get("id"),
+                two_theta=result.get("two_theta", []),
+                intensities=result.get("intensities", []),
+                detected_peaks=result.get("detected_peaks", []),
+                wavelength_angstrom=result.get("wavelength_angstrom", 1.5406),
+                two_theta_unit=result.get("two_theta_unit", "degrees"),
+                spectral_metadata=result.get("spectral_metadata", {}),
+                last_updated=result.get("last_updated"),
             )
 
         if data_type in ("photoluminescence", "pl"):
