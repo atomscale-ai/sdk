@@ -72,6 +72,7 @@ class Client(BaseClient):
             "rheed_stationary",
             "rheed_rotating",
             "xps",
+            "xrd",
             "photoluminescence",
             "pl",
             "raman",
@@ -103,7 +104,7 @@ class Client(BaseClient):
             data_ids (str | list[str] | None): Data ID or list of data IDs. Defaults to None.
             physical_sample_ids (str | list[str] | None): Physical sample ID or list of IDs. Defaults to None.
             project_ids (str | list[str] | None): Project ID or list of IDs. Defaults to None.
-            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "photoluminescence", "raman", "all"]): Type of data. Defaults to "all".
+            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "xrd", "photoluminescence", "raman", "all"]): Type of data. Defaults to "all".
             status (Literal["success", "pending", "error", "running", "all"]): Analyzed status of the data. Defaults to "all".
             growth_length (tuple[int | None, int | None]): Minimum and maximum values of the growth length in seconds.
                 Defaults to (None, None) which will include all non-video data.
@@ -225,6 +226,7 @@ class Client(BaseClient):
         RHEEDVideoResult
         | RHEEDImageResult
         | XPSResult
+        | XRDResult
         | PhotoluminescenceResult
         | RamanResult
         | UnknownResult
@@ -235,7 +237,7 @@ class Client(BaseClient):
             data_ids (str | list[str]): Data ID or list of data IDs from the data catalogue to obtain analyzed results for.
 
         Returns:
-            list[atomscale.results.RHEEDVideoResult | atomscale.results.RHEEDImageResult | atomscale.results.XPSResult]:
+            list[atomscale.results.RHEEDVideoResult | atomscale.results.RHEEDImageResult | atomscale.results.XPSResult | atomscale.results.XRDResult]:
                 List of result objects
 
         """
