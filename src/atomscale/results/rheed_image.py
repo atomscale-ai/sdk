@@ -706,7 +706,7 @@ def _get_rheed_image_result(
             graph_data["fingerprint"],  # type: ignore #noqa: PGH003
             source="start_id",  # type: ignore #noqa: PGH003
             target="end_id",  # type: ignore #noqa: PGH003
-            link="horizontal_distances",  # type: ignore #noqa: PGH003
+            edges="horizontal_distances",  # type: ignore #noqa: PGH003
         )
         if graph_data
         else None
