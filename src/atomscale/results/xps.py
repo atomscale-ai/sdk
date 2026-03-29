@@ -19,6 +19,7 @@ class XPSResult(MSONable):
         predicted_composition: dict[str, float],
         detected_peaks: dict[str, float | str],
         elements_manually_set: bool,
+        collected_datetime: str | None = None,
     ):
         """XPS result
 
@@ -32,6 +33,7 @@ class XPSResult(MSONable):
             detected_peaks (dict[str, float | str]): Mapping with peak transition labels.
             elements_manually_set (bool): Whether the elements represented in the predicted composition
                 were manually specified by the user.
+            collected_datetime (str | None): Datetime when the data was collected.
         """
         self.data_id = data_id
         self.xps_id = xps_id
@@ -40,6 +42,7 @@ class XPSResult(MSONable):
         self.predicted_composition = predicted_composition
         self.detected_peaks = detected_peaks
         self.elements_manually_set = elements_manually_set
+        self.collected_datetime = collected_datetime
 
     def get_plot(self) -> Figure:
         """Get plot of X-ray Photoelectron Spectrum

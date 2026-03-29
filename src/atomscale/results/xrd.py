@@ -21,6 +21,7 @@ class XRDResult(MSONable):
         two_theta_unit: str = "degrees",
         spectral_metadata: dict | None = None,
         last_updated: str | None = None,
+        collected_datetime: str | None = None,
     ):
         """Initializes an XRD result.
 
@@ -35,6 +36,7 @@ class XRDResult(MSONable):
             two_theta_unit: Unit for two_theta values.
             spectral_metadata: Optional file and acquisition metadata.
             last_updated: Optional last-updated timestamp string.
+            collected_datetime: Datetime when the data was collected.
         """
         self.data_id = data_id
         self.xrd_id = xrd_id
@@ -45,6 +47,7 @@ class XRDResult(MSONable):
         self.two_theta_unit = two_theta_unit
         self.spectral_metadata = spectral_metadata or {}
         self.last_updated = last_updated
+        self.collected_datetime = collected_datetime
 
     def get_plot(self) -> Figure:
         """Returns a Matplotlib figure of the XRD pattern."""

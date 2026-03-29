@@ -19,13 +19,16 @@ class OpticalResult(MSONable):
         data_id: UUID | str,
         timeseries_data: DataFrame,
         snapshot_image_data: list[OpticalImageResult] | None,
+        collected_datetime: str | None = None,
     ):
         """Optical result
 
         Args:
             data_id (UUID | str): Data ID for the entry in the data catalogue.
             timeseries_data (DataFrame): Pandas DataFrame with timeseries data associated with the video.
+            collected_datetime (str | None): Datetime when the data was collected.
         """
         self.data_id = data_id
         self.timeseries_data = timeseries_data
         self.snapshot_image_data = snapshot_image_data
+        self.collected_datetime = collected_datetime

@@ -18,6 +18,7 @@ class RamanResult(MSONable):
         intensities: list[float],
         detected_peaks: dict[str, float | str] | None = None,
         last_updated: str | None = None,
+        collected_datetime: str | None = None,
     ):
         """Initializes a Raman result.
 
@@ -28,6 +29,7 @@ class RamanResult(MSONable):
             intensities: Intensity values aligned with `raman_shift`.
             detected_peaks: Optional mapping of peak labels to positions/metadata.
             last_updated: Optional last-updated timestamp string.
+            collected_datetime: Datetime when the data was collected.
         """
         self.data_id = data_id
         self.raman_id = raman_id
@@ -35,6 +37,7 @@ class RamanResult(MSONable):
         self.intensities = intensities
         self.detected_peaks = detected_peaks or {}
         self.last_updated = last_updated
+        self.collected_datetime = collected_datetime
 
     def get_plot(self) -> Figure:
         """Returns a Matplotlib figure of the spectrum."""

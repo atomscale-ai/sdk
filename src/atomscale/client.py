@@ -578,6 +578,8 @@ class Client(BaseClient):
         | UnknownResult
         | None
     ):
+        collected_dt = catalogue_entry.get("collected_datetime") if catalogue_entry else None
+
         if data_type == "xps":
             result: dict = self._get(sub_url=f"xps/{data_id}") or {}  # type: ignore  # noqa: PGH003
 
@@ -589,6 +591,7 @@ class Client(BaseClient):
                 predicted_composition=result.get("predicted_composition", {}),
                 detected_peaks=result.get("detected_peaks", {}),
                 elements_manually_set=bool(result.get("set_elements", False)),
+                collected_datetime=collected_dt,
             )
 
         if data_type == "xrd":
@@ -603,6 +606,7 @@ class Client(BaseClient):
                 two_theta_unit=result.get("two_theta_unit", "degrees"),
                 spectral_metadata=result.get("spectral_metadata", {}),
                 last_updated=result.get("last_updated"),
+                collected_datetime=collected_dt,
             )
 
         if data_type in ("photoluminescence", "pl"):
@@ -621,6 +625,7 @@ class Client(BaseClient):
                 intensities=result.get("intensities", []),
                 detected_peaks=result.get("detected_peaks", {}),
                 last_updated=result.get("last_updated"),
+                collected_datetime=collected_dt,
             )
 
         if data_type == "raman":
@@ -632,10 +637,14 @@ class Client(BaseClient):
                 intensities=result.get("intensities", []),
                 detected_peaks=result.get("detected_peaks", {}),
                 last_updated=result.get("last_updated"),
+                collected_datetime=collected_dt,
             )
 
         if data_type == "rheed_image":
-            return _get_rheed_image_result(self, data_id)
+            result_obj = _get_rheed_image_result(self, data_id)
+            if result_obj is not None:
+                result_obj.collected_datetime = collected_dt
+            return result_obj
 
         if data_type in [
             "rheed_stationary",
@@ -665,6 +674,7 @@ class Client(BaseClient):
                 upload_dt = catalogue_entry.get("upload_datetime")
                 if upload_dt:
                     result_obj.upload_datetime = upload_dt
+            result_obj.collected_datetime = collected_dt
             return result_obj
 
         # Fallback for unknown/unsupported data types
@@ -672,6 +682,7 @@ class Client(BaseClient):
             data_id=data_id,
             data_type=data_type,
             catalogue_entry=catalogue_entry,
+            collected_datetime=collected_dt,
         )
 
     def upload(self, files: list[str | BinaryIO]):
