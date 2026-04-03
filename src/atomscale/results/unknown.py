@@ -18,12 +18,14 @@ class UnknownResult(MSONable):
         data_id: UUID | str,
         data_type: str | None,
         catalogue_entry: dict[str, Any] | None = None,
+        collected_datetime: str | None = None,
     ) -> None:
         self.data_id = data_id
         self.data_type = data_type
         # keep a shallow copy so later mutation of the source entry doesn't
         # affect the stored snapshot
         self.catalogue_entry = dict(catalogue_entry or {})
+        self.collected_datetime = collected_datetime
 
     def summary(self) -> dict[str, Any]:
         """Return a lightweight summary of catalogue fields if present."""

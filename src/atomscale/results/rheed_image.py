@@ -32,6 +32,7 @@ class RHEEDImageResult(MSONable):
         mask: NDArray | None,
         pattern_graph: Graph | None,
         metadata: dict | None = None,
+        collected_datetime: str | None = None,
     ):
         """RHEED image result
 
@@ -42,6 +43,7 @@ class RHEEDImageResult(MSONable):
             mask (NDArray | None): Array containing binary segmentation mask.
             pattern_graph (Graph | None): NetworkX Graph object for the extracted diffraction pattern.
             metadata (dict): Generic metadata (e.g. timestamp, cluster_id, etc...).
+            collected_datetime (str | None): Datetime when the data was collected.
         """
 
         metadata = metadata or {}
@@ -52,6 +54,7 @@ class RHEEDImageResult(MSONable):
         self.mask = mask
         self.pattern_graph = pattern_graph
         self.metadata = metadata
+        self.collected_datetime = collected_datetime
 
     def get_plot(
         self,
@@ -703,7 +706,7 @@ def _get_rheed_image_result(
             graph_data["fingerprint"],  # type: ignore #noqa: PGH003
             source="start_id",  # type: ignore #noqa: PGH003
             target="end_id",  # type: ignore #noqa: PGH003
-            link="horizontal_distances",  # type: ignore #noqa: PGH003
+            edges="horizontal_distances",  # type: ignore #noqa: PGH003
         )
         if graph_data
         else None

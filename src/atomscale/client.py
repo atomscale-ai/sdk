@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -20,6 +21,7 @@ from atomscale.results import (
     RHEEDVideoResult,
     UnknownResult,
     XPSResult,
+    XRDResult,
     _get_rheed_image_result,
 )
 from atomscale.results.group import PhysicalSampleResult, ProjectResult
@@ -71,6 +73,7 @@ class Client(BaseClient):
             "rheed_stationary",
             "rheed_rotating",
             "xps",
+            "xrd",
             "photoluminescence",
             "pl",
             "raman",
@@ -102,7 +105,7 @@ class Client(BaseClient):
             data_ids (str | list[str] | None): Data ID or list of data IDs. Defaults to None.
             physical_sample_ids (str | list[str] | None): Physical sample ID or list of IDs. Defaults to None.
             project_ids (str | list[str] | None): Project ID or list of IDs. Defaults to None.
-            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "photoluminescence", "raman", "all"]): Type of data. Defaults to "all".
+            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "xrd", "photoluminescence", "raman", "all"]): Type of data. Defaults to "all".
             status (Literal["success", "pending", "error", "running", "all"]): Analyzed status of the data. Defaults to "all".
             growth_length (tuple[int | None, int | None]): Minimum and maximum values of the growth length in seconds.
                 Defaults to (None, None) which will include all non-video data.
@@ -172,10 +175,10 @@ class Client(BaseClient):
 
         if "projects" in catalogue.columns:
             catalogue["project_ids"] = catalogue["projects"].apply(
-                lambda projects: (projects[0].get("id") if projects else None)
+                lambda projects: projects[0].get("id") if projects else None
             )
             catalogue["project_names"] = catalogue["projects"].apply(
-                lambda projects: (projects[0].get("name") if projects else None)
+                lambda projects: projects[0].get("name") if projects else None
             )
 
         if len(catalogue):
@@ -224,6 +227,7 @@ class Client(BaseClient):
         RHEEDVideoResult
         | RHEEDImageResult
         | XPSResult
+        | XRDResult
         | PhotoluminescenceResult
         | RamanResult
         | UnknownResult
@@ -234,7 +238,7 @@ class Client(BaseClient):
             data_ids (str | list[str]): Data ID or list of data IDs from the data catalogue to obtain analyzed results for.
 
         Returns:
-            list[atomscale.results.RHEEDVideoResult | atomscale.results.RHEEDImageResult | atomscale.results.XPSResult]:
+            list[atomscale.results.RHEEDVideoResult | atomscale.results.RHEEDImageResult | atomscale.results.XPSResult | atomscale.results.XRDResult]:
                 List of result objects
 
         """
@@ -294,10 +298,10 @@ class Client(BaseClient):
 
         if "projects" in samples.columns:
             samples["project_id"] = samples["projects"].apply(
-                lambda projects: (projects[0].get("id") if projects else None)
+                lambda projects: projects[0].get("id") if projects else None
             )
             samples["project_name"] = samples["projects"].apply(
-                lambda projects: (projects[0].get("name") if projects else None)
+                lambda projects: projects[0].get("name") if projects else None
             )
 
         if "detail_notes" in samples.columns:
@@ -305,9 +309,9 @@ class Client(BaseClient):
                 lambda note: note.get("content") if isinstance(note, dict) else None
             )
             samples["detail_note_last_updated"] = samples["detail_notes"].apply(
-                lambda note: note.get("last_updated")
-                if isinstance(note, dict)
-                else None
+                lambda note: (
+                    note.get("last_updated") if isinstance(note, dict) else None
+                )
             )
             samples["detail_note_last_updated"] = samples[
                 "detail_note_last_updated"
@@ -315,13 +319,15 @@ class Client(BaseClient):
 
         if "target_material" in samples.columns:
             samples["target_material"] = samples["target_material"].apply(
-                lambda tm: {
-                    k: tm.get(k)
-                    for k in ("substrate", "sample_name")
-                    if isinstance(tm, dict) and k in tm
-                }
-                if isinstance(tm, dict)
-                else tm
+                lambda tm: (
+                    {
+                        k: tm.get(k)
+                        for k in ("substrate", "sample_name")
+                        if isinstance(tm, dict) and k in tm
+                    }
+                    if isinstance(tm, dict)
+                    else tm
+                )
             )
 
         columns_to_drop = [
@@ -390,9 +396,9 @@ class Client(BaseClient):
                 lambda note: note.get("content") if isinstance(note, dict) else None
             )
             projects["detail_note_last_updated"] = projects["detail_note"].apply(
-                lambda note: note.get("last_updated")
-                if isinstance(note, dict)
-                else None
+                lambda note: (
+                    note.get("last_updated") if isinstance(note, dict) else None
+                )
             )
             projects["detail_note_last_updated"] = projects[
                 "detail_note_last_updated"
@@ -552,6 +558,7 @@ class Client(BaseClient):
         data_id: str,
         data_type: Literal[
             "xps",
+            "xrd",
             "photoluminescence",
             "pl",
             "raman",
@@ -570,20 +577,41 @@ class Client(BaseClient):
         | XPSResult
         | PhotoluminescenceResult
         | RamanResult
+        | XRDResult
         | UnknownResult
         | None
     ):
+        collected_dt = (
+            catalogue_entry.get("collected_datetime") if catalogue_entry else None
+        )
+
         if data_type == "xps":
-            result: dict = self._get(sub_url=f"xps/{data_id}")  # type: ignore  # noqa: PGH003
+            result: dict = self._get(sub_url=f"xps/{data_id}") or {}  # type: ignore  # noqa: PGH003
 
             return XPSResult(
                 data_id=data_id,
-                xps_id=result["xps_id"],
-                binding_energies=result["binding_energies"],
-                intensities=result["intensities"],
-                predicted_composition=result["predicted_composition"],
-                detected_peaks=result["detected_peaks"],
-                elements_manually_set=bool(result["set_elements"]),
+                xps_id=result.get("xps_id"),
+                binding_energies=result.get("binding_energies", []),
+                intensities=result.get("intensities", []),
+                predicted_composition=result.get("predicted_composition", {}),
+                detected_peaks=result.get("detected_peaks", {}),
+                elements_manually_set=bool(result.get("set_elements", False)),
+                collected_datetime=collected_dt,
+            )
+
+        if data_type == "xrd":
+            result = self._get(sub_url=f"xrd/{data_id}") or {}  # type: ignore  # noqa: PGH003
+            return XRDResult(
+                data_id=data_id,
+                xrd_id=result.get("id"),
+                two_theta=result.get("two_theta", []),
+                intensities=result.get("intensities", []),
+                detected_peaks=result.get("detected_peaks", []),
+                wavelength_angstrom=result.get("wavelength_angstrom", 1.5406),
+                two_theta_unit=result.get("two_theta_unit", "degrees"),
+                spectral_metadata=result.get("spectral_metadata", {}),
+                last_updated=result.get("last_updated"),
+                collected_datetime=collected_dt,
             )
 
         if data_type in ("photoluminescence", "pl"):
@@ -602,6 +630,7 @@ class Client(BaseClient):
                 intensities=result.get("intensities", []),
                 detected_peaks=result.get("detected_peaks", {}),
                 last_updated=result.get("last_updated"),
+                collected_datetime=collected_dt,
             )
 
         if data_type == "raman":
@@ -613,10 +642,14 @@ class Client(BaseClient):
                 intensities=result.get("intensities", []),
                 detected_peaks=result.get("detected_peaks", {}),
                 last_updated=result.get("last_updated"),
+                collected_datetime=collected_dt,
             )
 
         if data_type == "rheed_image":
-            return _get_rheed_image_result(self, data_id)
+            result_obj = _get_rheed_image_result(self, data_id)
+            if result_obj is not None:
+                result_obj.collected_datetime = collected_dt
+            return result_obj
 
         if data_type in [
             "rheed_stationary",
@@ -646,6 +679,7 @@ class Client(BaseClient):
                 upload_dt = catalogue_entry.get("upload_datetime")
                 if upload_dt:
                     result_obj.upload_datetime = upload_dt
+            result_obj.collected_datetime = collected_dt
             return result_obj
 
         # Fallback for unknown/unsupported data types
@@ -653,15 +687,79 @@ class Client(BaseClient):
             data_id=data_id,
             data_type=data_type,
             catalogue_entry=catalogue_entry,
+            collected_datetime=collected_dt,
         )
 
-    def upload(self, files: list[str | BinaryIO]):
-        """Upload and process files
+    _UUID_RE = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
+    )
+
+    def _resolve_physical_sample(self, physical_sample: str) -> tuple[str, str]:
+        """Resolve a physical sample name or UUID to (id, name).
+
+        If UUID: look up existing sample, error if not found.
+        If name: case-insensitive match, auto-create if not found.
+
+        Returns:
+            Tuple of (physical_sample_id, physical_sample_name).
+        """
+        physical_sample = physical_sample.strip()
+        if not physical_sample:
+            raise ClientError("physical_sample cannot be empty")
+
+        samples_df = self.list_physical_samples()
+
+        if self._UUID_RE.match(physical_sample):
+            match = samples_df[samples_df["Physical Sample ID"] == physical_sample]
+            if match.empty:
+                raise ClientError(
+                    f"Physical sample with id '{physical_sample}' not found"
+                )
+            return physical_sample, match.iloc[0]["Physical Sample Name"]
+
+        # Name lookup: case-insensitive exact match
+        names_lower = samples_df["Physical Sample Name"].str.strip().str.lower()
+        mask = names_lower == physical_sample.lower()
+        match = samples_df[mask]
+
+        if not match.empty:
+            return match.iloc[0]["Physical Sample ID"], match.iloc[0][
+                "Physical Sample Name"
+            ]
+
+        # Not found — create a new physical sample
+        resp: dict = self._post_or_put(  # type: ignore  # noqa: PGH003
+            method="POST",
+            sub_url="physical_samples/",
+            body={"name": physical_sample},
+        )
+        return resp["id"], physical_sample
+
+    def upload(
+        self,
+        files: list[str | BinaryIO],
+        physical_sample: str | None = None,
+    ) -> list[str]:
+        """Upload and process files.
 
         Args:
-            files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from `open`.
+            files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from ``open``.
+            physical_sample (str | None): Physical sample name or UUID to link uploads to.
+                If a name is given and no matching sample exists, one is created automatically.
+
+        Returns:
+            list[str]: Data IDs assigned to the uploaded files.
         """
         chunk_size = 40 * 1024 * 1024  # 40 MiB
+
+        # Resolve physical sample before uploading so we fail fast on bad input
+        metadata_body: dict[str, str] | None = None
+        if physical_sample is not None:
+            ps_id, ps_name = self._resolve_physical_sample(physical_sample)
+            metadata_body = {
+                "physical_sample_id": ps_id,
+                "physical_sample_name": ps_name,
+            }
 
         # Check to make sure list is valid and get pre-signed URL nums
         file_data = []
@@ -697,7 +795,7 @@ class Client(BaseClient):
             file_info: dict[
                 Literal["num_urls", "file_name", "file_size", "file_path"], int | str
             ],
-        ):
+        ) -> str:
             url_data: list[dict[str, str | int]] = self._post_or_put(
                 method="POST",
                 sub_url="data_entries/raw_data/staged/upload_urls/",
@@ -706,6 +804,7 @@ class Client(BaseClient):
                     "num_parts": file_info["num_urls"],
                     "staging_type": "core",
                 },
+                body=metadata_body,
             )  # type: ignore  # noqa: PGH003
 
             # Iterate through data structure above and upload file using multi-part S3 urls. Multithread appropriately.
@@ -783,6 +882,9 @@ class Client(BaseClient):
                     },
                 )
 
+            return str(first_part["data_id"])
+
+        data_ids: list[str] = []
         main_task = None
         file_count = len(file_data)
         with _make_progress(self.mute_bars, False) as progress:
@@ -803,9 +905,11 @@ class Client(BaseClient):
                     for file_info in file_data
                 }
                 for future in as_completed(futures):
-                    future.result()  # raise early if anything went wrong
+                    data_ids.append(future.result())
                     if main_task is not None:
                         progress.update(main_task, advance=1, refresh=True)
+
+        return data_ids
 
     def download_videos(
         self,
