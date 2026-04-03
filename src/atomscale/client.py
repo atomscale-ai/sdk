@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -174,10 +175,10 @@ class Client(BaseClient):
 
         if "projects" in catalogue.columns:
             catalogue["project_ids"] = catalogue["projects"].apply(
-                lambda projects: (projects[0].get("id") if projects else None)
+                lambda projects: projects[0].get("id") if projects else None
             )
             catalogue["project_names"] = catalogue["projects"].apply(
-                lambda projects: (projects[0].get("name") if projects else None)
+                lambda projects: projects[0].get("name") if projects else None
             )
 
         if len(catalogue):
@@ -297,10 +298,10 @@ class Client(BaseClient):
 
         if "projects" in samples.columns:
             samples["project_id"] = samples["projects"].apply(
-                lambda projects: (projects[0].get("id") if projects else None)
+                lambda projects: projects[0].get("id") if projects else None
             )
             samples["project_name"] = samples["projects"].apply(
-                lambda projects: (projects[0].get("name") if projects else None)
+                lambda projects: projects[0].get("name") if projects else None
             )
 
         if "detail_notes" in samples.columns:
@@ -308,9 +309,9 @@ class Client(BaseClient):
                 lambda note: note.get("content") if isinstance(note, dict) else None
             )
             samples["detail_note_last_updated"] = samples["detail_notes"].apply(
-                lambda note: note.get("last_updated")
-                if isinstance(note, dict)
-                else None
+                lambda note: (
+                    note.get("last_updated") if isinstance(note, dict) else None
+                )
             )
             samples["detail_note_last_updated"] = samples[
                 "detail_note_last_updated"
@@ -318,13 +319,15 @@ class Client(BaseClient):
 
         if "target_material" in samples.columns:
             samples["target_material"] = samples["target_material"].apply(
-                lambda tm: {
-                    k: tm.get(k)
-                    for k in ("substrate", "sample_name")
-                    if isinstance(tm, dict) and k in tm
-                }
-                if isinstance(tm, dict)
-                else tm
+                lambda tm: (
+                    {
+                        k: tm.get(k)
+                        for k in ("substrate", "sample_name")
+                        if isinstance(tm, dict) and k in tm
+                    }
+                    if isinstance(tm, dict)
+                    else tm
+                )
             )
 
         columns_to_drop = [
@@ -393,9 +396,9 @@ class Client(BaseClient):
                 lambda note: note.get("content") if isinstance(note, dict) else None
             )
             projects["detail_note_last_updated"] = projects["detail_note"].apply(
-                lambda note: note.get("last_updated")
-                if isinstance(note, dict)
-                else None
+                lambda note: (
+                    note.get("last_updated") if isinstance(note, dict) else None
+                )
             )
             projects["detail_note_last_updated"] = projects[
                 "detail_note_last_updated"
@@ -578,7 +581,9 @@ class Client(BaseClient):
         | UnknownResult
         | None
     ):
-        collected_dt = catalogue_entry.get("collected_datetime") if catalogue_entry else None
+        collected_dt = (
+            catalogue_entry.get("collected_datetime") if catalogue_entry else None
+        )
 
         if data_type == "xps":
             result: dict = self._get(sub_url=f"xps/{data_id}") or {}  # type: ignore  # noqa: PGH003
@@ -685,13 +690,76 @@ class Client(BaseClient):
             collected_datetime=collected_dt,
         )
 
-    def upload(self, files: list[str | BinaryIO]):
-        """Upload and process files
+    _UUID_RE = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
+    )
+
+    def _resolve_physical_sample(self, physical_sample: str) -> tuple[str, str]:
+        """Resolve a physical sample name or UUID to (id, name).
+
+        If UUID: look up existing sample, error if not found.
+        If name: case-insensitive match, auto-create if not found.
+
+        Returns:
+            Tuple of (physical_sample_id, physical_sample_name).
+        """
+        physical_sample = physical_sample.strip()
+        if not physical_sample:
+            raise ClientError("physical_sample cannot be empty")
+
+        samples_df = self.list_physical_samples()
+
+        if self._UUID_RE.match(physical_sample):
+            match = samples_df[samples_df["Physical Sample ID"] == physical_sample]
+            if match.empty:
+                raise ClientError(
+                    f"Physical sample with id '{physical_sample}' not found"
+                )
+            return physical_sample, match.iloc[0]["Physical Sample Name"]
+
+        # Name lookup: case-insensitive exact match
+        names_lower = samples_df["Physical Sample Name"].str.strip().str.lower()
+        mask = names_lower == physical_sample.lower()
+        match = samples_df[mask]
+
+        if not match.empty:
+            return match.iloc[0]["Physical Sample ID"], match.iloc[0][
+                "Physical Sample Name"
+            ]
+
+        # Not found — create a new physical sample
+        resp: dict = self._post_or_put(  # type: ignore  # noqa: PGH003
+            method="POST",
+            sub_url="physical_samples/",
+            body={"name": physical_sample},
+        )
+        return resp["id"], physical_sample
+
+    def upload(
+        self,
+        files: list[str | BinaryIO],
+        physical_sample: str | None = None,
+    ) -> list[str]:
+        """Upload and process files.
 
         Args:
-            files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from `open`.
+            files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from ``open``.
+            physical_sample (str | None): Physical sample name or UUID to link uploads to.
+                If a name is given and no matching sample exists, one is created automatically.
+
+        Returns:
+            list[str]: Data IDs assigned to the uploaded files.
         """
         chunk_size = 40 * 1024 * 1024  # 40 MiB
+
+        # Resolve physical sample before uploading so we fail fast on bad input
+        metadata_body: dict[str, str] | None = None
+        if physical_sample is not None:
+            ps_id, ps_name = self._resolve_physical_sample(physical_sample)
+            metadata_body = {
+                "physical_sample_id": ps_id,
+                "physical_sample_name": ps_name,
+            }
 
         # Check to make sure list is valid and get pre-signed URL nums
         file_data = []
@@ -727,7 +795,7 @@ class Client(BaseClient):
             file_info: dict[
                 Literal["num_urls", "file_name", "file_size", "file_path"], int | str
             ],
-        ):
+        ) -> str:
             url_data: list[dict[str, str | int]] = self._post_or_put(
                 method="POST",
                 sub_url="data_entries/raw_data/staged/upload_urls/",
@@ -736,6 +804,7 @@ class Client(BaseClient):
                     "num_parts": file_info["num_urls"],
                     "staging_type": "core",
                 },
+                body=metadata_body,
             )  # type: ignore  # noqa: PGH003
 
             # Iterate through data structure above and upload file using multi-part S3 urls. Multithread appropriately.
@@ -813,6 +882,9 @@ class Client(BaseClient):
                     },
                 )
 
+            return str(first_part["data_id"])
+
+        data_ids: list[str] = []
         main_task = None
         file_count = len(file_data)
         with _make_progress(self.mute_bars, False) as progress:
@@ -833,9 +905,11 @@ class Client(BaseClient):
                     for file_info in file_data
                 }
                 for future in as_completed(futures):
-                    future.result()  # raise early if anything went wrong
+                    data_ids.append(future.result())
                     if main_task is not None:
                         progress.update(main_task, advance=1, refresh=True)
+
+        return data_ids
 
     def download_videos(
         self,
