@@ -357,8 +357,10 @@ class Client(BaseClient):
                 "similar_neighbor_ids",
             }
             rows = [
-                {**{k: v for k, v in r.items() if k not in _drop},
-                 "label": r.get("label_category")}
+                {
+                    **{k: v for k, v in r.items() if k not in _drop},
+                    "label": r.get("label_category"),
+                }
                 for r in records
             ]
             return DataFrame(rows)
