@@ -328,15 +328,13 @@ class Client(BaseClient):
             data_ids[i : i + chunk_size] for i in range(0, len(data_ids), chunk_size)
         ]
 
-        # Backend endpoint and response key are named "anomalies"; SDK surfaces this
-        # as "changepoints" for user-facing consistency.
         for chunk in chunks:
             payload: dict | None = self._get(  # type: ignore[assignment]
-                sub_url="anomalies/",
+                sub_url="changepoints/",
                 params={"data_ids": chunk, "latest_only": latest_only},
             )
             if payload:
-                records.extend(payload.get("anomalies", []))
+                records.extend(payload.get("changepoints", []))
 
         if detection_method is not None:
             records = [
