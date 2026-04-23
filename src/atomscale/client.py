@@ -15,6 +15,7 @@ from pandas import DataFrame
 from atomscale.core import BaseClient, ClientError, _FileSlice
 from atomscale.core.utils import _make_progress, normalize_path
 from atomscale.results import (
+    ChangepointResult,
     PhotoluminescenceResult,
     RamanResult,
     RHEEDImageResult,
@@ -288,6 +289,80 @@ class Client(BaseClient):
                 progress,
                 progress_description="Obtaining data results",
             )
+
+    def get_changepoints(
+        self,
+        data_ids: str | list[str],
+        latest_only: bool = True,
+        detection_method: (
+            Literal["forecasting", "clustering", "intensity_profile"] | None
+        ) = "intensity_profile",
+        severity: Literal["info", "warning", "critical"] | None = "critical",
+        as_dataframe: bool = True,
+    ) -> DataFrame | list[ChangepointResult]:
+        """Get changepoint detection records for one or more data IDs.
+
+        Args:
+            data_ids (str | list[str]): Data ID or list of data IDs from the data catalogue.
+            latest_only (bool): If True (default), only return changepoints from the most
+                recently completed detection run for each (data_id, detection_method) pair.
+                If False, return all changepoints from every historical run.
+            detection_method (str | None): Filter to a single detection method. One of
+                "forecasting", "clustering", "intensity_profile". Defaults to "intensity_profile".
+                Pass None to include all detection methods.
+            severity (str | None): Filter to a single severity level. One of "info",
+                "warning", "critical". Defaults to "critical". Pass None to include all
+                severities.
+            as_dataframe (bool): If True (default) return a pandas DataFrame. If False
+                return a list of ChangepointResult objects.
+
+        Returns:
+            DataFrame | list[ChangepointResult]: Changepoint records matching the filters.
+        """
+        if isinstance(data_ids, str):
+            data_ids = [data_ids]
+
+        records: list[dict] = []
+        chunk_size = 100
+        chunks = [
+            data_ids[i : i + chunk_size] for i in range(0, len(data_ids), chunk_size)
+        ]
+
+        # Backend endpoint and response key are named "anomalies"; SDK surfaces this
+        # as "changepoints" for user-facing consistency.
+        for chunk in chunks:
+            payload: dict | None = self._get(  # type: ignore[assignment]
+                sub_url="anomalies/",
+                params={"data_ids": chunk, "latest_only": latest_only},
+            )
+            if payload:
+                records.extend(payload.get("anomalies", []))
+
+        if detection_method is not None:
+            records = [
+                r for r in records if r.get("detection_method") == detection_method
+            ]
+        if severity is not None:
+            records = [r for r in records if r.get("severity") == severity]
+
+        if as_dataframe:
+            # Keep only the label itself; drop label provenance/metadata fields.
+            _drop = {
+                "label_category",
+                "label_notes",
+                "label_source",
+                "label_confidence",
+                "labeled_at",
+                "labeled_by_user_id",
+                "similar_neighbor_ids",
+            }
+            rows = [
+                {**{k: v for k, v in r.items() if k not in _drop},
+                 "label": r.get("label_category")}
+                for r in records
+            ]
+            return DataFrame(rows)
+        return [ChangepointResult.from_api(r) for r in records]
 
     def list_physical_samples(self) -> DataFrame:
         """List physical samples available to the user."""
