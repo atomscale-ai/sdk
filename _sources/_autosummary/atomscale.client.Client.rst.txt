@@ -21,6 +21,7 @@ atomscale.client.Client
       ~Client.delete_growth_instrument
       ~Client.download_videos
       ~Client.get
+      ~Client.get_changepoints
       ~Client.get_physical_sample
       ~Client.get_project
       ~Client.list_growth_instruments
