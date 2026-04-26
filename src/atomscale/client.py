@@ -222,7 +222,7 @@ class Client(BaseClient):
         return catalogue[ordered_cols]
 
     def get(
-        self, data_ids: str | list[str]
+        self, data_ids: str | list[str], mute_progress: bool | None = None
     ) -> list[
         RHEEDVideoResult
         | RHEEDImageResult
@@ -281,7 +281,8 @@ class Client(BaseClient):
         # sort by submission order; this is important to match external labels
         kwargs_list = sorted(kwargs_list, key=lambda x: data_ids.index(x["data_id"]))
 
-        with _make_progress(self.mute_bars, False) as progress:
+        mute = mute_progress if mute_progress is not None else self.mute_bars
+        with _make_progress(mute, False) as progress:
             return self._multi_thread(
                 self._get_result_data,
                 kwargs_list,
