@@ -19,6 +19,7 @@ from atomscale.core import BaseClient, ClientError, _FileSlice
 from atomscale.core.utils import _make_progress, normalize_path
 from atomscale.results import (
     ChangepointResult,
+    EllipsometryResult,
     PhotoluminescenceResult,
     RamanResult,
     RHEEDImageResult,
@@ -265,6 +266,7 @@ class Client(BaseClient):
         | XRDResult
         | PhotoluminescenceResult
         | RamanResult
+        | EllipsometryResult
         | UnknownResult
     ]:
         """Get analyzed data results
@@ -678,6 +680,7 @@ class Client(BaseClient):
             "metrology",
             "recipe",
             "optical",
+            "ellipsometry",
         ],
         catalogue_entry: dict[str, Any] | None = None,
     ) -> (
@@ -687,6 +690,7 @@ class Client(BaseClient):
         | PhotoluminescenceResult
         | RamanResult
         | XRDResult
+        | EllipsometryResult
         | UnknownResult
         | None
     ):
@@ -767,6 +771,7 @@ class Client(BaseClient):
             "metrology",
             "recipe",
             "optical",
+            "ellipsometry",
         ]:
             # recipe timeseries are served from the metrology endpoint; reuse that provider.
             timeseries_type = (

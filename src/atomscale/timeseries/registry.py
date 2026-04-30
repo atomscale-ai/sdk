@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from atomscale.similarity.provider import SimilarityTrajectoryProvider
 
+from .ellipsometry import EllipsometryProvider
 from .metrology import MetrologyProvider
 from .optical import OpticalProvider
 from .provider import TimeseriesProvider
@@ -13,6 +14,7 @@ _PROVIDER_CLASSES: dict[str, type[TimeseriesProvider]] = {
     RHEEDProvider.TYPE: RHEEDProvider,
     OpticalProvider.TYPE: OpticalProvider,
     MetrologyProvider.TYPE: MetrologyProvider,
+    EllipsometryProvider.TYPE: EllipsometryProvider,
     SimilarityTrajectoryProvider.TYPE: SimilarityTrajectoryProvider,
 }
 
