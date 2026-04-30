@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import re
+import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -11,6 +13,7 @@ from typing import Any, BinaryIO, Literal
 
 import pandas as pd
 from pandas import DataFrame
+from requests.exceptions import RequestException
 
 from atomscale.core import BaseClient, ClientError, _FileSlice
 from atomscale.core.utils import _make_progress, normalize_path
@@ -30,6 +33,37 @@ from atomscale.timeseries.align import align_timeseries
 from atomscale.timeseries.registry import get_provider
 
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
+
+_RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+
+def _retry_client_call(
+    fn: Callable[..., Any],
+    *args: Any,
+    attempts: int = 4,
+    base_delay: float = 0.5,
+    max_delay: float = 10.0,
+    **kwargs: Any,
+) -> Any:
+    """Retry a `_post_or_put`/`_get` style call on transient errors.
+
+    Retries on `ClientError` whose `status_code` is in `_RETRYABLE_STATUSES`
+    and on transport-level `RequestException`s (connection drops,
+    chunked-encoding errors, etc.). Uses exponential backoff capped at
+    `max_delay`. Re-raises the last exception when `attempts` is exhausted.
+    """
+    for i in range(attempts):
+        try:
+            return fn(*args, **kwargs)
+        except ClientError as exc:
+            if exc.status_code not in _RETRYABLE_STATUSES or i == attempts - 1:
+                raise
+        except RequestException:
+            if i == attempts - 1:
+                raise
+        time.sleep(min(base_delay * (2**i), max_delay))
+    # Defensive: loop above always returns or raises, but appease type checkers.
+    raise RuntimeError("unreachable")  # pragma: no cover
 
 
 class Client(BaseClient):
@@ -871,7 +905,8 @@ class Client(BaseClient):
                 Literal["num_urls", "file_name", "file_size", "file_path"], int | str
             ],
         ) -> str:
-            url_data: list[dict[str, str | int]] = self._post_or_put(
+            url_data: list[dict[str, str | int]] = _retry_client_call(
+                self._post_or_put,
                 method="POST",
                 sub_url="data_entries/raw_data/staged/upload_urls/",
                 params={
@@ -946,7 +981,8 @@ class Client(BaseClient):
                     {"ETag": entry["ETag"], "PartNumber": i + 1}
                     for i, entry in enumerate(etag_data)
                 ]
-                self._post_or_put(
+                _retry_client_call(
+                    self._post_or_put,
                     method="POST",
                     sub_url="data_entries/raw_data/staged/upload_urls/complete/",
                     params={"staging_type": "core"},

@@ -78,7 +78,9 @@ class BaseClient:
                 return None
 
             raise ClientError(
-                f"Problem retrieving data from {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}"
+                f"Problem retrieving data from {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}",
+                status_code=response.status_code,
+                response_text=response.text,
             )
         if len(response.content) == 0:
             return None
@@ -142,7 +144,9 @@ class BaseClient:
                 return None
 
             raise ClientError(
-                f"Problem sending data to {sub_url}. HTTP Error {response.status_code}: {response.text}"
+                f"Problem sending data to {sub_url}. HTTP Error {response.status_code}: {response.text}",
+                status_code=response.status_code,
+                response_text=response.text,
             )
 
         if return_headers:
@@ -182,7 +186,9 @@ class BaseClient:
                 return None
 
             raise ClientError(
-                f"Problem deleting data at {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}"
+                f"Problem deleting data at {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}",
+                status_code=response.status_code,
+                response_text=response.text,
             )
         if len(response.content) == 0:
             return None
@@ -294,8 +300,11 @@ class BaseClient:
             total=max_retry_num,
             read=max_retry_num,
             connect=max_retry_num,
+            status=max_retry_num,
+            backoff_factor=0.5,
             respect_retry_after_header=True,
-            status_forcelist=[429, 504, 502],
+            status_forcelist=[429, 500, 502, 503, 504],
+            raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry)
         session.mount("http://", adapter)
@@ -306,3 +315,13 @@ class BaseClient:
 
 class ClientError(Exception):
     """Generic error thrown by the Atomic Data Sciences API client"""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        response_text: str | None = None,
+    ):
+        super().__init__(message)
+        self.status_code = status_code
+        self.response_text = response_text
