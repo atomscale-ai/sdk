@@ -1106,7 +1106,7 @@ class Client(BaseClient):
             master_task = None
             if not progress.disable:
                 master_task = progress.add_task(
-                    "Downloading videos…",
+                    "Downloading files…",
                     total=len(data_ids),
                     show_percent=False,
                     show_total=True,
