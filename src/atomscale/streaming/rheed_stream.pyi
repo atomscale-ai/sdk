@@ -45,8 +45,11 @@ class RHEEDStreamer:
                 case-insensitively against existing samples, or a new sample
                 is created if no match is found.
             project_id: UUID of the associated project. When provided along
-                with physical_sample, the project's tracking_physical_sample_id
-                is automatically updated to link the sample for growth monitoring.
+                with physical_sample, the sample is added to the project's
+                tracking list and membership via
+                POST /projects/{id}/configuration/tracking_samples. The sample
+                is also marked as the project's active tracking sample for
+                growth monitoring.
 
         Returns:
             The data_id for this stream.
@@ -115,9 +118,12 @@ class TimeseriesStreamer:
                 existing sample. If a name is provided, it is matched
                 case-insensitively against existing samples, or a new sample
                 is created if no match is found.
-            project_id: UUID of the associated project. When provided along with
-                physical_sample, the project's tracking_physical_sample_id is
-                automatically updated to link the sample for growth monitoring.
+            project_id: UUID of the associated project. When provided along
+                with physical_sample, the sample is added to the project's
+                tracking list and membership via
+                POST /projects/{id}/configuration/tracking_samples. The sample
+                is also marked as the project's active tracking sample for
+                growth monitoring.
 
         Returns:
             The data_id for this stream.

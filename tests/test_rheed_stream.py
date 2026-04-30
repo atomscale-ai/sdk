@@ -219,46 +219,44 @@ class TestRHEEDStreamerInitialize:
 
         assert data_id == expected_data_id
 
-    def test_initialize_updates_project_config_when_physical_sample_and_project_id(
+    def test_initialize_adds_tracking_sample_when_physical_sample_and_project_id(
         self, mock_server_factory
     ):
-        """Verify project configuration is updated with tracking_physical_sample_id.
+        """Verify the sample is added to the project's tracking list.
 
         When both physical_sample and project_id are provided, the SDK should:
         1. POST /rheed/stream/ to create the stream
         2. GET /physical_samples/ to list existing samples
         3. POST /physical_samples/ to create the sample (if not found)
         4. POST /data_entries/physical_sample to link sample to data entry
-        5. GET /projects/ to get current project configuration
-        6. POST /projects/{id}/configuration to update tracking_physical_sample_id
+        5. POST /projects/{id}/configuration/tracking_samples to add the
+           sample to the project's tracking list (and membership), and mark
+           it as the active tracking sample.
+
+        This replaces an older flow that did GET /projects/ followed by
+        POST /projects/{id}/configuration to update tracking_physical_sample_id.
+        That flow was fragile because the backend strictly re-validated the
+        entire GrowthMonitoringConfiguration on POST and rejected on any
+        pre-existing config quirk (e.g. references to deleted samples). The
+        new endpoint patches only the tracking-sample fields and tolerates
+        existing config quirks.
         """
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
         project_uuid = "550e8400-e29b-41d4-a716-446655440000"
         sample_uuid = "660e8400-e29b-41d4-a716-446655440001"
 
-        # Configure routes for the multi-request flow
         # Note: /physical_samples/ is used for both GET (returns list) and POST (returns created sample)
         # The mock returns the same response for both, which works because:
         # - GET expects a list - we return a list with the sample already existing
         # - This skips the POST /physical_samples/ call since sample already exists
         routes = json.dumps({
             "__routes__": True,
-            "__max_requests__": 6,
+            "__max_requests__": 4,
             "/rheed/stream/": '"test-data-id-999"',
             "/physical_samples/": json.dumps([{"id": sample_uuid, "name": "Test Sample"}]),
             "/data_entries/physical_sample": '"OK"',
-            "/projects/": json.dumps([{
-                "id": project_uuid,
-                "name": "Test Project",
-                "configuration": {
-                    "api_configuration": {
-                        "reference_group_type": "categorical",
-                        "onboarding_complete": True
-                    }
-                }
-            }]),
-            f"/projects/{project_uuid}/configuration": '"OK"',
+            f"/projects/{project_uuid}/configuration/tracking_samples": '"OK"',
         })
 
         server = mock_server_factory(routes)
