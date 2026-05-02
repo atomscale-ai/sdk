@@ -2,8 +2,9 @@ use anyhow::{anyhow, Context};
 use chrono::{Local, Utc};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyIterator, PyModule};
+use pyo3::types::{PyAny, PyIterator, PyModule, PyTuple};
 use reqwest::Client;
+use std::sync::Mutex;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
@@ -26,6 +27,23 @@ use upload::{
     numpy_frames_to_flat, package_to_zarr_bytes, post_for_presigned, put_bytes_presigned,
     FrameChunkMetadata,
 };
+
+/// Pure deterministic timestamp math. Lifted out of `RHEEDStreamer` so it can
+/// be unit-tested without spinning up an HTTP/runtime/python stack.
+///
+/// Given a stream's base UTC timestamp (ms), the cumulative frames sent
+/// BEFORE the new chunk, and declared fps, returns the chunk's `start_unix_ms_utc`.
+#[inline]
+fn chunk_start_from_base(base_ms: i64, cumulative_frames_before: u64, fps: f64) -> i64 {
+    base_ms + ((cumulative_frames_before as f64 / fps) * 1000.0) as i64
+}
+
+/// Compute the `end_unix_ms_utc` for a chunk of `n` frames starting at `start_ms`
+/// at declared fps.
+#[inline]
+fn chunk_end(start_ms: i64, n: usize, fps: f64) -> i64 {
+    start_ms + ((n as f64 / fps) * 1000.0) as i64
+}
 
 /// RHEEDStreamer(api_key: str, endpoint: Optional[str] = None)
 ///
@@ -65,6 +83,12 @@ pub struct RHEEDStreamer {
     rotating: Option<bool>,
     fps: Option<f64>,
     chunk_size: Option<usize>,
+
+    // Stream-wide timestamp state. Captured on first chunk so subsequent chunks
+    // derive their start_unix_ms_utc from (base + cumulative_frames / fps).
+    // This decouples chunk metadata timestamps from iterator wall-clock pacing.
+    base_unix_ms_utc: Mutex<Option<i64>>,
+    cumulative_frames: Mutex<u64>,
 }
 
 #[pymethods]
@@ -111,6 +135,8 @@ impl RHEEDStreamer {
             rotating: None,
             chunk_size: None,
             fps: None,
+            base_unix_ms_utc: Mutex::new(None),
+            cumulative_frames: Mutex::new(0),
         })
     }
 
@@ -236,15 +262,27 @@ impl RHEEDStreamer {
         self.rotating = Some(rotations_per_min > 0.0);
         self.chunk_size = Some(chunk_size);
 
+        // Reset stream-wide timestamp state so a reused streamer starts fresh.
+        if let Ok(mut base) = self.base_unix_ms_utc.lock() {
+            *base = None;
+        }
+        if let Ok(mut cum) = self.cumulative_frames.lock() {
+            *cum = 0;
+        }
+
         Ok(data_id)
     }
 
-    /// run(self, data_id: str, frames_iter: Iterable[numpy.ndarray]) -> None
+    /// run(self, data_id: str, frames_iter: Iterable) -> None
     ///
-    /// **Generator/iterator mode.** Iterates `frames_iter`, where each yielded item is either:
+    /// **Generator/iterator mode.** Iterates `frames_iter`, where each yielded item is one of:
     ///
-    /// - `(N, H, W)` `numpy.ndarray[uint8]`: a chunk of `N` grayscale frames, or
+    /// - `(N, H, W)` `numpy.ndarray[uint8]`: a chunk of `N` grayscale frames
     /// - `(H, W)` `numpy.ndarray[uint8]`: a single frame (treated as `N = 1`)
+    /// - `(frames, capture_start_ms_utc)` 2-tuple: frames as above + an explicit
+    ///   capture-start timestamp (int milliseconds since UNIX epoch, UTC). Use
+    ///   this when you have hardware/OS-level timestamps for each chunk
+    ///   (camera trigger time, OS monotonic-to-utc conversion, etc.).
     ///
     /// For each yielded item, the method:
     /// 1) Converts to flat `uint8` bytes,
@@ -255,15 +293,26 @@ impl RHEEDStreamer {
     /// This method **blocks until all spawned tasks complete**. After `run(...)` returns,
     /// call `finalize(data_id)` to mark the stream complete on the server.
     ///
+    /// Timestamps
+    /// ----------
+    /// When the caller does not supply a `capture_start_ms_utc`, this method derives
+    /// each chunk's `[start_unix_ms_utc, end_unix_ms_utc]` from a single base timestamp
+    /// (set on the first yield) plus the cumulative frame count divided by the declared
+    /// fps. This makes chunk metadata reflect the declared cadence regardless of
+    /// iterator-yield latency. If your generator pacing or processing introduces
+    /// jitter relative to declared fps, supply explicit timestamps for accuracy.
+    ///
     /// Args:
     ///     data_id (str): The stream data ID returned by `initialize(...)`.
-    ///     frames_iter (Iterable[numpy.ndarray]): Python iterable/generator of `(N,H,W)` or `(H,W)` uint8 arrays.
+    ///     frames_iter (Iterable): Python iterable/generator of `(N,H,W)` / `(H,W)`
+    ///         uint8 arrays, or `(frames, capture_start_ms_utc)` tuples.
     ///
     /// Returns:
     ///     None
     ///
     /// Raises:
     ///     RuntimeError: If any packaging/join/upload step fails.
+    ///     ValueError: If a yielded tuple's second element is not an int.
     ///
     /// See also:
     ///     finalize(data_id)
@@ -283,8 +332,29 @@ impl RHEEDStreamer {
             let t0 = Instant::now();
             let obj = it?; // next yielded item
 
+            // Yielded item may be: frames | (frames, capture_start_ms_utc)
+            // The latter form lets the caller stamp each chunk with its actual
+            // capture time (e.g. from a hardware clock) so chunk metadata
+            // reflects real cadence even if iterator pacing is jittery.
+            let (frames_obj, caller_start_ms): (Bound<PyAny>, Option<i64>) =
+                if let Ok(t) = obj.downcast::<PyTuple>() {
+                    if t.len() == 2 {
+                        let frames = t.get_item(0)?;
+                        let ts = t.get_item(1)?.extract::<i64>().map_err(|e| {
+                            PyValueError::new_err(format!(
+                                "second element of yielded tuple must be int (ms UTC): {e}"
+                            ))
+                        })?;
+                        (frames, Some(ts))
+                    } else {
+                        (obj.clone(), None)
+                    }
+                } else {
+                    (obj.clone(), None)
+                };
+
             // Prepare (under GIL): convert to (flat bytes, N,H,W)
-            let (flat, n, h, w) = numpy_frames_to_flat(obj)?;
+            let (flat, n, h, w) = numpy_frames_to_flat(frames_obj)?;
             let flat_len = flat.len();
 
             debug!(
@@ -292,8 +362,14 @@ impl RHEEDStreamer {
                 t0.elapsed(), flat_len
             );
 
-            // Build metadata (timing handled externally overall; we keep 'now + duration' per chunk)
-            let now_ms_utc = Utc::now().timestamp_millis();
+            // Pick start timestamp: caller-provided wins; otherwise derive from
+            // the stream's base + cumulative frames so absolute timestamps
+            // reflect declared fps regardless of iterator pacing.
+            let start_unix_ms_utc =
+                caller_start_ms.unwrap_or_else(|| self.derive_start_unix_ms_utc(fps));
+            let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
+            self.advance_cumulative_frames(n as u64);
+
             let metadata = FrameChunkMetadata {
                 data_id: data_id.clone(),
                 data_stream: "rheed".to_string(),
@@ -303,8 +379,8 @@ impl RHEEDStreamer {
                 avg_frame_rate: fps,
                 chunk_size,
                 dims: format!("{n},{h},{w}"),
-                start_unix_ms_utc: now_ms_utc,
-                end_unix_ms_utc: now_ms_utc + (((n as f64 / fps) * 1000.0) as i64),
+                start_unix_ms_utc,
+                end_unix_ms_utc,
             };
 
             // Spawn via private helper
@@ -344,7 +420,7 @@ impl RHEEDStreamer {
         Ok(())
     }
 
-    /// push(self, data_id: str, chunk_idx: int, frames: numpy.ndarray) -> None
+    /// push(self, data_id: str, chunk_idx: int, frames: numpy.ndarray, capture_start_ms_utc: Optional[int] = None) -> None
     ///
     /// **Callback mode.** Push a single chunk of frames that you produced externally (e.g., from a
     /// camera callback). Call repeatedly for subsequent chunks.
@@ -353,10 +429,23 @@ impl RHEEDStreamer {
     ///
     /// After your last `push(...)`, call **`finalize(data_id)`** to mark the stream as complete on the server.
     ///
+    /// Timestamps
+    /// ----------
+    /// When `capture_start_ms_utc` is not provided, this method derives each chunk's
+    /// `[start_unix_ms_utc, end_unix_ms_utc]` from a single base timestamp (set on the
+    /// first push) plus the cumulative frame count divided by the declared fps. This
+    /// makes chunk metadata reflect the declared cadence regardless of when push() is
+    /// called by the caller. If you push chunks out of order, or if your capture
+    /// cadence is jittery relative to declared fps, pass explicit timestamps.
+    ///
     /// Args:
     ///     data_id (str): The remote data identifier returned by `initialize(...)`.
     ///     chunk_idx (int): Zero-based index of this chunk (used in Zarr shard path).
     ///     frames (numpy.ndarray): `(N,H,W)` or `(H,W)` grayscale frames as `uint8`.
+    ///     capture_start_ms_utc (Optional[int]): Capture-start timestamp in milliseconds
+    ///         since UNIX epoch (UTC). Pass when you have a real capture-time clock
+    ///         (camera trigger, OS monotonic-to-utc conversion). When None, derived
+    ///         from declared fps + cumulative frames.
     ///
     /// Returns:
     ///     None
@@ -366,16 +455,30 @@ impl RHEEDStreamer {
     ///
     /// See also:
     ///     finalize(data_id)
-    #[pyo3(signature = (data_id, chunk_idx, frames))]
-    #[pyo3(text_signature = "(data_id, chunk_idx, frames)")]
-    fn push(&self, data_id: String, chunk_idx: usize, frames: Bound<PyAny>) -> PyResult<()> {
+    #[pyo3(signature = (data_id, chunk_idx, frames, capture_start_ms_utc=None))]
+    #[pyo3(text_signature = "(data_id, chunk_idx, frames, capture_start_ms_utc=None)")]
+    fn push(
+        &self,
+        data_id: String,
+        chunk_idx: usize,
+        frames: Bound<PyAny>,
+        capture_start_ms_utc: Option<i64>,
+    ) -> PyResult<()> {
         let (rotating, fps, chunk_size) = self.cfg()?;
 
         // Prepare (under GIL)
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
-        // Build metadata (same model as generator mode)
-        let now_ms_utc = Utc::now().timestamp_millis();
+        // Pick start timestamp: caller-provided wins; otherwise derive from
+        // the stream's base + cumulative frames. For push() out-of-order
+        // chunks without explicit timestamps will produce contiguous-but-
+        // not-necessarily-correct timestamps — callers that push out of
+        // order should pass capture_start_ms_utc.
+        let start_unix_ms_utc =
+            capture_start_ms_utc.unwrap_or_else(|| self.derive_start_unix_ms_utc(fps));
+        let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
+        self.advance_cumulative_frames(n as u64);
+
         let metadata = FrameChunkMetadata {
             data_id: data_id.clone(),
             data_stream: "rheed".to_string(),
@@ -385,8 +488,8 @@ impl RHEEDStreamer {
             avg_frame_rate: fps,
             chunk_size,
             dims: format!("{n},{h},{w}"),
-            start_unix_ms_utc: now_ms_utc,
-            end_unix_ms_utc: now_ms_utc + (((n as f64 / fps) * 1000.0) as i64),
+            start_unix_ms_utc,
+            end_unix_ms_utc,
         };
 
         // Spawn via private helper; detach by dropping the handle
@@ -434,6 +537,14 @@ impl RHEEDStreamer {
             .block_on(final_fut)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
+        // Clear stream-wide timestamp state so the streamer can be reused.
+        if let Ok(mut base) = self.base_unix_ms_utc.lock() {
+            *base = None;
+        }
+        if let Ok(mut cum) = self.cumulative_frames.lock() {
+            *cum = 0;
+        }
+
         Ok(())
     }
 }
@@ -460,6 +571,49 @@ impl RHEEDStreamer {
                 PyRuntimeError::new_err("chunk size is not set; call initialize(...).")
             })?,
         ))
+    }
+
+    /// Returns the stream's base wall-clock timestamp in ms, lazily setting it
+    /// to `Utc::now()` on the first call. Subsequent calls return the same value.
+    fn ensure_base_unix_ms_utc(&self) -> i64 {
+        let mut guard = self
+            .base_unix_ms_utc
+            .lock()
+            .expect("base_unix_ms_utc mutex poisoned");
+        match *guard {
+            Some(b) => b,
+            None => {
+                let b = Utc::now().timestamp_millis();
+                *guard = Some(b);
+                b
+            }
+        }
+    }
+
+    /// Returns current cumulative frame count (frames sent before this chunk).
+    fn cumulative_frames(&self) -> u64 {
+        *self
+            .cumulative_frames
+            .lock()
+            .expect("cumulative_frames mutex poisoned")
+    }
+
+    /// Advance cumulative frame counter by `n`.
+    fn advance_cumulative_frames(&self, n: u64) {
+        let mut guard = self
+            .cumulative_frames
+            .lock()
+            .expect("cumulative_frames mutex poisoned");
+        *guard += n;
+    }
+
+    /// Compute deterministic `start_unix_ms_utc` for the next chunk based on
+    /// the stream's base timestamp + cumulative frames consumed so far.
+    /// Used as a fallback when the caller did not provide an explicit timestamp.
+    fn derive_start_unix_ms_utc(&self, fps: f64) -> i64 {
+        let base = self.ensure_base_unix_ms_utc();
+        let cum = self.cumulative_frames();
+        chunk_start_from_base(base, cum, fps)
     }
 
     /// spawn_chunk_upload(self, chunk_idx: int, flat: bytes, n: int, h: int, w: int, metadata: FrameChunkMetadata) -> asyncio.Task
@@ -539,4 +693,72 @@ fn rheed_stream(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RHEEDStreamer>()?;
     m.add_class::<TimeseriesStreamer>()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{chunk_end, chunk_start_from_base};
+
+    /// At declared fps=1, n=5 frames per chunk, three sequential chunks
+    /// should produce contiguous timestamps spanning 5s each.
+    /// This is the regression test for the 2× pacing bug: timestamps must
+    /// reflect declared fps regardless of wall-clock between chunks.
+    #[test]
+    fn timestamps_contiguous_for_sequential_chunks_at_1fps() {
+        let base_ms: i64 = 1_700_000_000_000;
+        let fps: f64 = 1.0;
+        let n: usize = 5;
+
+        let mut cum: u64 = 0;
+        let mut starts = Vec::new();
+        let mut ends = Vec::new();
+        for _ in 0..3 {
+            let start = chunk_start_from_base(base_ms, cum, fps);
+            let end = chunk_end(start, n, fps);
+            starts.push(start);
+            ends.push(end);
+            cum += n as u64;
+        }
+
+        // Each chunk spans n/fps × 1000 = 5000 ms.
+        for (s, e) in starts.iter().zip(ends.iter()) {
+            assert_eq!(e - s, 5000);
+        }
+
+        // Sequential starts grow by exactly 5000 ms; gap between prev.end and
+        // next.start is 0.
+        assert_eq!(starts[1] - ends[0], 0);
+        assert_eq!(starts[2] - ends[1], 0);
+
+        // Total span across 3 chunks = 15000 ms (NOT inflated by pacing).
+        assert_eq!(ends[2] - starts[0], 15_000);
+    }
+
+    /// Confirms higher fps shrinks chunk spans proportionally.
+    #[test]
+    fn span_scales_with_fps() {
+        let base_ms = 1_700_000_000_000;
+
+        let s1 = chunk_start_from_base(base_ms, 0, 2.0);
+        let e1 = chunk_end(s1, 4, 2.0); // 4 frames at 2 fps → 2000 ms span
+        assert_eq!(e1 - s1, 2_000);
+
+        let s2 = chunk_start_from_base(base_ms, 0, 30.0);
+        let e2 = chunk_end(s2, 30, 30.0); // 30 frames at 30 fps → 1000 ms span
+        assert_eq!(e2 - s2, 1_000);
+    }
+
+    /// Confirms that derived `start` advances exactly by `cumulative/fps × 1000`.
+    #[test]
+    fn start_advances_by_cumulative_frames_over_fps() {
+        let base_ms = 0;
+        let fps = 1.0;
+
+        assert_eq!(chunk_start_from_base(base_ms, 0, fps), 0);
+        assert_eq!(chunk_start_from_base(base_ms, 5, fps), 5_000);
+        assert_eq!(chunk_start_from_base(base_ms, 100, fps), 100_000);
+
+        // At 4 fps, 100 frames = 25 seconds.
+        assert_eq!(chunk_start_from_base(base_ms, 100, 4.0), 25_000);
+    }
 }

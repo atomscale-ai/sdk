@@ -34,6 +34,7 @@ class MockServer:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            bufsize=1,  # line-buffered so multi-request output is readable
         )
         # Wait for server to signal it's ready
         ready_line = self._proc.stdout.readline()
@@ -61,6 +62,40 @@ class MockServer:
                     self._captured_body = json.loads(line[5:])
                     break
         return self._captured_body
+
+    def get_captured_requests(
+        self, expected_count: int, timeout_s: float = 10.0
+    ) -> list[tuple[str, str, str]]:
+        """Drain REQUEST lines from the routes-mode server.
+
+        Returns a list of (method, path, body) tuples. Reads up to expected_count
+        lines or until timeout / process exit.
+        """
+        import select
+        import time
+
+        if not self._proc or not self._proc.stdout:
+            return []
+
+        deadline = time.monotonic() + timeout_s
+        requests: list[tuple[str, str, str]] = []
+        while len(requests) < expected_count and time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            ready, _, _ = select.select([self._proc.stdout], [], [], remaining)
+            if not ready:
+                break
+            line = self._proc.stdout.readline()
+            if not line:
+                break
+            if line.startswith("REQUEST:"):
+                # Format: REQUEST:METHOD:PATH:BODY
+                # PATH does not contain colons; BODY (JSON) may. Split on the
+                # first 3 colons to keep BODY intact.
+                parts = line.split(":", 3)
+                if len(parts) == 4:
+                    _, method, path, body = parts
+                    requests.append((method, path, body.rstrip("\n")))
+        return requests
 
     def __enter__(self) -> "MockServer":
         self.start()
@@ -275,3 +310,105 @@ class TestRHEEDStreamerInitialize:
         )
 
         assert data_id == "test-data-id-999"
+
+
+def _streaming_routes_for(port: int) -> str:
+    """Routes-mode mock config for a streaming session.
+
+    The presign endpoint returns a URL pointing at the same mock server's
+    /upload/put route, so the subsequent PUT can succeed in-process.
+    """
+    return json.dumps(
+        {
+            "__routes__": True,
+            "__max_requests__": 50,
+            "/rheed/stream/": '"stream-data-id"',
+            "/data_entries/raw_data/staged/upload_urls/": json.dumps(
+                [{"url": f"http://127.0.0.1:{port}/upload/put"}]
+            ),
+            "/upload/put": '"OK"',
+        }
+    )
+
+
+def _chunk_metadata_from_requests(
+    requests, presign_path="/data_entries/raw_data/staged/upload_urls/"
+):
+    """Filter REQUEST tuples for the presign POSTs and return parsed metadata bodies."""
+    metadatas = []
+    for method, path, body in requests:
+        if method == "POST" and path.startswith(presign_path):
+            if body:
+                metadatas.append(json.loads(body))
+    return metadatas
+
+
+@pytest.fixture
+def streaming_mock_server():
+    """Pre-allocate a port, then start a routes-mode mock that knows its own URL."""
+    port = _get_free_port()
+    server = MockServer(port, _streaming_routes_for(port))
+    server.start()
+    try:
+        yield server
+    finally:
+        server.stop()
+
+
+class TestChunkTimestamps:
+    """Verify chunk metadata `start_unix_ms_utc` / `end_unix_ms_utc` are derived
+    deterministically from declared fps + cumulative frames, and that explicit
+    `capture_start_ms_utc` overrides take precedence.
+
+    Background: previously the SDK stamped `start_unix_ms_utc = Utc::now()` per
+    chunk, which left chunk timestamps at the mercy of iterator/upload pacing.
+    Slow iterators produced inflated global durations (2× when iterator yielded
+    chunks at 2× the declared cadence), which caused downstream analysis to
+    interpret the stream at half the real fps.
+    """
+
+    def _initialize_streamer(self, server, fps=1.0, chunk_size=2):
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        streamer = RHEEDStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        streamer.initialize(fps=fps, rotations_per_min=0.0, chunk_size=chunk_size)
+        return streamer
+
+    def test_push_signature_accepts_capture_start_ms_utc(self):
+        """Verify push() signature includes the new capture_start_ms_utc kwarg."""
+        import inspect
+
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        sig = inspect.signature(RHEEDStreamer.push)
+        params = list(sig.parameters.keys())
+        assert "capture_start_ms_utc" in params
+        assert sig.parameters["capture_start_ms_utc"].default is None
+
+    def test_push_uses_explicit_timestamp_when_provided(self, streaming_mock_server):
+        """push() should respect capture_start_ms_utc when given."""
+        import numpy as np
+
+        streamer = self._initialize_streamer(
+            streaming_mock_server, fps=1.0, chunk_size=2
+        )
+
+        explicit_ts = 1_700_000_000_000
+        # push() is fire-and-forget — does not raise even if subsequent
+        # packaging fails. It dispatches the metadata POST first.
+        streamer.push(
+            "stream-data-id",
+            chunk_idx=0,
+            frames=np.zeros((2, 32, 32), dtype=np.uint8),
+            capture_start_ms_utc=explicit_ts,
+        )
+
+        requests = streaming_mock_server.get_captured_requests(
+            expected_count=2, timeout_s=5
+        )
+        metadatas = _chunk_metadata_from_requests(requests)
+
+        assert len(metadatas) >= 1
+        md = metadatas[0]
+        assert int(md["start_unix_ms_utc"]) == explicit_ts
+        assert int(md["end_unix_ms_utc"]) - explicit_ts == 2000  # n=2, fps=1
