@@ -91,13 +91,13 @@ class Client(BaseClient):
         """
 
         if api_key is None:
-            api_key = os.environ.get("AS_API_KEY")
+            api_key = os.environ.get("AS_API_KEY", os.environ.get("ATOMSCALE_API_KEY"))
 
         if endpoint is None:
             endpoint = os.environ.get("AS_API_ENDPOINT") or "https://api.atomscale.ai/"
 
         if api_key is None:
-            raise ValueError("No valid ADS API key supplied")
+            raise ValueError("No valid Atomscale API key supplied")
 
         self.mute_bars = mute_bars
 
