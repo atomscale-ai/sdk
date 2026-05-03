@@ -74,6 +74,20 @@ fn chunk_end(start_ms: i64, n: usize, fps: f64) -> i64 {
 ///
 /// Raises:
 ///     RuntimeError: If the HTTP client or async runtime cannot be constructed.
+#[pyclass]
+pub struct RHEEDStreamer {
+    api_key: String,
+    endpoint: String,
+    client: Client,
+    rt: Runtime,
+
+    /// Per-`data_id` config + timestamp state. Keyed by the `data_id` returned
+    /// from `initialize(...)`. Concurrent producers for different data_ids do
+    /// not share fps/chunk_size/cumulative_frames state — each stream has its
+    /// own entry, isolated from the others.
+    streams: Mutex<HashMap<String, PerStreamState>>,
+}
+
 /// Per-`data_id` runtime state. One `RHEEDStreamer` instance can service many
 /// concurrent streams (one per data_id); this struct holds the state that must
 /// not be shared across them.
@@ -87,20 +101,6 @@ struct PerStreamState {
     /// metadata in sync with declared fps regardless of caller pacing.
     base_unix_ms_utc: Option<i64>,
     cumulative_frames: u64,
-}
-
-#[pyclass]
-pub struct RHEEDStreamer {
-    api_key: String,
-    endpoint: String,
-    client: Client,
-    rt: Runtime,
-
-    /// Per-`data_id` config + timestamp state. Keyed by the `data_id` returned
-    /// from `initialize(...)`. Concurrent producers for different data_ids do
-    /// not share fps/chunk_size/cumulative_frames state — each stream has its
-    /// own entry, isolated from the others.
-    streams: Mutex<HashMap<String, PerStreamState>>,
 }
 
 #[pymethods]
