@@ -65,10 +65,18 @@ class CaptureHandler(BaseHTTPRequestHandler):
             response_data = self.server.response_data
             print(f"BODY:{body.decode()}", flush=True)
 
-        # Send response
+        # Send response.
+        # `Connection: close` tells reqwest's pool not to reuse this socket
+        # for the next request. Default Python BaseHTTPRequestHandler is
+        # HTTP/1.0, so each connection only handles one request anyway —
+        # but reqwest doesn't know that and will try to pipeline. Without
+        # this header the next pooled request sees a half-closed socket
+        # and fails ("PUT bytes failed" / "connection closed before message
+        # completed"), most reproducibly on Windows.
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", len(response_data))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(response_data.encode())
 
