@@ -7,6 +7,7 @@ import pytest
 from pandas import DataFrame
 
 from atomscale import Client
+from atomscale.client import _RETRYABLE_STATUSES, _retry_client_call
 from atomscale.results import UnknownResult
 from atomscale.core import ClientError
 from .conftest import ResultIDs
@@ -18,7 +19,7 @@ def client():
 
 
 def test_no_api_key():
-    with pytest.raises(ValueError, match="No valid ADS API key supplied"):
+    with pytest.raises(ValueError, match="No valid Atomscale API key supplied"):
         with mock.patch("os.environ.get", return_value=None):
             Client(api_key=None)
 
@@ -242,6 +243,154 @@ def test_upload_rejects_missing_file(tmp_path):
 
     with pytest.raises(ClientError, match="does not exist"):
         client.upload(files=[str(missing_file)])
+
+
+def test_retry_client_call_retries_then_succeeds(monkeypatch):
+    sleeps: list[float] = []
+    monkeypatch.setattr("atomscale.client.time.sleep", lambda d: sleeps.append(d))
+
+    calls = {"n": 0}
+
+    def flaky():
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise ClientError("boom", status_code=502, response_text="bad gateway")
+        return "ok"
+
+    result = _retry_client_call(flaky, attempts=4, base_delay=0.5, max_delay=10.0)
+
+    assert result == "ok"
+    assert calls["n"] == 3
+    # Two retries fired -> two sleeps with exponential backoff.
+    assert sleeps == [0.5, 1.0]
+
+
+def test_retry_client_call_does_not_retry_non_retryable_status(monkeypatch):
+    monkeypatch.setattr("atomscale.client.time.sleep", lambda *_: None)
+    calls = {"n": 0}
+
+    def fn():
+        calls["n"] += 1
+        raise ClientError("nope", status_code=400, response_text="bad request")
+
+    with pytest.raises(ClientError) as exc_info:
+        _retry_client_call(fn, attempts=4)
+
+    assert exc_info.value.status_code == 400
+    assert calls["n"] == 1
+
+
+def test_retry_client_call_gives_up_after_attempts(monkeypatch):
+    monkeypatch.setattr("atomscale.client.time.sleep", lambda *_: None)
+    calls = {"n": 0}
+
+    def fn():
+        calls["n"] += 1
+        raise ClientError("still bad", status_code=502)
+
+    with pytest.raises(ClientError) as exc_info:
+        _retry_client_call(fn, attempts=3)
+
+    assert exc_info.value.status_code == 502
+    assert calls["n"] == 3
+
+
+def test_retry_client_call_retries_request_exceptions(monkeypatch):
+    from requests.exceptions import ConnectionError as RequestsConnectionError
+
+    monkeypatch.setattr("atomscale.client.time.sleep", lambda *_: None)
+    calls = {"n": 0}
+
+    def fn():
+        calls["n"] += 1
+        if calls["n"] < 2:
+            raise RequestsConnectionError("dropped")
+        return "recovered"
+
+    assert _retry_client_call(fn, attempts=3) == "recovered"
+    assert calls["n"] == 2
+
+
+def test_retryable_statuses_include_known_transients():
+    assert {429, 500, 502, 503, 504}.issubset(_RETRYABLE_STATUSES)
+
+
+def test_upload_retries_url_fetch_502(tmp_path, monkeypatch):
+    """upload() should retry the upload_urls/ POST on a transient 502."""
+    monkeypatch.setattr("atomscale.client.time.sleep", lambda *_: None)
+
+    test_file = tmp_path / "small.bin"
+    test_file.write_bytes(b"hello world")
+
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+
+    call_log: list[str] = []
+    post_calls = {"n": 0}
+
+    def fake_post_or_put(method, sub_url, **kwargs):
+        call_log.append(f"{method} {sub_url}")
+        if sub_url == "data_entries/raw_data/staged/upload_urls/":
+            post_calls["n"] += 1
+            if post_calls["n"] == 1:
+                raise ClientError(
+                    "Problem sending data to data_entries/raw_data/staged/upload_urls/. HTTP Error 502: bad gateway",
+                    status_code=502,
+                    response_text="bad gateway",
+                )
+            return [
+                {
+                    "part": 1,
+                    "url": "http://s3.example.com/chunk1",
+                    "data_id": "data-123",
+                    "new_filename": "renamed.bin",
+                    "upload_id": "upload-abc",
+                }
+            ]
+        if sub_url == "data_entries/raw_data/staged/upload_urls/complete/":
+            return {}
+        # Chunk PUTs land here with sub_url="" and base_override=<s3 url>.
+        return {"ETag": "etag-123"}
+
+    def fake_multi_thread(func, kwargs_list, *args, **kwargs):
+        return [func(**kw) for kw in kwargs_list]
+
+    monkeypatch.setattr(client, "_post_or_put", fake_post_or_put)
+    monkeypatch.setattr(client, "_multi_thread", fake_multi_thread)
+
+    data_ids = client.upload(files=[str(test_file)])
+
+    assert data_ids == ["data-123"]
+    assert post_calls["n"] == 2  # one 502, one success
+    # Confirm the complete step ran after the chunk PUTs.
+    assert call_log[-1] == "POST data_entries/raw_data/staged/upload_urls/complete/"
+
+
+def test_upload_surfaces_url_fetch_failure_after_retry_exhaustion(tmp_path, monkeypatch):
+    """upload() should give up after retries are exhausted on the upload_urls/ POST."""
+    monkeypatch.setattr("atomscale.client.time.sleep", lambda *_: None)
+
+    test_file = tmp_path / "small.bin"
+    test_file.write_bytes(b"hello world")
+
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    call_count = {"n": 0}
+
+    def always_502(method, sub_url, **kwargs):
+        call_count["n"] += 1
+        raise ClientError(
+            "Problem sending data to data_entries/raw_data/staged/upload_urls/. HTTP Error 502: bad gateway",
+            status_code=502,
+            response_text="bad gateway",
+        )
+
+    monkeypatch.setattr(client, "_post_or_put", always_502)
+
+    with pytest.raises(ClientError) as exc_info:
+        client.upload(files=[str(test_file)])
+
+    assert exc_info.value.status_code == 502
+    # Default attempts=4 in _retry_client_call.
+    assert call_count["n"] == 4
 
 
 def test_download_videos_missing_metadata(client: Client, tmp_path):

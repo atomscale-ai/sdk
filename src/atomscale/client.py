@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
+import threading
+import time
+import warnings
+from collections.abc import AsyncIterator, Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
@@ -11,15 +16,20 @@ from typing import Any, BinaryIO, Literal
 
 import pandas as pd
 from pandas import DataFrame
+from requests.exceptions import RequestException
 
 from atomscale.core import BaseClient, ClientError, _FileSlice
 from atomscale.core.utils import _make_progress, normalize_path
 from atomscale.results import (
     ChangepointResult,
+    EllipsometryResult,
+    MetrologyResult,
+    OpticalResult,
     PhotoluminescenceResult,
     RamanResult,
     RHEEDImageResult,
     RHEEDVideoResult,
+    SimilarityTrajectoryResult,
     UnknownResult,
     XPSResult,
     XRDResult,
@@ -30,6 +40,37 @@ from atomscale.timeseries.align import align_timeseries
 from atomscale.timeseries.registry import get_provider
 
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
+
+_RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+
+def _retry_client_call(
+    fn: Callable[..., Any],
+    *args: Any,
+    attempts: int = 4,
+    base_delay: float = 0.5,
+    max_delay: float = 10.0,
+    **kwargs: Any,
+) -> Any:
+    """Retry a `_post_or_put`/`_get` style call on transient errors.
+
+    Retries on `ClientError` whose `status_code` is in `_RETRYABLE_STATUSES`
+    and on transport-level `RequestException`s (connection drops,
+    chunked-encoding errors, etc.). Uses exponential backoff capped at
+    `max_delay`. Re-raises the last exception when `attempts` is exhausted.
+    """
+    for i in range(attempts):
+        try:
+            return fn(*args, **kwargs)
+        except ClientError as exc:
+            if exc.status_code not in _RETRYABLE_STATUSES or i == attempts - 1:
+                raise
+        except RequestException:
+            if i == attempts - 1:
+                raise
+        time.sleep(min(base_delay * (2**i), max_delay))
+    # Defensive: loop above always returns or raises, but appease type checkers.
+    raise RuntimeError("unreachable")  # pragma: no cover
 
 
 class Client(BaseClient):
@@ -50,13 +91,13 @@ class Client(BaseClient):
         """
 
         if api_key is None:
-            api_key = os.environ.get("AS_API_KEY")
+            api_key = os.environ.get("AS_API_KEY", os.environ.get("ATOMSCALE_API_KEY"))
 
         if endpoint is None:
             endpoint = os.environ.get("AS_API_ENDPOINT") or "https://api.atomscale.ai/"
 
         if api_key is None:
-            raise ValueError("No valid ADS API key supplied")
+            raise ValueError("No valid Atomscale API key supplied")
 
         self.mute_bars = mute_bars
 
@@ -79,6 +120,9 @@ class Client(BaseClient):
             "pl",
             "raman",
             "recipe",
+            "optical",
+            "metrology",
+            "ellipsometry",
             "all",
         ] = "all",
         status: Literal[
@@ -106,7 +150,7 @@ class Client(BaseClient):
             data_ids (str | list[str] | None): Data ID or list of data IDs. Defaults to None.
             physical_sample_ids (str | list[str] | None): Physical sample ID or list of IDs. Defaults to None.
             project_ids (str | list[str] | None): Project ID or list of IDs. Defaults to None.
-            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "xrd", "photoluminescence", "raman", "all"]): Type of data. Defaults to "all".
+            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "xrd", "photoluminescence", "raman", "recipe", "optical", "metrology", "ellipsometry", "all"]): Type of data. Defaults to "all".
             status (Literal["success", "pending", "error", "running", "all"]): Analyzed status of the data. Defaults to "all".
             growth_length (tuple[int | None, int | None]): Minimum and maximum values of the growth length in seconds.
                 Defaults to (None, None) which will include all non-video data.
@@ -231,6 +275,9 @@ class Client(BaseClient):
         | XRDResult
         | PhotoluminescenceResult
         | RamanResult
+        | OpticalResult
+        | MetrologyResult
+        | EllipsometryResult
         | UnknownResult
     ]:
         """Get analyzed data results
@@ -363,6 +410,140 @@ class Client(BaseClient):
             ]
             return DataFrame(rows)
         return [ChangepointResult.from_api(r) for r in records]
+
+    def get_similarity_trajectory(
+        self,
+        source_id: str,
+        *,
+        workflow: str = "rheed_stationary",
+        last_n: int | None = None,
+        window_span: float | None = None,
+        reference_ids: list[str] | None = None,
+        softmax_mode: str | None = None,
+        reference_n_values: int | None = None,
+    ) -> SimilarityTrajectoryResult:
+        """Fetch a one-shot similarity trajectory for a source data_id or physical_sample_id.
+
+        Args:
+            source_id: Data ID or physical sample ID the trajectory is computed against.
+            workflow: Similarity workflow name (e.g. "rheed_stationary"). Defaults to
+                "rheed_stationary".
+            last_n: If set, only fetch the last N points of the trajectory.
+            window_span: Optional window span parameter forwarded to the provider.
+            reference_ids: Optional list of reference data IDs to compare against.
+            softmax_mode: Optional softmax mode forwarded to the provider.
+            reference_n_values: Optional number of reference values forwarded to the provider.
+
+        Returns:
+            SimilarityTrajectoryResult with the populated timeseries DataFrame.
+        """
+        provider = get_provider("similarity_trajectory")
+        kwargs: dict[str, Any] = {"workflow": workflow}
+        if last_n is not None:
+            kwargs["last_n"] = last_n
+        if window_span is not None:
+            kwargs["window_span"] = window_span
+        if reference_ids is not None:
+            kwargs["reference_ids"] = reference_ids
+        if softmax_mode is not None:
+            kwargs["softmax_mode"] = softmax_mode
+        if reference_n_values is not None:
+            kwargs["reference_n_values"] = reference_n_values
+
+        raw = provider.fetch_raw(self, source_id, **kwargs)
+        ts_df = provider.to_dataframe(raw)
+        return provider.build_result(
+            self,
+            source_id,
+            "similarity_trajectory",
+            ts_df,
+            workflow=workflow,
+            window_span=window_span or 0.0,
+        )
+
+    def iter_poll_similarity_trajectory(
+        self,
+        source_id: str,
+        *,
+        interval: float = 1.0,
+        last_n: int | None = None,
+        **kwargs: Any,
+    ) -> Iterator[DataFrame]:
+        """Synchronously poll similarity trajectory data, yielding DataFrames.
+
+        Thin wrapper around :func:`atomscale.similarity.iter_poll_trajectory`.
+        See that function for the full set of keyword arguments
+        (`distinct_by`, `until`, `max_polls`, `fire_immediately`, `jitter`,
+        `on_error`).
+        """
+        from atomscale.similarity import polling as _similarity_polling
+
+        return _similarity_polling.iter_poll_trajectory(
+            self, source_id, interval=interval, last_n=last_n, **kwargs
+        )
+
+    def aiter_poll_similarity_trajectory(
+        self,
+        source_id: str,
+        *,
+        interval: float = 1.0,
+        last_n: int | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[DataFrame]:
+        """Asynchronously poll similarity trajectory data without blocking the loop.
+
+        Thin wrapper around :func:`atomscale.similarity.aiter_poll_trajectory`.
+        """
+        from atomscale.similarity import polling as _similarity_polling
+
+        return _similarity_polling.aiter_poll_trajectory(
+            self, source_id, interval=interval, last_n=last_n, **kwargs
+        )
+
+    def start_polling_similarity_trajectory_thread(
+        self,
+        source_id: str,
+        *,
+        interval: float = 1.0,
+        last_n: int | None = None,
+        on_result: Callable[[DataFrame], None],
+        **kwargs: Any,
+    ) -> threading.Event:
+        """Start polling similarity trajectory data in a background daemon thread.
+
+        Returns a :class:`threading.Event` that can be set to stop polling.
+        """
+        from atomscale.similarity import polling as _similarity_polling
+
+        return _similarity_polling.start_polling_trajectory_thread(
+            self,
+            source_id,
+            interval=interval,
+            last_n=last_n,
+            on_result=on_result,
+            **kwargs,
+        )
+
+    def start_polling_similarity_trajectory_task(
+        self,
+        source_id: str,
+        *,
+        interval: float = 1.0,
+        last_n: int | None = None,
+        on_result: Callable[[DataFrame], Any] | None = None,
+        **kwargs: Any,
+    ) -> asyncio.Task[None]:
+        """Start polling similarity trajectory data as an :class:`asyncio.Task`."""
+        from atomscale.similarity import polling as _similarity_polling
+
+        return _similarity_polling.start_polling_trajectory_task(
+            self,
+            source_id,
+            interval=interval,
+            last_n=last_n,
+            on_result=on_result,
+            **kwargs,
+        )
 
     def list_physical_samples(self) -> DataFrame:
         """List physical samples available to the user."""
@@ -644,6 +825,7 @@ class Client(BaseClient):
             "metrology",
             "recipe",
             "optical",
+            "ellipsometry",
         ],
         catalogue_entry: dict[str, Any] | None = None,
     ) -> (
@@ -653,6 +835,9 @@ class Client(BaseClient):
         | PhotoluminescenceResult
         | RamanResult
         | XRDResult
+        | OpticalResult
+        | MetrologyResult
+        | EllipsometryResult
         | UnknownResult
         | None
     ):
@@ -733,6 +918,7 @@ class Client(BaseClient):
             "metrology",
             "recipe",
             "optical",
+            "ellipsometry",
         ]:
             # recipe timeseries are served from the metrology endpoint; reuse that provider.
             timeseries_type = (
@@ -758,6 +944,11 @@ class Client(BaseClient):
             return result_obj
 
         # Fallback for unknown/unsupported data types
+        warnings.warn(
+            f"Unrecognized data_type '{data_type}' for data_id '{data_id}'; "
+            "returning UnknownResult. The SDK may be out of date — consider upgrading.",
+            stacklevel=3,
+        )
         return UnknownResult(
             data_id=data_id,
             data_type=data_type,
@@ -810,10 +1001,57 @@ class Client(BaseClient):
         )
         return resp["id"], physical_sample
 
+    def _resolve_project(self, project: str) -> tuple[str, str]:
+        """Resolve a project name or UUID to (id, name).
+
+        Unlike ``_resolve_physical_sample``, this does **not** auto-create
+        missing projects (no SDK-exposed create endpoint). Raises ``ClientError``
+        if the project cannot be found.
+        """
+        project = project.strip()
+        if not project:
+            raise ClientError("project cannot be empty")
+
+        projects_df = self.list_projects()
+        if not len(projects_df):
+            raise ClientError(f"Project '{project}' not found")
+
+        if self._UUID_RE.match(project):
+            match = projects_df[projects_df["Project ID"] == project]
+            if match.empty:
+                raise ClientError(f"Project with id '{project}' not found")
+            return project, match.iloc[0]["Project Name"]
+
+        names_lower = projects_df["Project Name"].str.strip().str.lower()
+        mask = names_lower == project.lower()
+        match = projects_df[mask]
+        if match.empty:
+            raise ClientError(f"Project '{project}' not found")
+        return match.iloc[0]["Project ID"], match.iloc[0]["Project Name"]
+
+    def _add_sample_to_project(
+        self, project_id: str, physical_sample_id: str, set_active: bool = True
+    ) -> None:
+        """POST a physical sample onto a project's tracking-samples list.
+
+        Mirrors the streamer-side
+        ``POST /projects/{id}/configuration/tracking_samples`` call.
+        """
+        _retry_client_call(
+            self._post_or_put,
+            method="POST",
+            sub_url=f"projects/{project_id}/configuration/tracking_samples",
+            body={
+                "physical_sample_id": physical_sample_id,
+                "set_active": set_active,
+            },
+        )
+
     def upload(
         self,
         files: list[str | BinaryIO],
         physical_sample: str | None = None,
+        project: str | None = None,
     ) -> list[str]:
         """Upload and process files.
 
@@ -821,20 +1059,43 @@ class Client(BaseClient):
             files (list[str | BinaryIO]): List containing string paths to files, or BinaryIO objects from ``open``.
             physical_sample (str | None): Physical sample name or UUID to link uploads to.
                 If a name is given and no matching sample exists, one is created automatically.
+            project (str | None): Project name or UUID to associate the uploads with. The
+                project must already exist (the SDK does not auto-create projects). When
+                provided, ``physical_sample`` is required so the sample can be added to
+                the project's tracking list via
+                ``POST /projects/{id}/configuration/tracking_samples``.
 
         Returns:
             list[str]: Data IDs assigned to the uploaded files.
         """
         chunk_size = 40 * 1024 * 1024  # 40 MiB
 
+        if project is not None and physical_sample is None:
+            raise ClientError(
+                "`project` requires `physical_sample` so the sample can be added "
+                "to the project's tracking list."
+            )
+
         # Resolve physical sample before uploading so we fail fast on bad input
         metadata_body: dict[str, str] | None = None
+        ps_id: str | None = None
         if physical_sample is not None:
             ps_id, ps_name = self._resolve_physical_sample(physical_sample)
             metadata_body = {
                 "physical_sample_id": ps_id,
                 "physical_sample_name": ps_name,
             }
+
+        # Resolve project up-front so we fail fast on a bad project name/UUID
+        project_id: str | None = None
+        if project is not None:
+            project_id, _ = self._resolve_project(project)
+            if ps_id is None:  # guarded above; defensive against future refactors
+                raise ClientError(
+                    "`project` requires `physical_sample` so the sample can be added "
+                    "to the project's tracking list."
+                )
+            self._add_sample_to_project(project_id, ps_id)
 
         # Check to make sure list is valid and get pre-signed URL nums
         file_data = []
@@ -871,7 +1132,8 @@ class Client(BaseClient):
                 Literal["num_urls", "file_name", "file_size", "file_path"], int | str
             ],
         ) -> str:
-            url_data: list[dict[str, str | int]] = self._post_or_put(
+            url_data: list[dict[str, str | int]] = _retry_client_call(
+                self._post_or_put,
                 method="POST",
                 sub_url="data_entries/raw_data/staged/upload_urls/",
                 params={
@@ -946,7 +1208,8 @@ class Client(BaseClient):
                     {"ETag": entry["ETag"], "PartNumber": i + 1}
                     for i, entry in enumerate(etag_data)
                 ]
-                self._post_or_put(
+                _retry_client_call(
+                    self._post_or_put,
                     method="POST",
                     sub_url="data_entries/raw_data/staged/upload_urls/complete/",
                     params={"staging_type": "core"},
@@ -986,14 +1249,20 @@ class Client(BaseClient):
 
         return data_ids
 
-    def download_videos(
+    def download(
         self,
         data_ids: str | list[str],
         dest_dir: str | Path | None = None,
         data_type: Literal["raw", "processed"] = "processed",
     ):
         """
-        Download processed RHEED videos to disk.
+        Download raw or processed files for any data type to disk.
+
+        Works for every data_type the platform stores (RHEED video, XPS / XRD /
+        PL / Raman / optical / metrology / ellipsometry / etc.) — the underlying
+        ``data_entries/{raw_data|processed_data}/{data_id}`` endpoint is
+        data-type-agnostic and returns whatever file format the backend has on
+        record.
 
         Args:
             data_ids (str | list[str]): One or more data IDs from the data catalogue.
@@ -1070,7 +1339,7 @@ class Client(BaseClient):
             master_task = None
             if not progress.disable:
                 master_task = progress.add_task(
-                    "Downloading videos…",
+                    "Downloading files…",
                     total=len(data_ids),
                     show_percent=False,
                     show_total=True,
@@ -1087,6 +1356,21 @@ class Client(BaseClient):
                     fut.result()
                     if master_task is not None:
                         progress.update(master_task, advance=1, refresh=True)
+
+    def download_videos(
+        self,
+        data_ids: str | list[str],
+        dest_dir: str | Path | None = None,
+        data_type: Literal["raw", "processed"] = "processed",
+    ):
+        """Deprecated alias for :meth:`download`. Kept for backwards compatibility."""
+        warnings.warn(
+            "Client.download_videos is deprecated; use Client.download instead. "
+            "It is data-type-agnostic and works for every supported file type.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.download(data_ids=data_ids, dest_dir=dest_dir, data_type=data_type)
 
     # -------------------------------------------------------------------------
     # Growth Instrument Management

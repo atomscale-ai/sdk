@@ -9,9 +9,7 @@ use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::initialize::{
-    ensure_physical_sample_link, ensure_tags_attached, update_project_tracking_sample,
-};
+use crate::initialize::{add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached};
 use crate::utils::init_tracing_once;
 
 /// Request body for stream initialization.
@@ -219,9 +217,12 @@ impl TimeseriesStreamer {
                 .block_on(physical_sample_fut)
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
-            // If project_id was provided, update the project's tracking_physical_sample_id
+            // If project_id was provided, add the sample to the project's membership.
+            // We deliberately do NOT touch growth-monitoring tracking config here —
+            // that endpoint blindly re-validates the project's full configuration
+            // and is fragile (see add_sample_to_project for details).
             if let Some(ref proj_id) = project_id {
-                let update_project_fut = update_project_tracking_sample(
+                let add_to_project_fut = add_sample_to_project(
                     &self.client,
                     &base_endpoint,
                     &self.api_key,
@@ -229,7 +230,7 @@ impl TimeseriesStreamer {
                     &sample_id,
                 );
                 self.rt
-                    .block_on(update_project_fut)
+                    .block_on(add_to_project_fut)
                     .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
             }
         }

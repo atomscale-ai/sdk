@@ -16,13 +16,35 @@ The server:
 """
 import json
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 
 
 class CaptureHandler(BaseHTTPRequestHandler):
     """HTTP handler that captures request body and returns configured response."""
 
     def _handle_request(self, method: str):
+        try:
+            self._handle_request_inner(method)
+        except Exception:  # noqa: BLE001
+            # If anything throws inside the handler the response never
+            # reaches the client and reqwest reports a confusing
+            # "connection closed before message completed" instead of the
+            # actual root cause. Surface the full traceback to stderr so
+            # the test driver can capture it.
+            import sys as _sys
+            import traceback as _traceback
+
+            print(
+                f"MOCK HANDLER EXCEPTION ({method} {self.path}):",
+                file=_sys.stderr,
+                flush=True,
+            )
+            _traceback.print_exc(file=_sys.stderr)
+            _sys.stderr.flush()
+            raise
+
+    def _handle_request_inner(self, method: str):
         """Common handler for all HTTP methods."""
         # Read request body if present
         length = int(self.headers.get("Content-Length", 0))
@@ -55,16 +77,40 @@ class CaptureHandler(BaseHTTPRequestHandler):
                 response_data = '""'
 
             # Print request info for debugging / structured capture.
-            print(f"REQUEST:{method}:{path}:{body.decode() if body else ''}", flush=True)
+            #
+            # PUT bodies are binary (zarr-encoded frame shards) and can
+            # contain any byte 0x00–0xFF, so they can't be safely round-
+            # tripped through Python's text-mode stdout: on Windows CI
+            # the default stdout encoding is cp1252, which fails to encode
+            # byte values like 0x93. We log a length placeholder for PUTs
+            # and keep the actual body only for POSTs (which carry JSON).
+            if method == "PUT":
+                body_str = f"<{len(body)} bytes>"
+            else:
+                # POST bodies are JSON / ASCII — decode normally and
+                # silently replace any stray non-text bytes so a
+                # malformed body still won't crash the handler.
+                body_str = (
+                    body.decode("utf-8", errors="replace") if body else ""
+                )
+            print(f"REQUEST:{method}:{path}:{body_str}", flush=True)
         else:
             # Simple mode: single response for all requests
             response_data = self.server.response_data
             print(f"BODY:{body.decode()}", flush=True)
 
-        # Send response
+        # Send response.
+        # `Connection: close` tells reqwest's pool not to reuse this socket
+        # for the next request. Default Python BaseHTTPRequestHandler is
+        # HTTP/1.0, so each connection only handles one request anyway —
+        # but reqwest doesn't know that and will try to pipeline. Without
+        # this header the next pooled request sees a half-closed socket
+        # and fails ("PUT bytes failed" / "connection closed before message
+        # completed"), most reproducibly on Windows.
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", len(response_data))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(response_data.encode())
 
@@ -82,19 +128,43 @@ class CaptureHandler(BaseHTTPRequestHandler):
         pass
 
 
-class MultiRequestServer(HTTPServer):
-    """HTTP server that can handle multiple requests."""
+class MultiRequestServer(ThreadingHTTPServer):
+    """Threaded HTTP server that handles concurrent connections.
+
+    Tokio uploads from multiple streams arrive in tight bursts; serving
+    them serially (or with a small listen backlog) caused silent connection
+    drops under load. Using ThreadingHTTPServer + a generous backlog lets
+    the mock keep up.
+    """
+
+    request_queue_size = 256
 
     def __init__(self, *args, max_requests: int = 1, **kwargs):
         super().__init__(*args, **kwargs)
         self.max_requests = max_requests
+        self._count_lock = threading.Lock()
         self.request_count = 0
+        self._done = threading.Event()
 
     def handle_requests(self):
-        """Handle up to max_requests requests."""
-        while self.request_count < self.max_requests:
-            self.handle_request()
-            self.request_count += 1
+        """Serve until max_requests have been handled (or forever if the
+        server is told to shut down).
+        """
+        thread = threading.Thread(target=self.serve_forever, daemon=True)
+        thread.start()
+        self._done.wait()
+        self.shutdown()
+        thread.join(timeout=2)
+
+    def process_request_thread(self, request, client_address):  # noqa: D401
+        """Override to count handled requests and signal completion."""
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            with self._count_lock:
+                self.request_count += 1
+                if self.request_count >= self.max_requests:
+                    self._done.set()
 
 
 def run_server(port: int, response_data: str) -> None:

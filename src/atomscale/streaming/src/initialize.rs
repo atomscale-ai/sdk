@@ -1,7 +1,6 @@
 use anyhow::{Context, Result};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")] // Ensures JSON fields are snake_case (e.g., data_id)
@@ -12,18 +11,6 @@ pub struct RHEEDStreamSettings {
     pub fps_capture_rate: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
-}
-
-// Project-related structs for GET /projects/ response
-#[derive(Deserialize, Debug)]
-struct DataConfiguration {
-    api_configuration: Option<Value>,
-}
-
-#[derive(Deserialize, Debug)]
-struct ProjectSummary {
-    id: String,
-    configuration: Option<DataConfiguration>,
 }
 
 /// POST request to initialize a RHEED stream
@@ -166,60 +153,49 @@ pub async fn ensure_physical_sample_link(
     Ok(sample_id)
 }
 
-/// Updates the project's tracking_physical_sample_id in its configuration.
-/// Fetches current configuration, updates the tracking sample, and POSTs back.
-pub async fn update_project_tracking_sample(
+/// Adds a physical sample to a project's tracking list (and project membership).
+///
+/// Uses `POST /projects/{project_id}/configuration/tracking_samples`, a
+/// targeted endpoint that patches only `tracking_physical_sample_ids` and
+/// (optionally) `active_tracking_physical_sample_id`, and creates the
+/// `ProjectPhysicalSampleAssociation` row, all without re-validating the rest
+/// of the project's `GrowthMonitoringConfiguration`.
+///
+/// This replaces the older flow that did GET `/projects/` followed by
+/// POST `/projects/{id}/configuration` to set `tracking_physical_sample_id`.
+/// The older endpoint strictly re-validated the entire configuration and
+/// rejected on any pre-existing config quirk (references to deleted samples,
+/// fields from older schema versions, samples from another org) — so the
+/// streamer would surface "project configuration update returned error
+/// status" with no useful detail.
+#[derive(Serialize)]
+struct AddTrackingSampleBody<'a> {
+    physical_sample_id: &'a str,
+    set_active: bool,
+}
+
+pub async fn add_sample_to_project(
     client: &Client,
     base_endpoint: &str,
     api_key: &str,
     project_id: &str,
     physical_sample_id: &str,
 ) -> Result<()> {
-    // GET /projects/ to find the project and its current configuration
-    let projects_url = format!("{base_endpoint}/projects/");
-    let projects: Vec<ProjectSummary> = client
-        .get(&projects_url)
-        .header("X-API-KEY", api_key)
-        .send()
-        .await
-        .context("failed to request projects")?
-        .error_for_status()
-        .context("projects list returned error status")?
-        .json()
-        .await
-        .context("failed to deserialize projects list")?;
-
-    // Find the project by ID
-    let project = projects
-        .into_iter()
-        .find(|p| p.id == project_id)
-        .ok_or_else(|| anyhow::anyhow!("project with id {} not found", project_id))?;
-
-    // Build updated configuration, preserving existing fields
-    let mut config = match project.configuration {
-        Some(data_config) => data_config.api_configuration.unwrap_or_else(|| Value::Object(Default::default())),
-        None => Value::Object(Default::default()),
+    let url = format!("{base_endpoint}/projects/{project_id}/configuration/tracking_samples");
+    let body = AddTrackingSampleBody {
+        physical_sample_id,
+        set_active: true,
     };
 
-    // Update tracking_physical_sample_id in the configuration
-    if let Value::Object(ref mut map) = config {
-        map.insert(
-            "tracking_physical_sample_id".to_string(),
-            Value::String(physical_sample_id.to_string()),
-        );
-    }
-
-    // POST /projects/{project_id}/configuration with the updated config
-    let config_url = format!("{base_endpoint}/projects/{project_id}/configuration");
     client
-        .post(&config_url)
+        .post(&url)
         .header("X-API-KEY", api_key)
-        .json(&config)
+        .json(&body)
         .send()
         .await
-        .context("failed to update project configuration")?
+        .context("failed to add tracking sample to project")?
         .error_for_status()
-        .context("project configuration update returned error status")?;
+        .context("project tracking-sample update returned error status")?;
 
     Ok(())
 }

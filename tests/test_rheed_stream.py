@@ -19,79 +19,134 @@ _MOCK_SERVER_MODULE = Path(__file__).parent / "_mock_http_server.py"
 
 
 class MockServer:
-    """A mock HTTP server running in a subprocess."""
+    """A mock HTTP server running in a subprocess.
+
+    Stdout is drained by a background daemon thread into a ``queue.Queue``,
+    which gives us cross-platform timed reads (``select.select`` on a pipe FD
+    is a Unix-only trick — Windows raises WinError 10038).
+    """
 
     def __init__(self, port: int, response_data: str):
+        import queue as _queue
+
         self.port = port
         self.response_data = response_data
         self._proc: subprocess.Popen | None = None
         self._captured_body: dict | None = None
+        self._stdout_queue: "_queue.Queue[str | None]" = _queue.Queue()
+        self._reader_thread: "object | None" = None
 
     def start(self) -> None:
         """Start the server subprocess."""
+        import threading
+
         self._proc = subprocess.Popen(
             [sys.executable, str(_MOCK_SERVER_MODULE), str(self.port), self.response_data],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            bufsize=1,  # line-buffered so multi-request output is readable
         )
-        # Wait for server to signal it's ready
+        # Wait for server to signal it's ready (synchronous; the drain thread
+        # has not started yet so this read is unambiguous).
         ready_line = self._proc.stdout.readline()
         if not ready_line.startswith("READY:"):
             self.stop()
             raise RuntimeError(f"Server failed to start: {ready_line}")
 
+        # All subsequent stdout lines flow through the queue. Daemon thread so
+        # it never blocks shutdown if the subprocess wedges.
+        self._reader_thread = threading.Thread(target=self._drain_stdout, daemon=True)
+        self._reader_thread.start()
+
+    def _drain_stdout(self) -> None:
+        try:
+            assert self._proc is not None and self._proc.stdout is not None
+            for line in self._proc.stdout:
+                self._stdout_queue.put(line)
+        except Exception:
+            pass
+        finally:
+            # Sentinel signals EOF so consumers can break out without a timeout.
+            self._stdout_queue.put(None)
+
     def stop(self) -> None:
-        """Stop the server subprocess."""
+        """Stop the server subprocess (and cache its stderr for diagnostics)."""
         if self._proc:
             self._proc.terminate()
             self._proc.wait(timeout=5)
+            try:
+                if self._proc.stderr is not None:
+                    self._stderr_dump = self._proc.stderr.read() or ""
+            except Exception:  # noqa: BLE001
+                pass
             self._proc = None
+
+    def get_stderr(self) -> str:
+        """Return whatever the subprocess wrote to stderr. Empty before
+        stop() runs (we drain on shutdown to avoid blocking on a live pipe)."""
+        return getattr(self, "_stderr_dump", "") or ""
 
     @property
     def endpoint(self) -> str:
         """Return the server endpoint URL (no trailing slash)."""
         return f"http://127.0.0.1:{self.port}"
 
-    def get_captured_body(self) -> dict | None:
+    def _read_line(self, timeout_s: float) -> str | None:
+        """Block up to ``timeout_s`` for the next stdout line. ``None`` on EOF/timeout."""
+        import queue as _queue
+
+        try:
+            return self._stdout_queue.get(timeout=timeout_s)
+        except _queue.Empty:
+            return None
+
+    def get_captured_body(self, timeout_s: float = 5.0) -> dict | None:
         """Read and return the captured request body from the server."""
+        import time
+
         if self._proc and self._captured_body is None:
-            for line in self._proc.stdout:
+            deadline = time.monotonic() + timeout_s
+            while time.monotonic() < deadline:
+                line = self._read_line(deadline - time.monotonic())
+                if line is None:
+                    break
                 if line.startswith("BODY:"):
                     self._captured_body = json.loads(line[5:])
                     break
         return self._captured_body
 
-    def get_captured_requests(self) -> list[dict]:
-        """Return list of {method, path, body} dicts from routes-mode logs.
+    def get_captured_requests(
+        self, expected_count: int, timeout_s: float = 10.0
+    ) -> list[tuple[str, str, str]]:
+        """Drain REQUEST lines from the routes-mode server.
 
-        Drains stdout up to and including the EOF that occurs when the server
-        process exits (after handling __max_requests__ requests). Safe to call
-        only once per server.
+        Returns a list of (method, path, body) tuples. Reads up to expected_count
+        lines or until timeout / process exit.
         """
-        if self._proc is None:
+        import time
+
+        if not self._proc:
             return []
-        try:
-            stdout, _ = self._proc.communicate(timeout=5)
-        except subprocess.TimeoutExpired:
-            self._proc.terminate()
-            stdout, _ = self._proc.communicate(timeout=5)
-        self._proc = None
-        captured: list[dict] = []
-        for line in stdout.splitlines():
-            if not line.startswith("REQUEST:"):
-                continue
-            # Format: REQUEST:METHOD:PATH:BODY (BODY may contain ':' from JSON)
-            parts = line[len("REQUEST:"):].split(":", 2)
-            if len(parts) != 3:
-                continue
-            method, path, body = parts
-            try:
-                body_obj = json.loads(body) if body else None
-            except json.JSONDecodeError:
-                body_obj = body
-            captured.append({"method": method, "path": path, "body": body_obj})
-        return captured
+
+        deadline = time.monotonic() + timeout_s
+        requests: list[tuple[str, str, str]] = []
+        while len(requests) < expected_count:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            line = self._read_line(remaining)
+            if line is None:
+                break
+            if line.startswith("REQUEST:"):
+                # Format: REQUEST:METHOD:PATH:BODY
+                # PATH does not contain colons; BODY (JSON) may. Split on the
+                # first 3 colons to keep BODY intact.
+                parts = line.split(":", 3)
+                if len(parts) == 4:
+                    _, method, path, body = parts
+                    requests.append((method, path, body.rstrip("\n")))
+        return requests
 
     def __enter__(self) -> "MockServer":
         self.start()
@@ -250,46 +305,44 @@ class TestRHEEDStreamerInitialize:
 
         assert data_id == expected_data_id
 
-    def test_initialize_updates_project_config_when_physical_sample_and_project_id(
+    def test_initialize_adds_tracking_sample_when_physical_sample_and_project_id(
         self, mock_server_factory
     ):
-        """Verify project configuration is updated with tracking_physical_sample_id.
+        """Verify the sample is added to the project's tracking list.
 
         When both physical_sample and project_id are provided, the SDK should:
         1. POST /rheed/stream/ to create the stream
         2. GET /physical_samples/ to list existing samples
         3. POST /physical_samples/ to create the sample (if not found)
         4. POST /data_entries/physical_sample to link sample to data entry
-        5. GET /projects/ to get current project configuration
-        6. POST /projects/{id}/configuration to update tracking_physical_sample_id
+        5. POST /projects/{id}/configuration/tracking_samples to add the
+           sample to the project's tracking list (and membership), and mark
+           it as the active tracking sample.
+
+        This replaces an older flow that did GET /projects/ followed by
+        POST /projects/{id}/configuration to update tracking_physical_sample_id.
+        That flow was fragile because the backend strictly re-validated the
+        entire GrowthMonitoringConfiguration on POST and rejected on any
+        pre-existing config quirk (e.g. references to deleted samples). The
+        new endpoint patches only the tracking-sample fields and tolerates
+        existing config quirks.
         """
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
         project_uuid = "550e8400-e29b-41d4-a716-446655440000"
         sample_uuid = "660e8400-e29b-41d4-a716-446655440001"
 
-        # Configure routes for the multi-request flow
         # Note: /physical_samples/ is used for both GET (returns list) and POST (returns created sample)
         # The mock returns the same response for both, which works because:
         # - GET expects a list - we return a list with the sample already existing
         # - This skips the POST /physical_samples/ call since sample already exists
         routes = json.dumps({
             "__routes__": True,
-            "__max_requests__": 6,
+            "__max_requests__": 4,
             "/rheed/stream/": '"test-data-id-999"',
             "/physical_samples/": json.dumps([{"id": sample_uuid, "name": "Test Sample"}]),
             "/data_entries/physical_sample": '"OK"',
-            "/projects/": json.dumps([{
-                "id": project_uuid,
-                "name": "Test Project",
-                "configuration": {
-                    "api_configuration": {
-                        "reference_group_type": "categorical",
-                        "onboarding_complete": True
-                    }
-                }
-            }]),
-            f"/projects/{project_uuid}/configuration": '"OK"',
+            f"/projects/{project_uuid}/configuration/tracking_samples": '"OK"',
         })
 
         server = mock_server_factory(routes)
@@ -308,6 +361,10 @@ class TestRHEEDStreamerInitialize:
         )
 
         assert data_id == "test-data-id-999"
+
+
+class TestRHEEDStreamerTags:
+    """Tests for the `tags` parameter on RHEEDStreamer.initialize()."""
 
     def test_initialize_accepts_tags_parameter(self):
         """Verify initialize() signature includes the tags parameter."""
@@ -390,12 +447,12 @@ class TestRHEEDStreamerInitialize:
 
         assert data_id == "data-id-mixed"
 
-        requests = server.get_captured_requests()
+        requests = server.get_captured_requests(expected_count=4, timeout_s=5)
         # Filter to /tags/ traffic — the init POST is uninteresting here.
-        tag_reqs = [r for r in requests if r["path"].startswith("/tags/")]
+        tag_reqs = [(m, p, b) for (m, p, b) in requests if p.startswith("/tags/")]
         # Exactly: one GET, one create-POST, one attach-POST. Dedup means the
         # repeated "growth"/"GROWTH" entries did not produce extra creates.
-        methods_paths = [(r["method"], r["path"]) for r in tag_reqs]
+        methods_paths = [(m, p) for (m, p, _) in tag_reqs]
         assert methods_paths == [
             ("GET", "/tags/"),
             ("POST", "/tags/"),
@@ -403,11 +460,15 @@ class TestRHEEDStreamerInitialize:
         ], methods_paths
 
         # POST /tags/ body uses the trimmed name (no surrounding spaces).
-        create_body = next(r["body"] for r in tag_reqs if r["method"] == "POST" and r["path"] == "/tags/")
+        create_body = json.loads(
+            next(b for (m, p, b) in tag_reqs if m == "POST" and p == "/tags/")
+        )
         assert create_body == {"name": "novel-tag"}
 
         # POST /tags/data-items/ body has data_id + both resolved tag_ids in order.
-        attach_body = next(r["body"] for r in tag_reqs if r["path"] == "/tags/data-items/")
+        attach_body = json.loads(
+            next(b for (_, p, b) in tag_reqs if p == "/tags/data-items/")
+        )
         assert attach_body == {
             "data_ids": ["data-id-mixed"],
             "tag_ids": [existing_id, new_id],
@@ -504,16 +565,18 @@ class TestRHEEDStreamerInitialize:
 
         assert data_id == "data-id-azimuth"
 
-        requests = server.get_captured_requests()
-        tag_reqs = [r for r in requests if r["path"].startswith("/tags/")]
+        requests = server.get_captured_requests(expected_count=3, timeout_s=5)
+        tag_reqs = [(m, p, b) for (m, p, b) in requests if p.startswith("/tags/")]
         # All three exist → no POST /tags/ creates, just GET + attach.
-        methods_paths = [(r["method"], r["path"]) for r in tag_reqs]
+        methods_paths = [(m, p) for (m, p, _) in tag_reqs]
         assert methods_paths == [
             ("GET", "/tags/"),
             ("POST", "/tags/data-items/"),
         ], methods_paths
 
-        attach_body = next(r["body"] for r in tag_reqs if r["path"] == "/tags/data-items/")
+        attach_body = json.loads(
+            next(b for (_, p, b) in tag_reqs if p == "/tags/data-items/")
+        )
         assert attach_body == {
             "data_ids": ["data-id-azimuth"],
             "tag_ids": [id_100, id_210, id_110],
@@ -543,3 +606,141 @@ class TestRHEEDStreamerInitialize:
                 chunk_size=60,
                 tags=["99999999-9999-9999-9999-999999999999"],
             )
+
+
+class TestStreamingE2E:
+    """End-to-end RHEED streaming smoke test.
+
+    Drives the full upload pipeline — initialize POST, per-chunk presign
+    POSTs, frame PUTs to the presigned URLs, and the end-of-stream POST —
+    against the same subprocess-based mock the init tests use (which is
+    already known to work on Linux/macOS/Windows). An in-process Python
+    HTTP server can't be used here: the streamer holds the GIL during
+    `block_on(...)`, so a Python handler thread in the same process never
+    gets scheduled and the request times out.
+
+    We use `run(...)` rather than `push(...)`: it block-awaits every
+    chunk's spawned upload task before returning, so any
+    Windows-side scheduling or networking issue in `spawn_chunk_upload`
+    surfaces deterministically. `push(...)` shares the same internal
+    `spawn_chunk_upload` code path, so a green `run(...)` is strong
+    evidence `push(...)` works too.
+
+    Frame data must be **non-fill-value**: zarrs intentionally skips
+    persisting all-fill chunks (the platform reconstructs blank frames
+    server-side without an uploaded shard), so a test using
+    `np.zeros(...)` would silently bypass the PUT path.
+    """
+
+    def test_full_cycle_uploads_chunks(self):
+        import numpy as np
+
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        # Pre-allocate the port so the routes JSON can encode the
+        # presign-redirect URL pointing back at the same mock.
+        port = _get_free_port()
+        routes = json.dumps(
+            {
+                "__routes__": True,
+                # 6 expected requests: 1 init POST + 2 presign POSTs + 2 PUTs + 1 end POST.
+                "__max_requests__": 8,
+                "/rheed/stream/": '"stream-data-id"',
+                "/data_entries/raw_data/staged/upload_urls/": json.dumps(
+                    [{"url": f"http://127.0.0.1:{port}/upload/put"}]
+                ),
+                "/upload/put": '"OK"',
+            }
+        )
+        server = MockServer(port, routes)
+        server.start()
+        run_error: Exception | None = None
+        partial_requests: list[tuple[str, str, str]] = []
+        try:
+            # verbosity=4 emits debug logs for every step (presign,
+            # packaging, PUT) — pytest captures these and prints them on
+            # failure, which is the most useful diagnostic info we have
+            # for Windows-only flakes.
+            streamer = RHEEDStreamer(
+                api_key="k", endpoint=server.endpoint, verbosity=4
+            )
+            data_id = streamer.initialize(
+                fps=1.0, rotations_per_min=0.0, chunk_size=2
+            )
+            assert data_id == "stream-data-id"
+
+            # Non-fill-value frames so zarr packaging actually emits bytes
+            # and the PUT path runs.
+            frames = np.full((2, 8, 8), 7, dtype=np.uint8)
+            ts0 = 1_700_000_000_000
+            ts1 = ts0 + 5_000
+
+            def gen():
+                yield (frames, ts0)
+                yield (frames, ts1)
+
+            try:
+                streamer.run(data_id, gen())  # blocks until uploads complete
+                streamer.finalize(data_id)
+                # Drain captured request lines: 1 init + 2 presigns + 2 PUTs + 1 end.
+                requests = server.get_captured_requests(
+                    expected_count=6, timeout_s=15
+                )
+            except Exception as e:  # noqa: BLE001
+                run_error = e
+                # Pull whatever the mock managed to record before the failure.
+                partial_requests = server.get_captured_requests(
+                    expected_count=10, timeout_s=2
+                )
+                requests = []
+        finally:
+            server.stop()
+
+        if run_error is not None:
+            stderr_dump = server.get_stderr()
+            # Summarize each captured request: method, path, and body
+            # (POST bodies decoded as UTF-8 with replacement, PUT bodies
+            # represented as a "<N bytes>" placeholder by the mock).
+            req_summary = "\n".join(
+                f"  - {m} {p}  body={b[:120]!r}"
+                for (m, p, b) in partial_requests
+            ) or "  (none)"
+            pytest.fail(
+                "streaming pipeline failed:\n"
+                f"  exception: {type(run_error).__name__}: {run_error}\n"
+                f"  captured requests so far ({len(partial_requests)}):\n"
+                f"{req_summary}\n"
+                f"  mock subprocess stderr:\n"
+                f"{stderr_dump or '  (empty)'}\n"
+            )
+
+        inits = [r for r in requests if r[0] == "POST" and r[1] == "/rheed/stream/"]
+        presigns = [
+            r for r in requests
+            if r[0] == "POST"
+            and r[1].startswith("/data_entries/raw_data/staged/upload_urls/")
+        ]
+        puts = [r for r in requests if r[0] == "PUT" and r[1].startswith("/upload/put")]
+        ends = [r for r in requests if r[0] == "POST" and r[1].endswith("/end")]
+
+        assert len(inits) == 1, f"expected 1 init POST, saw {len(inits)} ({requests})"
+        assert len(presigns) == 2, (
+            f"expected 2 presign POSTs, saw {len(presigns)} ({requests})"
+        )
+        assert len(puts) == 2, f"expected 2 PUTs, saw {len(puts)} ({requests})"
+        assert len(ends) == 1, f"expected 1 end POST, saw {len(ends)} ({requests})"
+
+        # Both presigns must carry our explicit timestamps. Compare as a
+        # set: the two upload tasks are spawned concurrently on tokio
+        # workers and may arrive at the mock in either order, so we can't
+        # assume positional ordering.
+        meta_by_start = {
+            int(json.loads(body)["start_unix_ms_utc"]): json.loads(body)
+            for _, _, body in presigns
+        }
+        assert set(meta_by_start.keys()) == {ts0, ts1}, (
+            f"unexpected start timestamps: {set(meta_by_start.keys())}"
+        )
+        # Intra-chunk span = n / fps = 2 / 1 = 2000 ms — same for every chunk.
+        for ts, meta in meta_by_start.items():
+            assert int(meta["end_unix_ms_utc"]) - ts == 2000

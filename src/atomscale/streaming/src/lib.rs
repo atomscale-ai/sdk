@@ -2,8 +2,10 @@ use anyhow::{anyhow, Context};
 use chrono::{Local, Utc};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyIterator, PyModule};
+use pyo3::types::{PyAny, PyIterator, PyModule, PyTuple};
 use reqwest::Client;
+use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
@@ -17,8 +19,8 @@ use timeseries::TimeseriesStreamer;
 
 mod initialize;
 use initialize::{
-    ensure_physical_sample_link, ensure_tags_attached, post_for_initialization,
-    update_project_tracking_sample, RHEEDStreamSettings,
+    add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached,
+    post_for_initialization, RHEEDStreamSettings,
 };
 
 mod upload;
@@ -26,6 +28,14 @@ use upload::{
     numpy_frames_to_flat, package_to_zarr_bytes, post_for_presigned, put_bytes_presigned,
     FrameChunkMetadata,
 };
+
+/// Compute the `end_unix_ms_utc` for a chunk of `n` frames starting at `start_ms`
+/// at declared fps. Lifted into a free function so it can be unit-tested
+/// without spinning up an HTTP/runtime/python stack.
+#[inline]
+fn chunk_end(start_ms: i64, n: usize, fps: f64) -> i64 {
+    start_ms + ((n as f64 / fps) * 1000.0) as i64
+}
 
 /// RHEEDStreamer(api_key: str, endpoint: Optional[str] = None)
 ///
@@ -62,9 +72,20 @@ pub struct RHEEDStreamer {
     client: Client,
     rt: Runtime,
 
-    rotating: Option<bool>,
-    fps: Option<f64>,
-    chunk_size: Option<usize>,
+    /// Per-`data_id` config keyed by the `data_id` returned from
+    /// `initialize(...)`. Concurrent producers for different data_ids do not
+    /// share fps/rotating/chunk_size — each stream has its own entry.
+    streams: Mutex<HashMap<String, PerStreamState>>,
+}
+
+/// Per-`data_id` runtime config. One `RHEEDStreamer` instance can service
+/// many concurrent streams (one per data_id); this struct holds the config
+/// that must not be shared across them.
+#[derive(Clone, Debug)]
+struct PerStreamState {
+    rotating: bool,
+    fps: f64,
+    chunk_size: usize,
 }
 
 #[pymethods]
@@ -108,9 +129,7 @@ impl RHEEDStreamer {
             endpoint,
             client,
             rt,
-            rotating: None,
-            chunk_size: None,
-            fps: None,
+            streams: Mutex::new(HashMap::new()),
         })
     }
 
@@ -152,7 +171,7 @@ impl RHEEDStreamer {
         text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None)"
     )]
     fn initialize(
-        &mut self,
+        &self,
         fps: f64,
         rotations_per_min: f64,
         chunk_size: usize,
@@ -218,9 +237,12 @@ impl RHEEDStreamer {
                 .block_on(physical_sample_fut)
                 .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
-            // If project_id was provided, update the project's tracking_physical_sample_id
+            // If project_id was provided, add the sample to the project's membership.
+            // We deliberately do NOT touch growth-monitoring tracking config here —
+            // that endpoint blindly re-validates the project's full configuration
+            // and is fragile (see add_sample_to_project for details).
             if let Some(ref proj_id) = settings.project_id {
-                let update_project_fut = update_project_tracking_sample(
+                let add_to_project_fut = add_sample_to_project(
                     &self.client,
                     &base_endpoint,
                     &self.api_key,
@@ -228,7 +250,7 @@ impl RHEEDStreamer {
                     &sample_id,
                 );
                 self.rt
-                    .block_on(update_project_fut)
+                    .block_on(add_to_project_fut)
                     .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
             }
         }
@@ -248,19 +270,39 @@ impl RHEEDStreamer {
             }
         }
 
-        self.fps = Some(fps);
-        self.rotating = Some(rotations_per_min > 0.0);
-        self.chunk_size = Some(chunk_size);
+        // Insert per-stream state keyed by the new data_id. State is not
+        // shared with any other concurrent stream on this streamer instance.
+        // Returning data_id from the platform, then inserting locally, is the
+        // intended order: if the platform call fails we never create state for
+        // a phantom data_id.
+        {
+            let mut streams = self
+                .streams
+                .lock()
+                .expect("streams mutex poisoned");
+            streams.insert(
+                data_id.clone(),
+                PerStreamState {
+                    rotating: rotations_per_min > 0.0,
+                    fps,
+                    chunk_size,
+                },
+            );
+        }
 
         Ok(data_id)
     }
 
-    /// run(self, data_id: str, frames_iter: Iterable[numpy.ndarray]) -> None
+    /// run(self, data_id: str, frames_iter: Iterable) -> None
     ///
-    /// **Generator/iterator mode.** Iterates `frames_iter`, where each yielded item is either:
+    /// **Generator/iterator mode.** Iterates `frames_iter`, where each yielded item is one of:
     ///
-    /// - `(N, H, W)` `numpy.ndarray[uint8]`: a chunk of `N` grayscale frames, or
+    /// - `(N, H, W)` `numpy.ndarray[uint8]`: a chunk of `N` grayscale frames
     /// - `(H, W)` `numpy.ndarray[uint8]`: a single frame (treated as `N = 1`)
+    /// - `(frames, capture_start_ms_utc)` 2-tuple: frames as above + an explicit
+    ///   capture-start timestamp (int milliseconds since UNIX epoch, UTC). Use
+    ///   this when you have hardware/OS-level timestamps for each chunk
+    ///   (camera trigger time, OS monotonic-to-utc conversion, etc.).
     ///
     /// For each yielded item, the method:
     /// 1) Converts to flat `uint8` bytes,
@@ -271,22 +313,34 @@ impl RHEEDStreamer {
     /// This method **blocks until all spawned tasks complete**. After `run(...)` returns,
     /// call `finalize(data_id)` to mark the stream complete on the server.
     ///
+    /// Timestamps
+    /// ----------
+    /// When the caller does not supply a `capture_start_ms_utc`, this method
+    /// stamps each chunk with `Utc::now()` sampled the moment the iterator
+    /// yields, before any GIL-held packaging work. The chunk's
+    /// `end_unix_ms_utc` is then `start + (n / fps) * 1000`. Inter-chunk
+    /// gaps therefore reflect real arrival jitter; intra-chunk span follows
+    /// declared fps. Pass an explicit timestamp when you have a hardware
+    /// clock (camera trigger, OS monotonic-to-utc conversion).
+    ///
     /// Args:
     ///     data_id (str): The stream data ID returned by `initialize(...)`.
-    ///     frames_iter (Iterable[numpy.ndarray]): Python iterable/generator of `(N,H,W)` or `(H,W)` uint8 arrays.
+    ///     frames_iter (Iterable): Python iterable/generator of `(N,H,W)` / `(H,W)`
+    ///         uint8 arrays, or `(frames, capture_start_ms_utc)` tuples.
     ///
     /// Returns:
     ///     None
     ///
     /// Raises:
     ///     RuntimeError: If any packaging/join/upload step fails.
+    ///     ValueError: If a yielded tuple's second element is not an int.
     ///
     /// See also:
     ///     finalize(data_id)
     #[pyo3(signature = (data_id, frames_iter))]
     #[pyo3(text_signature = "(data_id, frames_iter)")]
     fn run(&self, data_id: String, frames_iter: Bound<PyAny>) -> PyResult<()> {
-        let (rotating, fps, chunk_size) = self.cfg()?;
+        let (rotating, fps, chunk_size) = self.cfg(&data_id)?;
 
         debug!("[rheed_stream] run: starting (concurrent: prepare→spawn package tasks)");
 
@@ -299,8 +353,34 @@ impl RHEEDStreamer {
             let t0 = Instant::now();
             let obj = it?; // next yielded item
 
-            // Prepare (under GIL): convert to (flat bytes, N,H,W)
-            let (flat, n, h, w) = numpy_frames_to_flat(obj)?;
+            // Sample arrival timestamp BEFORE any GIL-held packaging work.
+            // Combined with `numpy_frames_to_flat` releasing the GIL during
+            // its bytes copy, this keeps each chunk's stamp within
+            // microseconds of when its producer yielded — even when other
+            // streams are concurrently pushing on the same GIL.
+            let arrival_ms = Utc::now().timestamp_millis();
+
+            // Yielded item may be: frames | (frames, capture_start_ms_utc)
+            // The latter form lets the caller stamp each chunk with its actual
+            // capture time (e.g. from a hardware clock).
+            let (frames_obj, caller_start_ms): (Bound<PyAny>, Option<i64>) =
+                if let Ok(t) = obj.downcast::<PyTuple>() {
+                    if t.len() == 2 {
+                        let frames = t.get_item(0)?;
+                        let ts = t.get_item(1)?.extract::<i64>().map_err(|e| {
+                            PyValueError::new_err(format!(
+                                "second element of yielded tuple must be int (ms UTC): {e}"
+                            ))
+                        })?;
+                        (frames, Some(ts))
+                    } else {
+                        (obj.clone(), None)
+                    }
+                } else {
+                    (obj.clone(), None)
+                };
+
+            let (flat, n, h, w) = numpy_frames_to_flat(frames_obj)?;
             let flat_len = flat.len();
 
             debug!(
@@ -308,8 +388,9 @@ impl RHEEDStreamer {
                 t0.elapsed(), flat_len
             );
 
-            // Build metadata (timing handled externally overall; we keep 'now + duration' per chunk)
-            let now_ms_utc = Utc::now().timestamp_millis();
+            let start_unix_ms_utc = caller_start_ms.unwrap_or(arrival_ms);
+            let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
+
             let metadata = FrameChunkMetadata {
                 data_id: data_id.clone(),
                 data_stream: "rheed".to_string(),
@@ -319,8 +400,8 @@ impl RHEEDStreamer {
                 avg_frame_rate: fps,
                 chunk_size,
                 dims: format!("{n},{h},{w}"),
-                start_unix_ms_utc: now_ms_utc,
-                end_unix_ms_utc: now_ms_utc + (((n as f64 / fps) * 1000.0) as i64),
+                start_unix_ms_utc,
+                end_unix_ms_utc,
             };
 
             // Spawn via private helper
@@ -360,7 +441,7 @@ impl RHEEDStreamer {
         Ok(())
     }
 
-    /// push(self, data_id: str, chunk_idx: int, frames: numpy.ndarray) -> None
+    /// push(self, data_id: str, chunk_idx: int, frames: numpy.ndarray, capture_start_ms_utc: Optional[int] = None) -> None
     ///
     /// **Callback mode.** Push a single chunk of frames that you produced externally (e.g., from a
     /// camera callback). Call repeatedly for subsequent chunks.
@@ -369,10 +450,24 @@ impl RHEEDStreamer {
     ///
     /// After your last `push(...)`, call **`finalize(data_id)`** to mark the stream as complete on the server.
     ///
+    /// Timestamps
+    /// ----------
+    /// When `capture_start_ms_utc` is not provided, this method stamps each
+    /// chunk with `Utc::now()` sampled the moment `push()` is entered, before
+    /// any GIL-held packaging work. The chunk's `end_unix_ms_utc` is then
+    /// `start + (n / fps) * 1000`. Inter-chunk gaps therefore reflect real
+    /// arrival jitter; intra-chunk span follows declared fps. Pass an explicit
+    /// timestamp when you have a hardware clock (camera trigger, OS
+    /// monotonic-to-utc conversion).
+    ///
     /// Args:
     ///     data_id (str): The remote data identifier returned by `initialize(...)`.
     ///     chunk_idx (int): Zero-based index of this chunk (used in Zarr shard path).
     ///     frames (numpy.ndarray): `(N,H,W)` or `(H,W)` grayscale frames as `uint8`.
+    ///     capture_start_ms_utc (Optional[int]): Capture-start timestamp in milliseconds
+    ///         since UNIX epoch (UTC). Pass when you have a real capture-time clock
+    ///         (camera trigger, OS monotonic-to-utc conversion). When None, sampled
+    ///         from `Utc::now()` on entry.
     ///
     /// Returns:
     ///     None
@@ -382,16 +477,26 @@ impl RHEEDStreamer {
     ///
     /// See also:
     ///     finalize(data_id)
-    #[pyo3(signature = (data_id, chunk_idx, frames))]
-    #[pyo3(text_signature = "(data_id, chunk_idx, frames)")]
-    fn push(&self, data_id: String, chunk_idx: usize, frames: Bound<PyAny>) -> PyResult<()> {
-        let (rotating, fps, chunk_size) = self.cfg()?;
+    #[pyo3(signature = (data_id, chunk_idx, frames, capture_start_ms_utc=None))]
+    #[pyo3(text_signature = "(data_id, chunk_idx, frames, capture_start_ms_utc=None)")]
+    fn push(
+        &self,
+        data_id: String,
+        chunk_idx: usize,
+        frames: Bound<PyAny>,
+        capture_start_ms_utc: Option<i64>,
+    ) -> PyResult<()> {
+        // Sample arrival timestamp BEFORE any GIL-held packaging work, so the
+        // stamp reflects when `push()` was called (not when the GIL handed
+        // back after another stream's heavy copy completed).
+        let arrival_ms = Utc::now().timestamp_millis();
 
-        // Prepare (under GIL)
+        let (rotating, fps, chunk_size) = self.cfg(&data_id)?;
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
-        // Build metadata (same model as generator mode)
-        let now_ms_utc = Utc::now().timestamp_millis();
+        let start_unix_ms_utc = capture_start_ms_utc.unwrap_or(arrival_ms);
+        let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
+
         let metadata = FrameChunkMetadata {
             data_id: data_id.clone(),
             data_stream: "rheed".to_string(),
@@ -401,8 +506,8 @@ impl RHEEDStreamer {
             avg_frame_rate: fps,
             chunk_size,
             dims: format!("{n},{h},{w}"),
-            start_unix_ms_utc: now_ms_utc,
-            end_unix_ms_utc: now_ms_utc + (((n as f64 / fps) * 1000.0) as i64),
+            start_unix_ms_utc,
+            end_unix_ms_utc,
         };
 
         // Spawn via private helper; detach by dropping the handle
@@ -441,7 +546,7 @@ impl RHEEDStreamer {
     ///     run(data_id, frames_iter), push(data_id, chunk_idx, frames)
     #[pyo3(signature = (data_id))]
     #[pyo3(text_signature = "(data_id)")]
-    fn finalize(&mut self, data_id: String) -> PyResult<()> {
+    fn finalize(&self, data_id: String) -> PyResult<()> {
         let base_endpoint = self.endpoint.clone();
         let post_url = format!("{base_endpoint}/rheed/stream/{data_id}/end");
         let final_fut = generic_post(&self.client, &post_url, &self.api_key);
@@ -450,32 +555,33 @@ impl RHEEDStreamer {
             .block_on(final_fut)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
+        // Drop the per-stream entry so the data_id is no longer addressable
+        // from this streamer. Other streams' entries are untouched.
+        let mut streams = self
+            .streams
+            .lock()
+            .expect("streams mutex poisoned");
+        streams.remove(&data_id);
+
         Ok(())
     }
 }
 
 // Private and rust only access
 impl RHEEDStreamer {
-    /// cfg(self) -> Tuple[bool, float, int]
+    /// cfg(self, data_id) -> Tuple[bool, float, int]
     ///
-    /// Internal helper: validates that `initialize(...)` populated required runtime config.
-    ///
-    /// Returns:
-    ///     Tuple[bool, float, int]: `(rotating, fps, chunk_size)`
-    ///
-    /// Raises:
-    ///     RuntimeError: If any required field is missing (i.e., `initialize(...)` not called).
-    fn cfg(&self) -> PyResult<(bool, f64, usize)> {
-        Ok((
-            self.rotating.ok_or_else(|| {
-                PyRuntimeError::new_err("rotating is not set; call initialize(...).")
-            })?,
-            self.fps
-                .ok_or_else(|| PyRuntimeError::new_err("fps is not set; call initialize(...)."))?,
-            self.chunk_size.ok_or_else(|| {
-                PyRuntimeError::new_err("chunk size is not set; call initialize(...).")
-            })?,
-        ))
+    /// Internal helper: looks up per-stream config for `data_id`. Returns the
+    /// tuple `(rotating, fps, chunk_size)` from the entry inserted by
+    /// `initialize(...)`. Errors if no entry exists for this `data_id`.
+    fn cfg(&self, data_id: &str) -> PyResult<(bool, f64, usize)> {
+        let streams = self.streams.lock().expect("streams mutex poisoned");
+        let s = streams.get(data_id).ok_or_else(|| {
+            PyRuntimeError::new_err(format!(
+                "no stream initialized for data_id={data_id}; call initialize(...) first."
+            ))
+        })?;
+        Ok((s.rotating, s.fps, s.chunk_size))
     }
 
     /// spawn_chunk_upload(self, chunk_idx: int, flat: bytes, n: int, h: int, w: int, metadata: FrameChunkMetadata) -> asyncio.Task
@@ -555,4 +661,21 @@ fn rheed_stream(m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RHEEDStreamer>()?;
     m.add_class::<TimeseriesStreamer>()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::chunk_end;
+
+    /// `end_unix_ms_utc - start_unix_ms_utc` is the chunk's intra-chunk span,
+    /// scaled by declared fps. This is what the streamer writes alongside each
+    /// chunk's wallclock-sampled `start`.
+    #[test]
+    fn span_scales_with_fps() {
+        let start = 1_700_000_000_000;
+        // 4 frames at 2 fps → 2000 ms span.
+        assert_eq!(chunk_end(start, 4, 2.0) - start, 2_000);
+        // 30 frames at 30 fps → 1000 ms span.
+        assert_eq!(chunk_end(start, 30, 30.0) - start, 1_000);
+    }
 }

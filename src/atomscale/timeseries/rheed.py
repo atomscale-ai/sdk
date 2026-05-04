@@ -60,7 +60,13 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         frames: list[DataFrame] = []
         # payload shape: {"series_by_angle": [{"angle": <deg>, "series": [...]}, ...]}
         for angle_block in raw.get("series_by_angle", []):
-            angle_df = DataFrame(angle_block["series"])
+            series = angle_block.get("series") or []
+            if not series:
+                continue
+            # Drop columns that are all-NA within this angle block before concat;
+            # otherwise pandas issues a FutureWarning about empty/all-NA entries
+            # widening the result dtype.
+            angle_df = DataFrame(series).dropna(axis=1, how="all")
             angle_df["Angle"] = angle_block["angle"]
             frames.append(angle_df)
 

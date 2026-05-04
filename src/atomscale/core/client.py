@@ -78,7 +78,9 @@ class BaseClient:
                 return None
 
             raise ClientError(
-                f"Problem retrieving data from {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}"
+                f"Problem retrieving data from {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}",
+                status_code=response.status_code,
+                response_text=response.text,
             )
         if len(response.content) == 0:
             return None
@@ -142,7 +144,9 @@ class BaseClient:
                 return None
 
             raise ClientError(
-                f"Problem sending data to {sub_url}. HTTP Error {response.status_code}: {response.text}"
+                f"Problem sending data to {sub_url}. HTTP Error {response.status_code}: {response.text}",
+                status_code=response.status_code,
+                response_text=response.text,
             )
 
         if return_headers:
@@ -182,7 +186,9 @@ class BaseClient:
                 return None
 
             raise ClientError(
-                f"Problem deleting data at {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}"
+                f"Problem deleting data at {sub_url} with parameters {params}. HTTP Error {response.status_code}: {response.text}",
+                status_code=response.status_code,
+                response_text=response.text,
             )
         if len(response.content) == 0:
             return None
@@ -288,14 +294,26 @@ class BaseClient:
             f"{atomscale_info} ({python_info} {platform_info})"
         )
 
+        # urllib3 retries are the safety net for **all** HTTP calls (including
+        # those not wrapped by `_retry_client_call`, e.g. plain `_get`).
+        # Status-code retries are kept small here because the application
+        # layer (`_retry_client_call` in `client.py`) does its own retries
+        # for retryable statuses; previously both were set to 3 retries each,
+        # giving 4 x 4 = 16 worst-case HTTP requests against a persistently
+        # failing endpoint. Capping urllib3's status retries at 1 keeps a
+        # single-transient absorber for direct callers while bounding the
+        # stacked worst case at 2 x 4 = 8.
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3
         retry = Retry(
             total=max_retry_num,
             read=max_retry_num,
             connect=max_retry_num,
+            status=1,
+            backoff_factor=0.5,
             respect_retry_after_header=True,
-            status_forcelist=[429, 504, 502],
+            status_forcelist=[429, 500, 502, 503, 504],
+            raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry)
         session.mount("http://", adapter)
@@ -306,3 +324,13 @@ class BaseClient:
 
 class ClientError(Exception):
     """Generic error thrown by the Atomic Data Sciences API client"""
+
+    def __init__(
+        self,
+        message: str,
+        status_code: int | None = None,
+        response_text: str | None = None,
+    ):
+        super().__init__(message)
+        self.status_code = status_code
+        self.response_text = response_text
