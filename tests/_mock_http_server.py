@@ -24,6 +24,27 @@ class CaptureHandler(BaseHTTPRequestHandler):
     """HTTP handler that captures request body and returns configured response."""
 
     def _handle_request(self, method: str):
+        try:
+            self._handle_request_inner(method)
+        except Exception:  # noqa: BLE001
+            # If anything throws inside the handler the response never
+            # reaches the client and reqwest reports a confusing
+            # "connection closed before message completed" instead of the
+            # actual root cause. Surface the full traceback to stderr so
+            # the test driver can capture it.
+            import sys as _sys
+            import traceback as _traceback
+
+            print(
+                f"MOCK HANDLER EXCEPTION ({method} {self.path}):",
+                file=_sys.stderr,
+                flush=True,
+            )
+            _traceback.print_exc(file=_sys.stderr)
+            _sys.stderr.flush()
+            raise
+
+    def _handle_request_inner(self, method: str):
         """Common handler for all HTTP methods."""
         # Read request body if present
         length = int(self.headers.get("Content-Length", 0))

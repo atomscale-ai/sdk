@@ -71,11 +71,21 @@ class MockServer:
             self._stdout_queue.put(None)
 
     def stop(self) -> None:
-        """Stop the server subprocess."""
+        """Stop the server subprocess (and cache its stderr for diagnostics)."""
         if self._proc:
             self._proc.terminate()
             self._proc.wait(timeout=5)
+            try:
+                if self._proc.stderr is not None:
+                    self._stderr_dump = self._proc.stderr.read() or ""
+            except Exception:  # noqa: BLE001
+                pass
             self._proc = None
+
+    def get_stderr(self) -> str:
+        """Return whatever the subprocess wrote to stderr. Empty before
+        stop() runs (we drain on shutdown to avoid blocking on a live pipe)."""
+        return getattr(self, "_stderr_dump", "") or ""
 
     @property
     def endpoint(self) -> str:
@@ -644,8 +654,16 @@ class TestStreamingE2E:
         )
         server = MockServer(port, routes)
         server.start()
+        run_error: Exception | None = None
+        partial_requests: list[tuple[str, str, str]] = []
         try:
-            streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+            # verbosity=4 emits debug logs for every step (presign,
+            # packaging, PUT) — pytest captures these and prints them on
+            # failure, which is the most useful diagnostic info we have
+            # for Windows-only flakes.
+            streamer = RHEEDStreamer(
+                api_key="k", endpoint=server.endpoint, verbosity=4
+            )
             data_id = streamer.initialize(
                 fps=1.0, rotations_per_min=0.0, chunk_size=2
             )
@@ -661,13 +679,39 @@ class TestStreamingE2E:
                 yield (frames, ts0)
                 yield (frames, ts1)
 
-            streamer.run(data_id, gen())  # blocks until uploads complete
-            streamer.finalize(data_id)
-
-            # Drain captured request lines: 1 init + 2 presigns + 2 PUTs + 1 end.
-            requests = server.get_captured_requests(expected_count=6, timeout_s=15)
+            try:
+                streamer.run(data_id, gen())  # blocks until uploads complete
+                streamer.finalize(data_id)
+                # Drain captured request lines: 1 init + 2 presigns + 2 PUTs + 1 end.
+                requests = server.get_captured_requests(
+                    expected_count=6, timeout_s=15
+                )
+            except Exception as e:  # noqa: BLE001
+                run_error = e
+                # Pull whatever the mock managed to record before the failure.
+                partial_requests = server.get_captured_requests(
+                    expected_count=10, timeout_s=2
+                )
+                requests = []
         finally:
             server.stop()
+
+        if run_error is not None:
+            stderr_dump = server.get_stderr()
+            # Summarize each captured request: method, path, body size (bodies
+            # are latin-1-decoded so .encode('latin-1') gives true bytes).
+            req_summary = "\n".join(
+                f"  - {m} {p}  ({len(b.encode('latin-1'))}B body)"
+                for (m, p, b) in partial_requests
+            ) or "  (none)"
+            pytest.fail(
+                "streaming pipeline failed:\n"
+                f"  exception: {type(run_error).__name__}: {run_error}\n"
+                f"  captured requests so far ({len(partial_requests)}):\n"
+                f"{req_summary}\n"
+                f"  mock subprocess stderr:\n"
+                f"{stderr_dump or '  (empty)'}\n"
+            )
 
         inits = [r for r in requests if r[0] == "POST" and r[1] == "/rheed/stream/"]
         presigns = [
