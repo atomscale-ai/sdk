@@ -16,7 +16,8 @@ The server:
 """
 import json
 import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 
 
 class CaptureHandler(BaseHTTPRequestHandler):
@@ -71,19 +72,43 @@ class CaptureHandler(BaseHTTPRequestHandler):
         pass
 
 
-class MultiRequestServer(HTTPServer):
-    """HTTP server that can handle multiple requests."""
+class MultiRequestServer(ThreadingHTTPServer):
+    """Threaded HTTP server that handles concurrent connections.
+
+    Tokio uploads from multiple streams arrive in tight bursts; serving
+    them serially (or with a small listen backlog) caused silent connection
+    drops under load. Using ThreadingHTTPServer + a generous backlog lets
+    the mock keep up.
+    """
+
+    request_queue_size = 256
 
     def __init__(self, *args, max_requests: int = 1, **kwargs):
         super().__init__(*args, **kwargs)
         self.max_requests = max_requests
+        self._count_lock = threading.Lock()
         self.request_count = 0
+        self._done = threading.Event()
 
     def handle_requests(self):
-        """Handle up to max_requests requests."""
-        while self.request_count < self.max_requests:
-            self.handle_request()
-            self.request_count += 1
+        """Serve until max_requests have been handled (or forever if the
+        server is told to shut down).
+        """
+        thread = threading.Thread(target=self.serve_forever, daemon=True)
+        thread.start()
+        self._done.wait()
+        self.shutdown()
+        thread.join(timeout=2)
+
+    def process_request_thread(self, request, client_address):  # noqa: D401
+        """Override to count handled requests and signal completion."""
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            with self._count_lock:
+                self.request_count += 1
+                if self.request_count >= self.max_requests:
+                    self._done.set()
 
 
 def run_server(port: int, response_data: str) -> None:
