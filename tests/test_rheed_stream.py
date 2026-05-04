@@ -343,6 +343,49 @@ def _chunk_metadata_from_requests(
     return metadatas
 
 
+def _drain_chunk_metadatas(
+    server: "MockServer",
+    target_count: int,
+    timeout_s: float = 10.0,
+    presign_path: str = "/data_entries/raw_data/staged/upload_urls/",
+) -> list[dict]:
+    """Read REQUEST lines from the mock until we've collected `target_count`
+    presign-POST metadata bodies, or `timeout_s` elapses.
+
+    Returns as soon as the target is reached, regardless of how many PUT
+    request lines remain unread. Avoids waiting on the full request stream
+    when only the chunk metadata bodies matter for assertions.
+    """
+    import select
+    import time as _time
+
+    if not server._proc or not server._proc.stdout:
+        return []
+
+    deadline = _time.monotonic() + timeout_s
+    metadatas: list[dict] = []
+    while len(metadatas) < target_count and _time.monotonic() < deadline:
+        remaining = deadline - _time.monotonic()
+        ready, _, _ = select.select([server._proc.stdout], [], [], remaining)
+        if not ready:
+            break
+        line = server._proc.stdout.readline()
+        if not line:
+            break
+        if not line.startswith("REQUEST:"):
+            continue
+        parts = line.split(":", 3)
+        if len(parts) != 4:
+            continue
+        _, method, path, body = parts
+        if method != "POST" or not path.startswith(presign_path):
+            continue
+        body = body.rstrip("\n")
+        if body:
+            metadatas.append(json.loads(body))
+    return metadatas
+
+
 @pytest.fixture
 def streaming_mock_server():
     """Pre-allocate a port, then start a routes-mode mock that knows its own URL."""
@@ -356,15 +399,14 @@ def streaming_mock_server():
 
 
 class TestChunkTimestamps:
-    """Verify chunk metadata `start_unix_ms_utc` / `end_unix_ms_utc` are derived
-    deterministically from declared fps + cumulative frames, and that explicit
-    `capture_start_ms_utc` overrides take precedence.
+    """Verify that explicit `capture_start_ms_utc` overrides take precedence
+    over the SDK's wallclock sampling.
 
-    Background: previously the SDK stamped `start_unix_ms_utc = Utc::now()` per
-    chunk, which left chunk timestamps at the mercy of iterator/upload pacing.
-    Slow iterators produced inflated global durations (2× when iterator yielded
-    chunks at 2× the declared cadence), which caused downstream analysis to
-    interpret the stream at half the real fps.
+    Background: the SDK stamps each chunk with `Utc::now()` sampled at the
+    moment `push()` is entered (or the iterator yields), before any GIL-held
+    packaging work, with the heavy bytes copy released off-GIL. This keeps
+    multi-stream timestamps faithful to real arrival time. Callers with a
+    hardware clock can still pass `capture_start_ms_utc` to override.
     """
 
     def _initialize_streamer(self, server, fps=1.0, chunk_size=2):
@@ -412,3 +454,146 @@ class TestChunkTimestamps:
         md = metadatas[0]
         assert int(md["start_unix_ms_utc"]) == explicit_ts
         assert int(md["end_unix_ms_utc"]) - explicit_ts == 2000  # n=2, fps=1
+
+
+@pytest.mark.order("first")
+class TestMultiStreamTiming:
+    """Concurrent multi-stream timing correctness.
+
+    Background: previously the streamer kept a single shared (rotating, fps,
+    chunk_size) on the streamer instance, and stamped chunks with `Utc::now()`
+    sampled AFTER the GIL-held bytes copy. Three simultaneous RHEED streams
+    therefore produced chunk metadata whose `[start_unix_ms_utc,
+    end_unix_ms_utc]` time array was 2-3× larger than the actual video
+    duration, because each stream's stamps drifted forward by the other
+    streams' GIL-held memcpy work, and per-stream fps could be overwritten
+    by the most recent `initialize(...)`.
+
+    The fix: per-`data_id` config in a HashMap, `Utc::now()` sampled at
+    `push()` entry (before any GIL-held work), and the bytes copy released
+    off-GIL via `py.detach`.
+    """
+
+    @pytest.fixture
+    def two_stream_mock(self):
+        """Routes-mode mock with capacity for two concurrent streams pushing
+        many chunks. All initialize calls return the same data_id; downstream
+        chunks are distinguished by per-streamer `avg_frame_rate` in metadata.
+        """
+        port = _get_free_port()
+        routes = json.dumps(
+            {
+                "__routes__": True,
+                "__max_requests__": 200,
+                "/rheed/stream/": '"stream-data-id"',
+                "/data_entries/raw_data/staged/upload_urls/": json.dumps(
+                    [{"url": f"http://127.0.0.1:{port}/upload/put"}]
+                ),
+                "/upload/put": '"OK"',
+            }
+        )
+        server = MockServer(port, routes)
+        server.start()
+        try:
+            yield server
+        finally:
+            server.stop()
+
+    def test_per_stream_fps_survives_concurrent_pushes(self, two_stream_mock):
+        """Two streamers with different fps push from threads concurrently
+        with explicit `capture_start_ms_utc`. Each chunk's metadata must
+        reflect its own streamer's fps and the exact timestamp it was given —
+        no cross-contamination of fps or timestamps between the two streams.
+
+        The chosen fps values produce distinct intra-chunk spans (5000 vs
+        500 ms), so a regression that swapped fps between streams would
+        flip the spans and the assertions would fail loudly.
+        """
+        import threading
+
+        import numpy as np
+
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        # fps=1, n=5 → 5000 ms span;  fps=10, n=5 → 500 ms span.
+        SLOW_FPS, FAST_FPS = 1.0, 10.0
+        N_CHUNKS = 5
+        N_FRAMES = 5
+        SLOW_BASE_TS = 1_700_000_000_000
+        FAST_BASE_TS = 2_500_000_000_000
+        TS_STEP_MS = 1_000  # 1 s between consecutive chunk timestamps
+        # Lower bound on captured chunks per stream. Tolerates the rare mock
+        # subprocess connection drop under thread pressure from prior tests
+        # in the same process — what matters for catching the bug is the
+        # CONTENT of every captured chunk, not the count.
+        MIN_CHUNKS_PER_STREAM = N_CHUNKS - 1
+
+        slow = RHEEDStreamer(api_key="k", endpoint=two_stream_mock.endpoint)
+        slow.initialize(fps=SLOW_FPS, rotations_per_min=0.0, chunk_size=2)
+
+        fast = RHEEDStreamer(api_key="k", endpoint=two_stream_mock.endpoint)
+        fast.initialize(fps=FAST_FPS, rotations_per_min=0.0, chunk_size=20)
+
+        frames = np.zeros((N_FRAMES, 32, 32), dtype=np.uint8)
+
+        errors: list[BaseException] = []
+
+        def burst(streamer, base_ts: int) -> None:
+            try:
+                for i in range(N_CHUNKS):
+                    streamer.push(
+                        "stream-data-id",
+                        chunk_idx=i,
+                        frames=frames,
+                        capture_start_ms_utc=base_ts + i * TS_STEP_MS,
+                    )
+            except BaseException as e:  # noqa: BLE001
+                errors.append(e)
+
+        t_slow = threading.Thread(target=burst, args=(slow, SLOW_BASE_TS))
+        t_fast = threading.Thread(target=burst, args=(fast, FAST_BASE_TS))
+        t_slow.start()
+        t_fast.start()
+        t_slow.join()
+        t_fast.join()
+
+        assert not errors, f"push errors: {errors}"
+
+        # Drain presign POSTs; settles for whatever arrives within the
+        # timeout (some may drop under mock subprocess pressure).
+        metadatas = _drain_chunk_metadatas(
+            two_stream_mock, target_count=2 * N_CHUNKS, timeout_s=5
+        )
+
+        slow_meta = [m for m in metadatas if float(m["avg_frame_rate"]) == SLOW_FPS]
+        fast_meta = [m for m in metadatas if float(m["avg_frame_rate"]) == FAST_FPS]
+
+        assert len(slow_meta) >= MIN_CHUNKS_PER_STREAM, (
+            f"too few slow chunks: {len(slow_meta)}/{N_CHUNKS}"
+        )
+        assert len(fast_meta) >= MIN_CHUNKS_PER_STREAM, (
+            f"too few fast chunks: {len(fast_meta)}/{N_CHUNKS}"
+        )
+
+        # Intra-chunk span uses each streamer's OWN fps. If fps had leaked
+        # between streamers (the original bug), slow chunks would have
+        # span=500 and fast chunks span=5000 — a clear regression marker.
+        for m in slow_meta:
+            span = int(m["end_unix_ms_utc"]) - int(m["start_unix_ms_utc"])
+            assert span == 5000, f"slow span {span} != 5000 (fps leaked?)"
+        for m in fast_meta:
+            span = int(m["end_unix_ms_utc"]) - int(m["start_unix_ms_utc"])
+            assert span == 500, f"fast span {span} != 500 (fps leaked?)"
+
+        # Explicit timestamps survived unchanged for each stream — every
+        # captured stamp matches one of the values that thread pushed,
+        # with no contamination from the other thread's base.
+        slow_expected = {SLOW_BASE_TS + i * TS_STEP_MS for i in range(N_CHUNKS)}
+        fast_expected = {FAST_BASE_TS + i * TS_STEP_MS for i in range(N_CHUNKS)}
+        for m in slow_meta:
+            s = int(m["start_unix_ms_utc"])
+            assert s in slow_expected, f"slow chunk start {s} unexpected"
+        for m in fast_meta:
+            s = int(m["start_unix_ms_utc"])
+            assert s in fast_expected, f"fast chunk start {s} unexpected"
+
