@@ -294,16 +294,21 @@ class BaseClient:
             f"{atomscale_info} ({python_info} {platform_info})"
         )
 
+        # urllib3 retries cover **transport-level** failures only (connection
+        # drops, read timeouts). Status-code retries (429 / 5xx) are handled
+        # at the application layer by `_retry_client_call` in `client.py`.
+        # Keeping both would multiply attempts (e.g. 4 × 4 = 16 HTTP requests
+        # against a persistently failing endpoint).
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3
         retry = Retry(
             total=max_retry_num,
             read=max_retry_num,
             connect=max_retry_num,
-            status=max_retry_num,
+            status=0,
             backoff_factor=0.5,
             respect_retry_after_header=True,
-            status_forcelist=[429, 500, 502, 503, 504],
+            status_forcelist=[],
             raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry)

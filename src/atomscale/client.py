@@ -947,7 +947,7 @@ class Client(BaseClient):
         warnings.warn(
             f"Unrecognized data_type '{data_type}' for data_id '{data_id}'; "
             "returning UnknownResult. The SDK may be out of date — consider upgrading.",
-            stacklevel=2,
+            stacklevel=3,
         )
         return UnknownResult(
             data_id=data_id,
@@ -1090,7 +1090,11 @@ class Client(BaseClient):
         project_id: str | None = None
         if project is not None:
             project_id, _ = self._resolve_project(project)
-            assert ps_id is not None  # guarded above
+            if ps_id is None:  # guarded above; defensive against future refactors
+                raise ClientError(
+                    "`project` requires `physical_sample` so the sample can be added "
+                    "to the project's tracking list."
+                )
             self._add_sample_to_project(project_id, ps_id)
 
         # Check to make sure list is valid and get pre-signed URL nums

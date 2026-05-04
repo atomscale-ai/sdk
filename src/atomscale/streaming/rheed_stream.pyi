@@ -51,6 +51,10 @@ class RHEEDStreamer:
                 POST /projects/{id}/configuration/tracking_samples. The sample
                 is also marked as the project's active tracking sample for
                 growth monitoring.
+            tags: List of tag names or UUIDs to attach to the data item.
+                Names are matched case-insensitively against existing
+                organization tags; unknown names are created. UUIDs must
+                reference existing tags.
 
         Returns:
             The data_id for this stream.
@@ -65,7 +69,20 @@ class RHEEDStreamer:
         data_id: str,
         chunk_idx: int,
         frames: NDArray[np.uint8],
-    ) -> None: ...
+        capture_start_ms_utc: int | None = None,
+    ) -> None:
+        """Package and upload one chunk of frames.
+
+        Args:
+            data_id: Stream identifier from initialize().
+            chunk_idx: Zero-based chunk index for ordering.
+            frames: Grayscale uint8 array, shape (N, H, W) or (H, W).
+            capture_start_ms_utc: Optional capture-time timestamp (ms since
+                UNIX epoch, UTC) for the first frame in the chunk. When
+                omitted, the streamer samples ``Utc::now()`` at push entry.
+                Pass an explicit value when you have a hardware/trigger
+                timestamp aligned with frame capture.
+        """
     def finalize(self, data_id: str) -> None: ...
 
 class TimeseriesStreamer:
