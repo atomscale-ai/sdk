@@ -294,21 +294,25 @@ class BaseClient:
             f"{atomscale_info} ({python_info} {platform_info})"
         )
 
-        # urllib3 retries cover **transport-level** failures only (connection
-        # drops, read timeouts). Status-code retries (429 / 5xx) are handled
-        # at the application layer by `_retry_client_call` in `client.py`.
-        # Keeping both would multiply attempts (e.g. 4 x 4 = 16 HTTP requests
-        # against a persistently failing endpoint).
+        # urllib3 retries are the safety net for **all** HTTP calls (including
+        # those not wrapped by `_retry_client_call`, e.g. plain `_get`).
+        # Status-code retries are kept small here because the application
+        # layer (`_retry_client_call` in `client.py`) does its own retries
+        # for retryable statuses; previously both were set to 3 retries each,
+        # giving 4 x 4 = 16 worst-case HTTP requests against a persistently
+        # failing endpoint. Capping urllib3's status retries at 1 keeps a
+        # single-transient absorber for direct callers while bounding the
+        # stacked worst case at 2 x 4 = 8.
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3
         retry = Retry(
             total=max_retry_num,
             read=max_retry_num,
             connect=max_retry_num,
-            status=0,
+            status=1,
             backoff_factor=0.5,
             respect_retry_after_header=True,
-            status_forcelist=[],
+            status_forcelist=[429, 500, 502, 503, 504],
             raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry)
