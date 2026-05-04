@@ -19,7 +19,7 @@ def client():
 
 
 def test_no_api_key():
-    with pytest.raises(ValueError, match="No valid ADS API key supplied"):
+    with pytest.raises(ValueError, match="No valid Atomscale API key supplied"):
         with mock.patch("os.environ.get", return_value=None):
             Client(api_key=None)
 
