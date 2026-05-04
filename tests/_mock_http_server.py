@@ -76,10 +76,23 @@ class CaptureHandler(BaseHTTPRequestHandler):
                 # Default response for unmatched routes
                 response_data = '""'
 
-            # Print request info for debugging / structured capture. Body
-            # is decoded as latin-1 (always lossless) since PUTs of binary
-            # frame data won't be valid UTF-8.
-            body_str = body.decode("latin-1") if body else ""
+            # Print request info for debugging / structured capture.
+            #
+            # PUT bodies are binary (zarr-encoded frame shards) and can
+            # contain any byte 0x00–0xFF, so they can't be safely round-
+            # tripped through Python's text-mode stdout: on Windows CI
+            # the default stdout encoding is cp1252, which fails to encode
+            # byte values like 0x93. We log a length placeholder for PUTs
+            # and keep the actual body only for POSTs (which carry JSON).
+            if method == "PUT":
+                body_str = f"<{len(body)} bytes>"
+            else:
+                # POST bodies are JSON / ASCII — decode normally and
+                # silently replace any stray non-text bytes so a
+                # malformed body still won't crash the handler.
+                body_str = (
+                    body.decode("utf-8", errors="replace") if body else ""
+                )
             print(f"REQUEST:{method}:{path}:{body_str}", flush=True)
         else:
             # Simple mode: single response for all requests

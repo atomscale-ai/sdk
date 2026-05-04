@@ -698,10 +698,11 @@ class TestStreamingE2E:
 
         if run_error is not None:
             stderr_dump = server.get_stderr()
-            # Summarize each captured request: method, path, body size (bodies
-            # are latin-1-decoded so .encode('latin-1') gives true bytes).
+            # Summarize each captured request: method, path, and body
+            # (POST bodies decoded as UTF-8 with replacement, PUT bodies
+            # represented as a "<N bytes>" placeholder by the mock).
             req_summary = "\n".join(
-                f"  - {m} {p}  ({len(b.encode('latin-1'))}B body)"
+                f"  - {m} {p}  body={b[:120]!r}"
                 for (m, p, b) in partial_requests
             ) or "  (none)"
             pytest.fail(
