@@ -484,12 +484,16 @@ class TestChunkTimestamps:
             capture_start_ms_utc=explicit_ts,
         )
 
+        # Generous timeout for slow Windows CI runners — push() is async
+        # and the tokio dispatch + stdout-pipe drain can take a few seconds.
         requests = streaming_mock_server.get_captured_requests(
-            expected_count=2, timeout_s=5
+            expected_count=2, timeout_s=20
         )
         metadatas = _chunk_metadata_from_requests(requests)
 
-        assert len(metadatas) >= 1
+        assert len(metadatas) >= 1, (
+            f"no presign POST captured within timeout; saw requests={requests}"
+        )
         md = metadatas[0]
         assert int(md["start_unix_ms_utc"]) == explicit_ts
         assert int(md["end_unix_ms_utc"]) - explicit_ts == 2000  # n=2, fps=1
