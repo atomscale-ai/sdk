@@ -55,8 +55,11 @@ class CaptureHandler(BaseHTTPRequestHandler):
                 # Default response for unmatched routes
                 response_data = '""'
 
-            # Print request info for debugging / structured capture.
-            print(f"REQUEST:{method}:{path}:{body.decode() if body else ''}", flush=True)
+            # Print request info for debugging / structured capture. Body
+            # is decoded as latin-1 (always lossless) since PUTs of binary
+            # frame data won't be valid UTF-8.
+            body_str = body.decode("latin-1") if body else ""
+            print(f"REQUEST:{method}:{path}:{body_str}", flush=True)
         else:
             # Simple mode: single response for all requests
             response_data = self.server.response_data

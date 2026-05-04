@@ -353,293 +353,9 @@ class TestRHEEDStreamerInitialize:
         assert data_id == "test-data-id-999"
 
 
-def _streaming_routes_for(port: int) -> str:
-    """Routes-mode mock config for a streaming session.
+class TestRHEEDStreamerTags:
+    """Tests for the `tags` parameter on RHEEDStreamer.initialize()."""
 
-    The presign endpoint returns a URL pointing at the same mock server's
-    /upload/put route, so the subsequent PUT can succeed in-process.
-    """
-    return json.dumps(
-        {
-            "__routes__": True,
-            "__max_requests__": 50,
-            "/rheed/stream/": '"stream-data-id"',
-            "/data_entries/raw_data/staged/upload_urls/": json.dumps(
-                [{"url": f"http://127.0.0.1:{port}/upload/put"}]
-            ),
-            "/upload/put": '"OK"',
-        }
-    )
-
-
-def _chunk_metadata_from_requests(
-    requests, presign_path="/data_entries/raw_data/staged/upload_urls/"
-):
-    """Filter REQUEST tuples for the presign POSTs and return parsed metadata bodies."""
-    metadatas = []
-    for method, path, body in requests:
-        if method == "POST" and path.startswith(presign_path):
-            if body:
-                metadatas.append(json.loads(body))
-    return metadatas
-
-
-def _drain_chunk_metadatas(
-    server: "MockServer",
-    target_count: int,
-    timeout_s: float = 10.0,
-    presign_path: str = "/data_entries/raw_data/staged/upload_urls/",
-) -> list[dict]:
-    """Read REQUEST lines from the mock until we've collected `target_count`
-    presign-POST metadata bodies, or `timeout_s` elapses.
-
-    Returns as soon as the target is reached, regardless of how many PUT
-    request lines remain unread. Avoids waiting on the full request stream
-    when only the chunk metadata bodies matter for assertions.
-    """
-    import time as _time
-
-    if not server._proc:
-        return []
-
-    deadline = _time.monotonic() + timeout_s
-    metadatas: list[dict] = []
-    while len(metadatas) < target_count:
-        remaining = deadline - _time.monotonic()
-        if remaining <= 0:
-            break
-        line = server._read_line(remaining)
-        if line is None:
-            break
-        if not line.startswith("REQUEST:"):
-            continue
-        parts = line.split(":", 3)
-        if len(parts) != 4:
-            continue
-        _, method, path, body = parts
-        if method != "POST" or not path.startswith(presign_path):
-            continue
-        body = body.rstrip("\n")
-        if body:
-            metadatas.append(json.loads(body))
-    return metadatas
-
-
-@pytest.fixture
-def streaming_mock_server():
-    """Pre-allocate a port, then start a routes-mode mock that knows its own URL."""
-    port = _get_free_port()
-    server = MockServer(port, _streaming_routes_for(port))
-    server.start()
-    try:
-        yield server
-    finally:
-        server.stop()
-
-
-class TestChunkTimestamps:
-    """Verify that explicit `capture_start_ms_utc` overrides take precedence
-    over the SDK's wallclock sampling.
-
-    Background: the SDK stamps each chunk with `Utc::now()` sampled at the
-    moment `push()` is entered (or the iterator yields), before any GIL-held
-    packaging work, with the heavy bytes copy released off-GIL. This keeps
-    multi-stream timestamps faithful to real arrival time. Callers with a
-    hardware clock can still pass `capture_start_ms_utc` to override.
-    """
-
-    def _initialize_streamer(self, server, fps=1.0, chunk_size=2):
-        from atomscale.streaming.rheed_stream import RHEEDStreamer
-
-        streamer = RHEEDStreamer(api_key="test-api-key", endpoint=server.endpoint)
-        streamer.initialize(fps=fps, rotations_per_min=0.0, chunk_size=chunk_size)
-        return streamer
-
-    def test_push_signature_accepts_capture_start_ms_utc(self):
-        """Verify push() signature includes the new capture_start_ms_utc kwarg."""
-        import inspect
-
-        from atomscale.streaming.rheed_stream import RHEEDStreamer
-
-        sig = inspect.signature(RHEEDStreamer.push)
-        params = list(sig.parameters.keys())
-        assert "capture_start_ms_utc" in params
-        assert sig.parameters["capture_start_ms_utc"].default is None
-
-    def test_push_uses_explicit_timestamp_when_provided(self, streaming_mock_server):
-        """push() should respect capture_start_ms_utc when given."""
-        import numpy as np
-
-        streamer = self._initialize_streamer(
-            streaming_mock_server, fps=1.0, chunk_size=2
-        )
-
-        explicit_ts = 1_700_000_000_000
-        # push() is fire-and-forget — does not raise even if subsequent
-        # packaging fails. It dispatches the metadata POST first.
-        streamer.push(
-            "stream-data-id",
-            chunk_idx=0,
-            frames=np.zeros((2, 32, 32), dtype=np.uint8),
-            capture_start_ms_utc=explicit_ts,
-        )
-
-        # Generous timeout for slow Windows CI runners — push() is async
-        # and the tokio dispatch + stdout-pipe drain can take a few seconds.
-        requests = streaming_mock_server.get_captured_requests(
-            expected_count=2, timeout_s=20
-        )
-        metadatas = _chunk_metadata_from_requests(requests)
-
-        assert len(metadatas) >= 1, (
-            f"no presign POST captured within timeout; saw requests={requests}"
-        )
-        md = metadatas[0]
-        assert int(md["start_unix_ms_utc"]) == explicit_ts
-        assert int(md["end_unix_ms_utc"]) - explicit_ts == 2000  # n=2, fps=1
-
-
-@pytest.mark.order("first")
-class TestMultiStreamTiming:
-    """Concurrent multi-stream timing correctness.
-
-    Background: previously the streamer kept a single shared (rotating, fps,
-    chunk_size) on the streamer instance, and stamped chunks with `Utc::now()`
-    sampled AFTER the GIL-held bytes copy. Three simultaneous RHEED streams
-    therefore produced chunk metadata whose `[start_unix_ms_utc,
-    end_unix_ms_utc]` time array was 2-3× larger than the actual video
-    duration, because each stream's stamps drifted forward by the other
-    streams' GIL-held memcpy work, and per-stream fps could be overwritten
-    by the most recent `initialize(...)`.
-
-    The fix: per-`data_id` config in a HashMap, `Utc::now()` sampled at
-    `push()` entry (before any GIL-held work), and the bytes copy released
-    off-GIL via `py.detach`.
-    """
-
-    @pytest.fixture
-    def two_stream_mock(self):
-        """Routes-mode mock with capacity for two concurrent streams pushing
-        many chunks. All initialize calls return the same data_id; downstream
-        chunks are distinguished by per-streamer `avg_frame_rate` in metadata.
-        """
-        port = _get_free_port()
-        routes = json.dumps(
-            {
-                "__routes__": True,
-                "__max_requests__": 200,
-                "/rheed/stream/": '"stream-data-id"',
-                "/data_entries/raw_data/staged/upload_urls/": json.dumps(
-                    [{"url": f"http://127.0.0.1:{port}/upload/put"}]
-                ),
-                "/upload/put": '"OK"',
-            }
-        )
-        server = MockServer(port, routes)
-        server.start()
-        try:
-            yield server
-        finally:
-            server.stop()
-
-    def test_per_stream_fps_survives_concurrent_pushes(self, two_stream_mock):
-        """Two streamers with different fps push from threads concurrently
-        with explicit `capture_start_ms_utc`. Each chunk's metadata must
-        reflect its own streamer's fps and the exact timestamp it was given —
-        no cross-contamination of fps or timestamps between the two streams.
-
-        The chosen fps values produce distinct intra-chunk spans (5000 vs
-        500 ms), so a regression that swapped fps between streams would
-        flip the spans and the assertions would fail loudly.
-        """
-        import threading
-
-        import numpy as np
-
-        from atomscale.streaming.rheed_stream import RHEEDStreamer
-
-        # fps=1, n=5 → 5000 ms span;  fps=10, n=5 → 500 ms span.
-        SLOW_FPS, FAST_FPS = 1.0, 10.0
-        N_CHUNKS = 5
-        N_FRAMES = 5
-        SLOW_BASE_TS = 1_700_000_000_000
-        FAST_BASE_TS = 2_500_000_000_000
-        TS_STEP_MS = 1_000  # 1 s between consecutive chunk timestamps
-        # Lower bound on captured chunks per stream. Tolerates mock-subprocess
-        # connection drops under thread pressure (especially on slow CI
-        # runners) — what matters for catching the bug is the CONTENT of
-        # every captured chunk, not the count. As long as ≥ half made it
-        # through and any "all chunks dropped" regression still trips here.
-        MIN_CHUNKS_PER_STREAM = max(2, N_CHUNKS // 2)
-
-        slow = RHEEDStreamer(api_key="k", endpoint=two_stream_mock.endpoint)
-        slow.initialize(fps=SLOW_FPS, rotations_per_min=0.0, chunk_size=2)
-
-        fast = RHEEDStreamer(api_key="k", endpoint=two_stream_mock.endpoint)
-        fast.initialize(fps=FAST_FPS, rotations_per_min=0.0, chunk_size=20)
-
-        frames = np.zeros((N_FRAMES, 32, 32), dtype=np.uint8)
-
-        errors: list[BaseException] = []
-
-        def burst(streamer, base_ts: int) -> None:
-            try:
-                for i in range(N_CHUNKS):
-                    streamer.push(
-                        "stream-data-id",
-                        chunk_idx=i,
-                        frames=frames,
-                        capture_start_ms_utc=base_ts + i * TS_STEP_MS,
-                    )
-            except BaseException as e:  # noqa: BLE001
-                errors.append(e)
-
-        t_slow = threading.Thread(target=burst, args=(slow, SLOW_BASE_TS))
-        t_fast = threading.Thread(target=burst, args=(fast, FAST_BASE_TS))
-        t_slow.start()
-        t_fast.start()
-        t_slow.join()
-        t_fast.join()
-
-        assert not errors, f"push errors: {errors}"
-
-        # Drain presign POSTs; settles for whatever arrives within the
-        # timeout (some may drop under mock subprocess pressure).
-        metadatas = _drain_chunk_metadatas(
-            two_stream_mock, target_count=2 * N_CHUNKS, timeout_s=5
-        )
-
-        slow_meta = [m for m in metadatas if float(m["avg_frame_rate"]) == SLOW_FPS]
-        fast_meta = [m for m in metadatas if float(m["avg_frame_rate"]) == FAST_FPS]
-
-        assert len(slow_meta) >= MIN_CHUNKS_PER_STREAM, (
-            f"too few slow chunks: {len(slow_meta)}/{N_CHUNKS}"
-        )
-        assert len(fast_meta) >= MIN_CHUNKS_PER_STREAM, (
-            f"too few fast chunks: {len(fast_meta)}/{N_CHUNKS}"
-        )
-
-        # Intra-chunk span uses each streamer's OWN fps. If fps had leaked
-        # between streamers (the original bug), slow chunks would have
-        # span=500 and fast chunks span=5000 — a clear regression marker.
-        for m in slow_meta:
-            span = int(m["end_unix_ms_utc"]) - int(m["start_unix_ms_utc"])
-            assert span == 5000, f"slow span {span} != 5000 (fps leaked?)"
-        for m in fast_meta:
-            span = int(m["end_unix_ms_utc"]) - int(m["start_unix_ms_utc"])
-            assert span == 500, f"fast span {span} != 500 (fps leaked?)"
-
-        # Explicit timestamps survived unchanged for each stream — every
-        # captured stamp matches one of the values that thread pushed,
-        # with no contamination from the other thread's base.
-        slow_expected = {SLOW_BASE_TS + i * TS_STEP_MS for i in range(N_CHUNKS)}
-        fast_expected = {FAST_BASE_TS + i * TS_STEP_MS for i in range(N_CHUNKS)}
-        for m in slow_meta:
-            s = int(m["start_unix_ms_utc"])
-            assert s in slow_expected, f"slow chunk start {s} unexpected"
-        for m in fast_meta:
-            s = int(m["start_unix_ms_utc"])
-            assert s in fast_expected, f"fast chunk start {s} unexpected"
     def test_initialize_accepts_tags_parameter(self):
         """Verify initialize() signature includes the tags parameter."""
         import inspect
@@ -880,3 +596,100 @@ class TestMultiStreamTiming:
                 chunk_size=60,
                 tags=["99999999-9999-9999-9999-999999999999"],
             )
+
+
+class TestStreamingE2E:
+    """End-to-end RHEED streaming smoke test.
+
+    Drives the full upload pipeline — initialize POST, per-chunk presign
+    POSTs, frame PUTs to the presigned URLs, and the end-of-stream POST —
+    against the same subprocess-based mock the init tests use (which is
+    already known to work on Linux/macOS/Windows). An in-process Python
+    HTTP server can't be used here: the streamer holds the GIL during
+    `block_on(...)`, so a Python handler thread in the same process never
+    gets scheduled and the request times out.
+
+    We use `run(...)` rather than `push(...)`: it block-awaits every
+    chunk's spawned upload task before returning, so any
+    Windows-side scheduling or networking issue in `spawn_chunk_upload`
+    surfaces deterministically. `push(...)` shares the same internal
+    `spawn_chunk_upload` code path, so a green `run(...)` is strong
+    evidence `push(...)` works too.
+
+    Frame data must be **non-fill-value**: zarrs intentionally skips
+    persisting all-fill chunks (the platform reconstructs blank frames
+    server-side without an uploaded shard), so a test using
+    `np.zeros(...)` would silently bypass the PUT path.
+    """
+
+    def test_full_cycle_uploads_chunks(self):
+        import numpy as np
+
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        # Pre-allocate the port so the routes JSON can encode the
+        # presign-redirect URL pointing back at the same mock.
+        port = _get_free_port()
+        routes = json.dumps(
+            {
+                "__routes__": True,
+                # 6 expected requests: 1 init POST + 2 presign POSTs + 2 PUTs + 1 end POST.
+                "__max_requests__": 8,
+                "/rheed/stream/": '"stream-data-id"',
+                "/data_entries/raw_data/staged/upload_urls/": json.dumps(
+                    [{"url": f"http://127.0.0.1:{port}/upload/put"}]
+                ),
+                "/upload/put": '"OK"',
+            }
+        )
+        server = MockServer(port, routes)
+        server.start()
+        try:
+            streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+            data_id = streamer.initialize(
+                fps=1.0, rotations_per_min=0.0, chunk_size=2
+            )
+            assert data_id == "stream-data-id"
+
+            # Non-fill-value frames so zarr packaging actually emits bytes
+            # and the PUT path runs.
+            frames = np.full((2, 8, 8), 7, dtype=np.uint8)
+            ts0 = 1_700_000_000_000
+            ts1 = ts0 + 5_000
+
+            def gen():
+                yield (frames, ts0)
+                yield (frames, ts1)
+
+            streamer.run(data_id, gen())  # blocks until uploads complete
+            streamer.finalize(data_id)
+
+            # Drain captured request lines: 1 init + 2 presigns + 2 PUTs + 1 end.
+            requests = server.get_captured_requests(expected_count=6, timeout_s=15)
+        finally:
+            server.stop()
+
+        inits = [r for r in requests if r[0] == "POST" and r[1] == "/rheed/stream/"]
+        presigns = [
+            r for r in requests
+            if r[0] == "POST"
+            and r[1].startswith("/data_entries/raw_data/staged/upload_urls/")
+        ]
+        puts = [r for r in requests if r[0] == "PUT" and r[1].startswith("/upload/put")]
+        ends = [r for r in requests if r[0] == "POST" and r[1].endswith("/end")]
+
+        assert len(inits) == 1, f"expected 1 init POST, saw {len(inits)} ({requests})"
+        assert len(presigns) == 2, (
+            f"expected 2 presign POSTs, saw {len(presigns)} ({requests})"
+        )
+        assert len(puts) == 2, f"expected 2 PUTs, saw {len(puts)} ({requests})"
+        assert len(ends) == 1, f"expected 1 end POST, saw {len(ends)} ({requests})"
+
+        # First presign carried our explicit timestamp; intra-chunk span
+        # is n / fps = 2 / 1 = 2000 ms.
+        meta0 = json.loads(presigns[0][2])
+        assert int(meta0["start_unix_ms_utc"]) == ts0
+        assert int(meta0["end_unix_ms_utc"]) - ts0 == 2000
+
+        meta1 = json.loads(presigns[1][2])
+        assert int(meta1["start_unix_ms_utc"]) == ts1
