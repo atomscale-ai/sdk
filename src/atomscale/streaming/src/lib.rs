@@ -17,8 +17,8 @@ use timeseries::TimeseriesStreamer;
 
 mod initialize;
 use initialize::{
-    ensure_physical_sample_link, post_for_initialization, update_project_tracking_sample,
-    RHEEDStreamSettings,
+    ensure_physical_sample_link, ensure_tags_attached, post_for_initialization,
+    update_project_tracking_sample, RHEEDStreamSettings,
 };
 
 mod upload;
@@ -138,15 +138,18 @@ impl RHEEDStreamer {
     ///     project_id (Optional[str]): UUID of a project to associate with the stream. When provided along with
     ///         `physical_sample`, the project's `tracking_physical_sample_id` configuration is automatically updated
     ///         to link the physical sample to the project for growth monitoring.
+    ///     tags (Optional[List[str]]): List of tag names or UUIDs to attach to the data item. Names are matched
+    ///         case-insensitively against existing org tags; unknown names are created. UUIDs must reference
+    ///         existing tags.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
     ///     RuntimeError: If the initialization POST fails.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None))]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None))]
     #[pyo3(
-        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None)"
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None)"
     )]
     fn initialize(
         &mut self,
@@ -156,6 +159,7 @@ impl RHEEDStreamer {
         stream_name: Option<String>,
         physical_sample: Option<String>,
         project_id: Option<String>,
+        tags: Option<Vec<String>>,
     ) -> PyResult<String> {
         // Guard: chunk_size must be >= ceil(2 * fps)
         let min_chunk = (2.0 * fps).ceil() as usize;
@@ -225,6 +229,21 @@ impl RHEEDStreamer {
                 );
                 self.rt
                     .block_on(update_project_fut)
+                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            }
+        }
+
+        if let Some(tag_inputs) = tags {
+            if !tag_inputs.is_empty() {
+                let tags_fut = ensure_tags_attached(
+                    &self.client,
+                    &base_endpoint,
+                    &self.api_key,
+                    &data_id,
+                    &tag_inputs,
+                );
+                self.rt
+                    .block_on(tags_fut)
                     .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
             }
         }

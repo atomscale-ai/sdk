@@ -26,6 +26,7 @@ class RHEEDStreamer:
         stream_name: str | None = None,
         physical_sample: str | None = None,
         project_id: str | None = None,
+        tags: list[str] | None = None,
     ) -> str:
         """Initialize a new RHEED stream.
 
@@ -47,6 +48,10 @@ class RHEEDStreamer:
             project_id: UUID of the associated project. When provided along
                 with physical_sample, the project's tracking_physical_sample_id
                 is automatically updated to link the sample for growth monitoring.
+            tags: List of tag names or UUIDs to attach to the data item.
+                Names are matched case-insensitively against existing
+                organization tags; unknown names are created. UUIDs must
+                reference existing tags.
 
         Returns:
             The data_id for this stream.
@@ -100,6 +105,7 @@ class TimeseriesStreamer:
         synth_source_id: int | None = None,
         physical_sample: str | None = None,
         project_id: str | None = None,
+        tags: list[str] | None = None,
     ) -> str:
         """Initialize a new timeseries stream.
 
@@ -118,6 +124,10 @@ class TimeseriesStreamer:
             project_id: UUID of the associated project. When provided along with
                 physical_sample, the project's tracking_physical_sample_id is
                 automatically updated to link the sample for growth monitoring.
+            tags: List of tag names or UUIDs to attach to the data item.
+                Names are matched case-insensitively against existing
+                organization tags; unknown names are created. UUIDs must
+                reference existing tags.
 
         Returns:
             The data_id for this stream.

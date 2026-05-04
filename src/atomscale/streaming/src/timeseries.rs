@@ -9,7 +9,9 @@ use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::initialize::{ensure_physical_sample_link, update_project_tracking_sample};
+use crate::initialize::{
+    ensure_physical_sample_link, ensure_tags_attached, update_project_tracking_sample,
+};
 use crate::utils::init_tracing_once;
 
 /// Request body for stream initialization.
@@ -133,15 +135,18 @@ impl TimeseriesStreamer {
     ///         provided along with `physical_sample`, the project's `tracking_physical_sample_id`
     ///         configuration is automatically updated to link the physical sample to the project
     ///         for growth monitoring.
+    ///     tags (Optional[List[str]]): List of tag names or UUIDs to attach to the data item. Names
+    ///         are matched case-insensitively against existing org tags; unknown names are created.
+    ///         UUIDs must reference existing tags.
     ///
     /// Returns:
     ///     str: The data_id for this stream.
     ///
     /// Raises:
     ///     RuntimeError: If the initialization request fails or instrument not found.
-    #[pyo3(signature = (stream_name=None, synth_source_id=None, physical_sample=None, project_id=None))]
+    #[pyo3(signature = (stream_name=None, synth_source_id=None, physical_sample=None, project_id=None, tags=None))]
     #[pyo3(
-        text_signature = "(stream_name=None, synth_source_id=None, physical_sample=None, project_id=None)"
+        text_signature = "(stream_name=None, synth_source_id=None, physical_sample=None, project_id=None, tags=None)"
     )]
     fn initialize(
         &self,
@@ -149,6 +154,7 @@ impl TimeseriesStreamer {
         synth_source_id: Option<i64>,
         physical_sample: Option<String>,
         project_id: Option<String>,
+        tags: Option<Vec<String>>,
     ) -> PyResult<String> {
         let physical_sample = physical_sample
             .map(|s| s.trim().to_string())
@@ -199,8 +205,8 @@ impl TimeseriesStreamer {
         };
 
         // Handle physical sample linking (same flow as RHEEDStreamer)
+        let base_endpoint = self.endpoint.clone();
         if let Some(sample_name) = physical_sample {
-            let base_endpoint = self.endpoint.clone();
             let physical_sample_fut = ensure_physical_sample_link(
                 &self.client,
                 &base_endpoint,
@@ -224,6 +230,21 @@ impl TimeseriesStreamer {
                 );
                 self.rt
                     .block_on(update_project_fut)
+                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            }
+        }
+
+        if let Some(tag_inputs) = tags {
+            if !tag_inputs.is_empty() {
+                let tags_fut = ensure_tags_attached(
+                    &self.client,
+                    &base_endpoint,
+                    &self.api_key,
+                    &data_id,
+                    &tag_inputs,
+                );
+                self.rt
+                    .block_on(tags_fut)
                     .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
             }
         }
