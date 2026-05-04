@@ -234,6 +234,9 @@ case-insensitively against existing samples, or a new sample is created if no ma
 <li><p><strong>project_id</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – UUID of a project to associate with the stream. When provided along with
 <cite>physical_sample</cite>, the project’s <cite>tracking_physical_sample_id</cite> configuration is automatically updated
 to link the physical sample to the project for growth monitoring.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of tag names or UUIDs to attach to the data item. Names are matched
+case-insensitively against existing org tags; unknown names are created. UUIDs must reference
+existing tags.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -377,6 +380,9 @@ is created if no match is found.</p></li>
 provided along with <cite>physical_sample</cite>, the project’s <cite>tracking_physical_sample_id</cite>
 configuration is automatically updated to link the physical sample to the project
 for growth monitoring.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of tag names or UUIDs to attach to the data item. Names
+are matched case-insensitively against existing org tags; unknown names are created.
+UUIDs must reference existing tags.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
