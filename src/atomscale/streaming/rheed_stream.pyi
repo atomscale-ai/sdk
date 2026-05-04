@@ -26,6 +26,7 @@ class RHEEDStreamer:
         stream_name: str | None = None,
         physical_sample: str | None = None,
         project_id: str | None = None,
+        tags: list[str] | None = None,
     ) -> str:
         """Initialize a new RHEED stream.
 
@@ -103,6 +104,7 @@ class TimeseriesStreamer:
         synth_source_id: int | None = None,
         physical_sample: str | None = None,
         project_id: str | None = None,
+        tags: list[str] | None = None,
     ) -> str:
         """Initialize a new timeseries stream.
 

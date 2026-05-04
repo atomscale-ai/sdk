@@ -19,8 +19,13 @@ use timeseries::TimeseriesStreamer;
 
 mod initialize;
 use initialize::{
+<<<<<<< add-project-association
     add_sample_to_project, ensure_physical_sample_link, post_for_initialization,
     RHEEDStreamSettings,
+=======
+    ensure_physical_sample_link, ensure_tags_attached, post_for_initialization,
+    update_project_tracking_sample, RHEEDStreamSettings,
+>>>>>>> main
 };
 
 mod upload;
@@ -157,15 +162,18 @@ impl RHEEDStreamer {
     ///     project_id (Optional[str]): UUID of a project to associate with the stream. When provided along with
     ///         `physical_sample`, the project's `tracking_physical_sample_id` configuration is automatically updated
     ///         to link the physical sample to the project for growth monitoring.
+    ///     tags (Optional[List[str]]): List of tag names or UUIDs to attach to the data item. Names are matched
+    ///         case-insensitively against existing org tags; unknown names are created. UUIDs must reference
+    ///         existing tags.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
     ///     RuntimeError: If the initialization POST fails.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None))]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None))]
     #[pyo3(
-        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None)"
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None)"
     )]
     fn initialize(
         &self,
@@ -175,6 +183,7 @@ impl RHEEDStreamer {
         stream_name: Option<String>,
         physical_sample: Option<String>,
         project_id: Option<String>,
+        tags: Option<Vec<String>>,
     ) -> PyResult<String> {
         // Guard: chunk_size must be >= ceil(2 * fps)
         let min_chunk = (2.0 * fps).ceil() as usize;
@@ -251,6 +260,7 @@ impl RHEEDStreamer {
             }
         }
 
+<<<<<<< add-project-association
         // Insert per-stream state keyed by the new data_id. State is not
         // shared with any other concurrent stream on this streamer instance.
         // Returning data_id from the platform, then inserting locally, is the
@@ -270,6 +280,26 @@ impl RHEEDStreamer {
                 },
             );
         }
+=======
+        if let Some(tag_inputs) = tags {
+            if !tag_inputs.is_empty() {
+                let tags_fut = ensure_tags_attached(
+                    &self.client,
+                    &base_endpoint,
+                    &self.api_key,
+                    &data_id,
+                    &tag_inputs,
+                );
+                self.rt
+                    .block_on(tags_fut)
+                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            }
+        }
+
+        self.fps = Some(fps);
+        self.rotating = Some(rotations_per_min > 0.0);
+        self.chunk_size = Some(chunk_size);
+>>>>>>> main
 
         Ok(data_id)
     }
