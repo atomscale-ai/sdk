@@ -19,13 +19,8 @@ use timeseries::TimeseriesStreamer;
 
 mod initialize;
 use initialize::{
-<<<<<<< add-project-association
-    add_sample_to_project, ensure_physical_sample_link, post_for_initialization,
-    RHEEDStreamSettings,
-=======
-    ensure_physical_sample_link, ensure_tags_attached, post_for_initialization,
-    update_project_tracking_sample, RHEEDStreamSettings,
->>>>>>> main
+    add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached,
+    post_for_initialization, RHEEDStreamSettings,
 };
 
 mod upload;
@@ -260,7 +255,21 @@ impl RHEEDStreamer {
             }
         }
 
-<<<<<<< add-project-association
+        if let Some(tag_inputs) = tags {
+            if !tag_inputs.is_empty() {
+                let tags_fut = ensure_tags_attached(
+                    &self.client,
+                    &base_endpoint,
+                    &self.api_key,
+                    &data_id,
+                    &tag_inputs,
+                );
+                self.rt
+                    .block_on(tags_fut)
+                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+            }
+        }
+
         // Insert per-stream state keyed by the new data_id. State is not
         // shared with any other concurrent stream on this streamer instance.
         // Returning data_id from the platform, then inserting locally, is the
@@ -280,26 +289,6 @@ impl RHEEDStreamer {
                 },
             );
         }
-=======
-        if let Some(tag_inputs) = tags {
-            if !tag_inputs.is_empty() {
-                let tags_fut = ensure_tags_attached(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    &data_id,
-                    &tag_inputs,
-                );
-                self.rt
-                    .block_on(tags_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
-
-        self.fps = Some(fps);
-        self.rotating = Some(rotations_per_min > 0.0);
-        self.chunk_size = Some(chunk_size);
->>>>>>> main
 
         Ok(data_id)
     }

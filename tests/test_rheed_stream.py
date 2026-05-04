@@ -677,12 +677,12 @@ class TestMultiStreamTiming:
 
         assert data_id == "data-id-mixed"
 
-        requests = server.get_captured_requests()
+        requests = server.get_captured_requests(expected_count=4, timeout_s=5)
         # Filter to /tags/ traffic — the init POST is uninteresting here.
-        tag_reqs = [r for r in requests if r["path"].startswith("/tags/")]
+        tag_reqs = [(m, p, b) for (m, p, b) in requests if p.startswith("/tags/")]
         # Exactly: one GET, one create-POST, one attach-POST. Dedup means the
         # repeated "growth"/"GROWTH" entries did not produce extra creates.
-        methods_paths = [(r["method"], r["path"]) for r in tag_reqs]
+        methods_paths = [(m, p) for (m, p, _) in tag_reqs]
         assert methods_paths == [
             ("GET", "/tags/"),
             ("POST", "/tags/"),
@@ -690,11 +690,15 @@ class TestMultiStreamTiming:
         ], methods_paths
 
         # POST /tags/ body uses the trimmed name (no surrounding spaces).
-        create_body = next(r["body"] for r in tag_reqs if r["method"] == "POST" and r["path"] == "/tags/")
+        create_body = json.loads(
+            next(b for (m, p, b) in tag_reqs if m == "POST" and p == "/tags/")
+        )
         assert create_body == {"name": "novel-tag"}
 
         # POST /tags/data-items/ body has data_id + both resolved tag_ids in order.
-        attach_body = next(r["body"] for r in tag_reqs if r["path"] == "/tags/data-items/")
+        attach_body = json.loads(
+            next(b for (_, p, b) in tag_reqs if p == "/tags/data-items/")
+        )
         assert attach_body == {
             "data_ids": ["data-id-mixed"],
             "tag_ids": [existing_id, new_id],
@@ -791,16 +795,18 @@ class TestMultiStreamTiming:
 
         assert data_id == "data-id-azimuth"
 
-        requests = server.get_captured_requests()
-        tag_reqs = [r for r in requests if r["path"].startswith("/tags/")]
+        requests = server.get_captured_requests(expected_count=3, timeout_s=5)
+        tag_reqs = [(m, p, b) for (m, p, b) in requests if p.startswith("/tags/")]
         # All three exist → no POST /tags/ creates, just GET + attach.
-        methods_paths = [(r["method"], r["path"]) for r in tag_reqs]
+        methods_paths = [(m, p) for (m, p, _) in tag_reqs]
         assert methods_paths == [
             ("GET", "/tags/"),
             ("POST", "/tags/data-items/"),
         ], methods_paths
 
-        attach_body = next(r["body"] for r in tag_reqs if r["path"] == "/tags/data-items/")
+        attach_body = json.loads(
+            next(b for (_, p, b) in tag_reqs if p == "/tags/data-items/")
+        )
         assert attach_body == {
             "data_ids": ["data-id-azimuth"],
             "tag_ids": [id_100, id_210, id_110],
