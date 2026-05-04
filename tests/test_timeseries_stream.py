@@ -191,6 +191,49 @@ class TestTimeseriesStreamerInitialize:
         assert body["stream_name"] == "My Stream"
         assert body["points_per_chunk"] == 50
 
+    def test_initialize_attaches_tag(self, mock_server_factory):
+        """Verify tags wire through TimeseriesStreamer.initialize.
+
+        End-to-end coverage of the shared resolver lives in test_rheed_stream;
+        here we just confirm the wiring: an existing tag is looked up and the
+        bulk-attach POST is fired with the right ids.
+        """
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        tag_id = "770e8400-e29b-41d4-a716-446655440002"
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 3,
+            "/tags/data-items/": '{"success": true, "associations_created": 1}',
+            "/tags/": json.dumps([{"id": tag_id, "name": "growth"}]),
+            "/metrology/stream/initialize": json.dumps({
+                "data_id": "ts-data-id",
+                "processed_data_id": "ts-proc-id",
+            }),
+        })
+
+        server = mock_server_factory(routes)
+        streamer = TimeseriesStreamer(
+            api_key="k",
+            endpoint=server.endpoint,
+        )
+
+        data_id = streamer.initialize(
+            stream_name="Tagged Stream",
+            tags=["GROWTH"],  # case-insensitive match
+        )
+
+        assert data_id == "ts-data-id"
+
+        requests = server.get_all_requests()
+        # Exactly the three requests we expect, in order.
+        assert any("REQUEST:POST:/metrology/stream/initialize:" in r for r in requests)
+        assert any("REQUEST:GET:/tags/:" in r for r in requests)
+        attach = next(r for r in requests if "/tags/data-items/" in r)
+        # The bulk-attach body must include the resolved tag_id and data_id.
+        assert tag_id in attach
+        assert "ts-data-id" in attach
+
 
 class TestTimeseriesStreamerPush:
     """Tests for TimeseriesStreamer.push() method."""
