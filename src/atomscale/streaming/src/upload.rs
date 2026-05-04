@@ -33,38 +33,66 @@ pub struct FrameChunkMetadata {
 }
 
 /// Accept (H,W) or (N,H,W) frames (casts to uint8) → (flat bytes, N,H,W).
+///
+/// The bytes copy runs **without the GIL** when the input array is contiguous,
+/// so concurrent producers calling into the streamer don't serialize on this
+/// conversion. The numpy buffer is pinned by `PyReadonlyArrayDyn` for the
+/// duration of the function, so the raw pointer stays valid across the
+/// `allow_threads` boundary.
 pub fn numpy_frames_to_flat(obj: Bound<PyAny>) -> PyResult<(Vec<u8>, usize, usize, usize)> {
+    let py = obj.py();
+
     // downcast() returns &Bound<...>; clone it to get Bound<...>.
     let arr_u8: Bound<PyArrayDyn<u8>> = if let Ok(a) = obj.downcast::<PyArrayDyn<u8>>() {
         a.clone()
     } else {
-        let np = PyModule::import(obj.py(), "numpy")?;
+        let np = PyModule::import(py, "numpy")?;
         let a = np.getattr("asarray")?.call1((obj,))?;
         let a = a.call_method1("astype", ("uint8",))?;
         a.downcast::<PyArrayDyn<u8>>()?.clone()
     };
 
     let ro: PyReadonlyArrayDyn<u8> = arr_u8.readonly();
-    let v = ro.as_array();
-    let s = v.shape();
+    let view = ro.as_array();
+    let shape = view.shape();
 
-    match s.len() {
-        2 => {
-            let (h, w) = (s[0], s[1]);
-            let (flat, off) = v.to_owned().into_raw_vec_and_offset();
-            assert!(off == Some(0));
-            Ok((flat, 1, h, w))
+    let (n, h, w) = match shape.len() {
+        2 => (1usize, shape[0], shape[1]),
+        3 => (shape[0], shape[1], shape[2]),
+        _ => {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "frames must be (H,W) or (N,H,W)",
+            ))
         }
-        3 => {
-            let (n, h, w) = (s[0], s[1], s[2]);
-            let (flat, off) = v.to_owned().into_raw_vec_and_offset();
-            assert!(off == Some(0));
-            Ok((flat, n, h, w))
-        }
-        _ => Err(pyo3::exceptions::PyValueError::new_err(
-            "frames must be (H,W) or (N,H,W)",
-        )),
-    }
+    };
+
+    let nbytes = n
+        .checked_mul(h)
+        .and_then(|x| x.checked_mul(w))
+        .ok_or_else(|| pyo3::exceptions::PyValueError::new_err("N*H*W overflow"))?;
+
+    // Fast path: contiguous standard-layout array → memcpy off-GIL.
+    // `as usize` round-trip is the standard pyo3 idiom for moving a non-Send
+    // raw pointer into an `allow_threads` closure.
+    let flat = if let Some(slice) = view.as_slice() {
+        let src_addr = slice.as_ptr() as usize;
+        py.detach(|| {
+            let mut buf: Vec<u8> = Vec::with_capacity(nbytes);
+            unsafe {
+                std::ptr::copy_nonoverlapping(src_addr as *const u8, buf.as_mut_ptr(), nbytes);
+                buf.set_len(nbytes);
+            }
+            buf
+        })
+    } else {
+        // Non-contiguous fallback (e.g. transposed views): GIL-held copy via
+        // ndarray. Rare in practice; preserves prior semantics.
+        let (flat, off) = view.to_owned().into_raw_vec_and_offset();
+        assert!(off == Some(0));
+        flat
+    };
+
+    Ok((flat, n, h, w))
 }
 
 /// Build one outer chunk (N,H,W), shard into (1,H,W), return encoded bytes of chunk [0,0,0].
