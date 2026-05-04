@@ -19,16 +19,27 @@ _MOCK_SERVER_MODULE = Path(__file__).parent / "_mock_http_server.py"
 
 
 class MockServer:
-    """A mock HTTP server running in a subprocess."""
+    """A mock HTTP server running in a subprocess.
+
+    Stdout is drained by a background daemon thread into a ``queue.Queue``,
+    which gives us cross-platform timed reads (``select.select`` on a pipe FD
+    is a Unix-only trick — Windows raises WinError 10038).
+    """
 
     def __init__(self, port: int, response_data: str):
+        import queue as _queue
+
         self.port = port
         self.response_data = response_data
         self._proc: subprocess.Popen | None = None
         self._captured_body: dict | None = None
+        self._stdout_queue: "_queue.Queue[str | None]" = _queue.Queue()
+        self._reader_thread: "object | None" = None
 
     def start(self) -> None:
         """Start the server subprocess."""
+        import threading
+
         self._proc = subprocess.Popen(
             [sys.executable, str(_MOCK_SERVER_MODULE), str(self.port), self.response_data],
             stdout=subprocess.PIPE,
@@ -36,11 +47,28 @@ class MockServer:
             text=True,
             bufsize=1,  # line-buffered so multi-request output is readable
         )
-        # Wait for server to signal it's ready
+        # Wait for server to signal it's ready (synchronous; the drain thread
+        # has not started yet so this read is unambiguous).
         ready_line = self._proc.stdout.readline()
         if not ready_line.startswith("READY:"):
             self.stop()
             raise RuntimeError(f"Server failed to start: {ready_line}")
+
+        # All subsequent stdout lines flow through the queue. Daemon thread so
+        # it never blocks shutdown if the subprocess wedges.
+        self._reader_thread = threading.Thread(target=self._drain_stdout, daemon=True)
+        self._reader_thread.start()
+
+    def _drain_stdout(self) -> None:
+        try:
+            assert self._proc is not None and self._proc.stdout is not None
+            for line in self._proc.stdout:
+                self._stdout_queue.put(line)
+        except Exception:
+            pass
+        finally:
+            # Sentinel signals EOF so consumers can break out without a timeout.
+            self._stdout_queue.put(None)
 
     def stop(self) -> None:
         """Stop the server subprocess."""
@@ -54,10 +82,25 @@ class MockServer:
         """Return the server endpoint URL (no trailing slash)."""
         return f"http://127.0.0.1:{self.port}"
 
-    def get_captured_body(self) -> dict | None:
+    def _read_line(self, timeout_s: float) -> str | None:
+        """Block up to ``timeout_s`` for the next stdout line. ``None`` on EOF/timeout."""
+        import queue as _queue
+
+        try:
+            return self._stdout_queue.get(timeout=timeout_s)
+        except _queue.Empty:
+            return None
+
+    def get_captured_body(self, timeout_s: float = 5.0) -> dict | None:
         """Read and return the captured request body from the server."""
+        import time
+
         if self._proc and self._captured_body is None:
-            for line in self._proc.stdout:
+            deadline = time.monotonic() + timeout_s
+            while time.monotonic() < deadline:
+                line = self._read_line(deadline - time.monotonic())
+                if line is None:
+                    break
                 if line.startswith("BODY:"):
                     self._captured_body = json.loads(line[5:])
                     break
@@ -71,21 +114,19 @@ class MockServer:
         Returns a list of (method, path, body) tuples. Reads up to expected_count
         lines or until timeout / process exit.
         """
-        import select
         import time
 
-        if not self._proc or not self._proc.stdout:
+        if not self._proc:
             return []
 
         deadline = time.monotonic() + timeout_s
         requests: list[tuple[str, str, str]] = []
-        while len(requests) < expected_count and time.monotonic() < deadline:
+        while len(requests) < expected_count:
             remaining = deadline - time.monotonic()
-            ready, _, _ = select.select([self._proc.stdout], [], [], remaining)
-            if not ready:
+            if remaining <= 0:
                 break
-            line = self._proc.stdout.readline()
-            if not line:
+            line = self._read_line(remaining)
+            if line is None:
                 break
             if line.startswith("REQUEST:"):
                 # Format: REQUEST:METHOD:PATH:BODY
@@ -356,21 +397,19 @@ def _drain_chunk_metadatas(
     request lines remain unread. Avoids waiting on the full request stream
     when only the chunk metadata bodies matter for assertions.
     """
-    import select
     import time as _time
 
-    if not server._proc or not server._proc.stdout:
+    if not server._proc:
         return []
 
     deadline = _time.monotonic() + timeout_s
     metadatas: list[dict] = []
-    while len(metadatas) < target_count and _time.monotonic() < deadline:
+    while len(metadatas) < target_count:
         remaining = deadline - _time.monotonic()
-        ready, _, _ = select.select([server._proc.stdout], [], [], remaining)
-        if not ready:
+        if remaining <= 0:
             break
-        line = server._proc.stdout.readline()
-        if not line:
+        line = server._read_line(remaining)
+        if line is None:
             break
         if not line.startswith("REQUEST:"):
             continue
