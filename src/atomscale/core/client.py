@@ -297,7 +297,7 @@ class BaseClient:
         # urllib3 retries cover **transport-level** failures only (connection
         # drops, read timeouts). Status-code retries (429 / 5xx) are handled
         # at the application layer by `_retry_client_call` in `client.py`.
-        # Keeping both would multiply attempts (e.g. 4 × 4 = 16 HTTP requests
+        # Keeping both would multiply attempts (e.g. 4 x 4 = 16 HTTP requests
         # against a persistently failing endpoint).
         # TODO: Add retry setting to configuration somewhere
         max_retry_num = 3
