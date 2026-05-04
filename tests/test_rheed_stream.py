@@ -685,11 +685,17 @@ class TestStreamingE2E:
         assert len(puts) == 2, f"expected 2 PUTs, saw {len(puts)} ({requests})"
         assert len(ends) == 1, f"expected 1 end POST, saw {len(ends)} ({requests})"
 
-        # First presign carried our explicit timestamp; intra-chunk span
-        # is n / fps = 2 / 1 = 2000 ms.
-        meta0 = json.loads(presigns[0][2])
-        assert int(meta0["start_unix_ms_utc"]) == ts0
-        assert int(meta0["end_unix_ms_utc"]) - ts0 == 2000
-
-        meta1 = json.loads(presigns[1][2])
-        assert int(meta1["start_unix_ms_utc"]) == ts1
+        # Both presigns must carry our explicit timestamps. Compare as a
+        # set: the two upload tasks are spawned concurrently on tokio
+        # workers and may arrive at the mock in either order, so we can't
+        # assume positional ordering.
+        meta_by_start = {
+            int(json.loads(body)["start_unix_ms_utc"]): json.loads(body)
+            for _, _, body in presigns
+        }
+        assert set(meta_by_start.keys()) == {ts0, ts1}, (
+            f"unexpected start timestamps: {set(meta_by_start.keys())}"
+        )
+        # Intra-chunk span = n / fps = 2 / 1 = 2000 ms — same for every chunk.
+        for ts, meta in meta_by_start.items():
+            assert int(meta["end_unix_ms_utc"]) - ts == 2000
