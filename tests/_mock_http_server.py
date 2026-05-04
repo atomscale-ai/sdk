@@ -32,18 +32,29 @@ class CaptureHandler(BaseHTTPRequestHandler):
         routes = getattr(self.server, "routes", None)
 
         if routes:
-            # Routes mode: find matching route
+            # Routes mode: prefer method-keyed routes ("POST /tags/"), then
+            # fall back to path-only routes ("/tags/"). Insertion order wins
+            # within each group.
             response_data = None
-            for route_path, route_response in routes.items():
-                if path.startswith(route_path):
-                    response_data = route_response
-                    break
+            for route_key, route_response in routes.items():
+                if " " in route_key:
+                    route_method, route_path = route_key.split(" ", 1)
+                    if method == route_method and path.startswith(route_path):
+                        response_data = route_response
+                        break
+            if response_data is None:
+                for route_key, route_response in routes.items():
+                    if " " in route_key:
+                        continue
+                    if path.startswith(route_key):
+                        response_data = route_response
+                        break
 
             if response_data is None:
                 # Default response for unmatched routes
                 response_data = '""'
 
-            # Print request info for debugging
+            # Print request info for debugging / structured capture.
             print(f"REQUEST:{method}:{path}:{body.decode() if body else ''}", flush=True)
         else:
             # Simple mode: single response for all requests
