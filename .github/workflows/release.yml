@@ -22,16 +22,16 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]  # macos-latest provides Apple Silicon runners
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"   # host Python; cibuildwheel builds for multiple Pythons
 
       # QEMU only needed for cross-arch Linux wheels
       - name: Set up QEMU (Linux only)
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
 
@@ -83,7 +83,7 @@ jobs:
         run: python -m cibuildwheel --output-dir dist
 
       - name: Upload built wheels (artifact)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           # make the name unique per matrix entry
           name: wheels-${{ matrix.os }}
@@ -95,9 +95,9 @@ jobs:
     if: github.event_name == 'release' || !inputs.docs_only
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -111,7 +111,7 @@ jobs:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
       - name: Upload sdist (artifact)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sdist
           path: dist/*.tar.gz
@@ -122,14 +122,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download wheels
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: wheels-*
           merge-multiple: true    # puts everything under ./
           path: dist
 
       - name: Download sdist
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: sdist
           path: dist
@@ -146,16 +146,21 @@ jobs:
     needs: publish
     # Always run after publish on release, or run independently when docs_only
     if: always() && (github.event_name == 'release' && needs.publish.result == 'success' || inputs.docs_only)
+    env:
+      # peaceiris/actions-gh-pages has no Node 24 release yet; opt the docs job
+      # into Node 24 explicitly so the workflow is unaffected by GitHub's
+      # June 2026 Node 20 deprecation. Remove once upstream ships Node 24.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8
         with:
           version: "latest"
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -169,7 +174,7 @@ jobs:
         run: sphinx-build ./docs ./docs/_build
 
       - name: Deploy docs
-        uses: peaceiris/actions-gh-pages@v3.8.0
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GH_TOKEN }}
           publish_dir: ./docs/_build
