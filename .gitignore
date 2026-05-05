@@ -190,3 +190,6 @@ cython_debug/
 # Local-only example artifacts (kept on disk for testing, not tracked)
 examples/rheed_streaming_from_mp4.ipynb
 examples/test_video.mp4
+
+# Claude Code
+.claude/worktrees/
