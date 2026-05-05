@@ -17,17 +17,23 @@ atomscale.client.Client
    .. autosummary::
    
       ~Client.__init__
+      ~Client.aiter_poll_similarity_trajectory
       ~Client.create_growth_instrument
       ~Client.delete_growth_instrument
+      ~Client.download
       ~Client.download_videos
       ~Client.get
       ~Client.get_changepoints
       ~Client.get_physical_sample
       ~Client.get_project
+      ~Client.get_similarity_trajectory
+      ~Client.iter_poll_similarity_trajectory
       ~Client.list_growth_instruments
       ~Client.list_physical_samples
       ~Client.list_projects
       ~Client.search
+      ~Client.start_polling_similarity_trajectory_task
+      ~Client.start_polling_similarity_trajectory_thread
       ~Client.upload
    
    

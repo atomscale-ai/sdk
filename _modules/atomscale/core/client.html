@@ -274,237 +274,265 @@
 </span><span id="line-78">                <span class="k">return</span> <span class="kc">None</span>
 </span><span id="line-79">
 </span><span id="line-80">            <span class="k">raise</span> <span class="n">ClientError</span><span class="p">(</span>
-</span><span id="line-81">                <span class="sa">f</span><span class="s2">&quot;Problem retrieving data from </span><span class="si">{</span><span class="n">sub_url</span><span class="si">}</span><span class="s2"> with parameters </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">. HTTP Error </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="line-82">            <span class="p">)</span>
-</span><span id="line-83">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-84">            <span class="k">return</span> <span class="kc">None</span>
-</span><span id="line-85">
-</span><span id="line-86">        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span> <span class="k">if</span> <span class="n">deserialize</span> <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>
+</span><span id="line-81">                <span class="sa">f</span><span class="s2">&quot;Problem retrieving data from </span><span class="si">{</span><span class="n">sub_url</span><span class="si">}</span><span class="s2"> with parameters </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">. HTTP Error </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="line-82">                <span class="n">status_code</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
+</span><span id="line-83">                <span class="n">response_text</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+</span><span id="line-84">            <span class="p">)</span>
+</span><span id="line-85">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="line-86">            <span class="k">return</span> <span class="kc">None</span>
 </span><span id="line-87">
-</span><span id="line-88">    <span class="k">def</span><span class="w"> </span><span class="nf">_post_or_put</span><span class="p">(</span>
-</span><span id="line-89">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-90">        <span class="n">method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">,</span> <span class="s2">&quot;PUT&quot;</span><span class="p">],</span>
-</span><span id="line-91">        <span class="n">sub_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-92">        <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-93">        <span class="n">body</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-94">        <span class="n">headers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-95">        <span class="n">deserialize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-96">        <span class="n">base_override</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-97">        <span class="n">return_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="line-98">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-99"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Method for issuing a POST or PUT request</span>
-</span><span id="line-100">
-</span><span id="line-101"><span class="sd">        Args:</span>
-</span><span id="line-102"><span class="sd">            method (Literal[&quot;POST&quot;, &quot;PUT&quot;]): Method to use</span>
-</span><span id="line-103"><span class="sd">            sub_url (str): API sub-url to use.</span>
-</span><span id="line-104"><span class="sd">            params (dict[str, Any] | None): Params to pass in the GET request. Defaults to None.</span>
-</span><span id="line-105"><span class="sd">            body (dict[str, Any] | bytes): Body data to send in the POST request.</span>
-</span><span id="line-106"><span class="sd">            headers (dict[str, str] | None): Optional headers to include in the request.</span>
-</span><span id="line-107"><span class="sd">            deserialize (bool): Whether to JSON deserialize the response data or return raw bytes. Defaults to True.</span>
-</span><span id="line-108"><span class="sd">            base_overrise (str): Base URL to use instead of the default ADS API root URL.</span>
-</span><span id="line-109"><span class="sd">            return_headers (bool): Whether to return the headers from the response instead of the content. Defaults</span>
-</span><span id="line-110"><span class="sd">                to False.</span>
-</span><span id="line-111">
-</span><span id="line-112"><span class="sd">        Raises:</span>
-</span><span id="line-113"><span class="sd">            ClientError: If the response code returned is not within the range of 200-400.</span>
-</span><span id="line-114">
-</span><span id="line-115"><span class="sd">        Returns:</span>
-</span><span id="line-116"><span class="sd">            (list[dict] | dict | bytes | None): Deserialized JSON data or raw bytes. Returns None if response is a 404.</span>
-</span><span id="line-117"><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="line-118">        <span class="n">base_url</span> <span class="o">=</span> <span class="n">base_override</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span>
-</span><span id="line-119">        <span class="n">method_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">put</span> <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;PUT&quot;</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">post</span>
-</span><span id="line-120">
-</span><span id="line-121">        <span class="c1"># decide whether to use data= (bytes/streams) or json=</span>
-</span><span id="line-122">        <span class="k">if</span> <span class="n">body</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-123">            <span class="n">data_params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-124">        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">body</span><span class="p">,</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="nb">bytearray</span><span class="p">):</span>
-</span><span id="line-125">            <span class="n">data_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">body</span><span class="p">}</span>
-</span><span id="line-126">        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">body</span><span class="p">,</span> <span class="s2">&quot;read&quot;</span><span class="p">):</span>
-</span><span id="line-127">            <span class="c1"># any file-like / RawIOBase</span>
-</span><span id="line-128">            <span class="n">data_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">body</span><span class="p">}</span>
-</span><span id="line-129">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-130">            <span class="c1"># everything else (dict, list, etc.) goes through JSON</span>
-</span><span id="line-131">            <span class="n">data_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">body</span><span class="p">}</span>
-</span><span id="line-132">
-</span><span id="line-133">        <span class="n">response</span> <span class="o">=</span> <span class="n">method_func</span><span class="p">(</span>
-</span><span id="line-134">            <span class="n">url</span><span class="o">=</span><span class="n">urljoin</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">sub_url</span><span class="p">),</span>
-</span><span id="line-135">            <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="line-136">            <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
-</span><span id="line-137">            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span> <span class="ow">or</span> <span class="p">{},</span>
-</span><span id="line-138">            <span class="o">**</span><span class="n">data_params</span><span class="p">,</span>  <span class="c1"># type: ignore # noqa: PGH003</span>
-</span><span id="line-139">        <span class="p">)</span>
-</span><span id="line-140">        <span class="k">if</span> <span class="ow">not</span> <span class="n">response</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
-</span><span id="line-141">            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
-</span><span id="line-142">                <span class="k">return</span> <span class="kc">None</span>
-</span><span id="line-143">
-</span><span id="line-144">            <span class="k">raise</span> <span class="n">ClientError</span><span class="p">(</span>
-</span><span id="line-145">                <span class="sa">f</span><span class="s2">&quot;Problem sending data to </span><span class="si">{</span><span class="n">sub_url</span><span class="si">}</span><span class="s2">. HTTP Error </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="line-146">            <span class="p">)</span>
-</span><span id="line-147">
-</span><span id="line-148">        <span class="k">if</span> <span class="n">return_headers</span><span class="p">:</span>
-</span><span id="line-149">            <span class="n">return_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-</span><span id="line-150">        <span class="k">else</span><span class="p">:</span>
-</span><span id="line-151">            <span class="n">return_data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span> <span class="k">if</span> <span class="n">deserialize</span> <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>  <span class="c1"># type: ignore  #noqa: PGH003</span>
-</span><span id="line-152">
-</span><span id="line-153">        <span class="k">return</span> <span class="n">return_data</span>
-</span><span id="line-154">
-</span><span id="line-155">    <span class="k">def</span><span class="w"> </span><span class="nf">_delete</span><span class="p">(</span>
-</span><span id="line-156">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-157">        <span class="n">sub_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-158">        <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-159">        <span class="n">deserialize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-</span><span id="line-160">        <span class="n">base_override</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-161">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-162"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Method for issuing a DELETE request</span>
-</span><span id="line-163">
-</span><span id="line-164"><span class="sd">        Args:</span>
-</span><span id="line-165"><span class="sd">            sub_url (str): API sub-url to use.</span>
-</span><span id="line-166"><span class="sd">            params (dict[str, Any] | None): Params to pass in the DELETE request. Defaults to None.</span>
-</span><span id="line-167"><span class="sd">            deserialize (bool): Whether to JSON deserialize the response data or return raw bytes. Defaults to True.</span>
-</span><span id="line-168"><span class="sd">            base_override (str): Base URL to use instead of the default ADS API root URL.</span>
-</span><span id="line-169">
-</span><span id="line-170"><span class="sd">        Raises:</span>
-</span><span id="line-171"><span class="sd">            ClientError: If the response code returned is not within the range of 200-400.</span>
-</span><span id="line-172">
-</span><span id="line-173"><span class="sd">        Returns:</span>
-</span><span id="line-174"><span class="sd">            (list[dict] | dict | bytes | None): Deserialized JSON data or raw bytes. Returns None if response is a 404.</span>
-</span><span id="line-175"><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="line-176">        <span class="n">base_url</span> <span class="o">=</span> <span class="n">base_override</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span>
-</span><span id="line-177">        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
-</span><span id="line-178">            <span class="n">url</span><span class="o">=</span><span class="n">urljoin</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">sub_url</span><span class="p">),</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span>
-</span><span id="line-179">        <span class="p">)</span>
-</span><span id="line-180">        <span class="k">if</span> <span class="ow">not</span> <span class="n">response</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
-</span><span id="line-181">            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
-</span><span id="line-182">                <span class="k">return</span> <span class="kc">None</span>
-</span><span id="line-183">
-</span><span id="line-184">            <span class="k">raise</span> <span class="n">ClientError</span><span class="p">(</span>
-</span><span id="line-185">                <span class="sa">f</span><span class="s2">&quot;Problem deleting data at </span><span class="si">{</span><span class="n">sub_url</span><span class="si">}</span><span class="s2"> with parameters </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">. HTTP Error </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="line-186">            <span class="p">)</span>
-</span><span id="line-187">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-</span><span id="line-188">            <span class="k">return</span> <span class="kc">None</span>
-</span><span id="line-189">
-</span><span id="line-190">        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span> <span class="k">if</span> <span class="n">deserialize</span> <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>
-</span><span id="line-191">
-</span><span id="line-192">    <span class="k">def</span><span class="w"> </span><span class="nf">_multi_thread</span><span class="p">(</span>
-</span><span id="line-193">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-194">        <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
-</span><span id="line-195">        <span class="n">kwargs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
-</span><span id="line-196">        <span class="n">progress_bar</span><span class="p">:</span> <span class="n">Progress</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-197">        <span class="n">progress_description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-198">        <span class="n">progress_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-199">        <span class="n">transient</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-</span><span id="line-200">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
-</span><span id="line-201"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Handles running a function concurrently with a ThreadPoolExecutor</span>
-</span><span id="line-202">
-</span><span id="line-203"><span class="sd">        Arguments:</span>
-</span><span id="line-204"><span class="sd">            func (Callable): Function to run concurrently</span>
-</span><span id="line-205"><span class="sd">            kwargs_list (list): List of keyword argument inputs for the function</span>
-</span><span id="line-206"><span class="sd">            progress_bar (Progress | None): Progress bar to show. Defaults to None.</span>
-</span><span id="line-207"><span class="sd">            progress_description (str | None): Progress bar description.</span>
-</span><span id="line-208"><span class="sd">            progress_kwargs (dict | None): Additional kwargs to pass to the progress task.</span>
-</span><span id="line-209"><span class="sd">            transient (bool): Whether the progress bar is transient. Defaults to False,</span>
-</span><span id="line-210">
-</span><span id="line-211"><span class="sd">        Returns:</span>
-</span><span id="line-212"><span class="sd">            (list[Any]): List of results from passed function in the order of parameters passed</span>
-</span><span id="line-213"><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="line-214">        <span class="n">return_dict</span> <span class="o">=</span> <span class="p">{}</span>
-</span><span id="line-215">
-</span><span id="line-216">        <span class="n">total_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs_list</span><span class="p">)</span>
-</span><span id="line-217">        <span class="n">kwargs_gen</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">kwargs_list</span><span class="p">)</span>
-</span><span id="line-218">
-</span><span id="line-219">        <span class="k">if</span> <span class="n">progress_bar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-220">            <span class="n">progress_kwargs</span> <span class="o">=</span> <span class="n">progress_kwargs</span> <span class="ow">or</span> <span class="p">{</span><span class="s2">&quot;pad&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}</span>
-</span><span id="line-221">            <span class="n">task</span> <span class="o">=</span> <span class="n">progress_bar</span><span class="o">.</span><span class="n">add_task</span><span class="p">(</span>
-</span><span id="line-222">                <span class="n">progress_description</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="n">total_count</span><span class="p">,</span> <span class="o">**</span><span class="n">progress_kwargs</span>
-</span><span id="line-223">            <span class="p">)</span>
+</span><span id="line-88">        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span> <span class="k">if</span> <span class="n">deserialize</span> <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>
+</span><span id="line-89">
+</span><span id="line-90">    <span class="k">def</span><span class="w"> </span><span class="nf">_post_or_put</span><span class="p">(</span>
+</span><span id="line-91">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-92">        <span class="n">method</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">,</span> <span class="s2">&quot;PUT&quot;</span><span class="p">],</span>
+</span><span id="line-93">        <span class="n">sub_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-94">        <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-95">        <span class="n">body</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-96">        <span class="n">headers</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-97">        <span class="n">deserialize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-98">        <span class="n">base_override</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-99">        <span class="n">return_headers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="line-100">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-101"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Method for issuing a POST or PUT request</span>
+</span><span id="line-102">
+</span><span id="line-103"><span class="sd">        Args:</span>
+</span><span id="line-104"><span class="sd">            method (Literal[&quot;POST&quot;, &quot;PUT&quot;]): Method to use</span>
+</span><span id="line-105"><span class="sd">            sub_url (str): API sub-url to use.</span>
+</span><span id="line-106"><span class="sd">            params (dict[str, Any] | None): Params to pass in the GET request. Defaults to None.</span>
+</span><span id="line-107"><span class="sd">            body (dict[str, Any] | bytes): Body data to send in the POST request.</span>
+</span><span id="line-108"><span class="sd">            headers (dict[str, str] | None): Optional headers to include in the request.</span>
+</span><span id="line-109"><span class="sd">            deserialize (bool): Whether to JSON deserialize the response data or return raw bytes. Defaults to True.</span>
+</span><span id="line-110"><span class="sd">            base_overrise (str): Base URL to use instead of the default ADS API root URL.</span>
+</span><span id="line-111"><span class="sd">            return_headers (bool): Whether to return the headers from the response instead of the content. Defaults</span>
+</span><span id="line-112"><span class="sd">                to False.</span>
+</span><span id="line-113">
+</span><span id="line-114"><span class="sd">        Raises:</span>
+</span><span id="line-115"><span class="sd">            ClientError: If the response code returned is not within the range of 200-400.</span>
+</span><span id="line-116">
+</span><span id="line-117"><span class="sd">        Returns:</span>
+</span><span id="line-118"><span class="sd">            (list[dict] | dict | bytes | None): Deserialized JSON data or raw bytes. Returns None if response is a 404.</span>
+</span><span id="line-119"><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="line-120">        <span class="n">base_url</span> <span class="o">=</span> <span class="n">base_override</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span>
+</span><span id="line-121">        <span class="n">method_func</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">put</span> <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;PUT&quot;</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">post</span>
+</span><span id="line-122">
+</span><span id="line-123">        <span class="c1"># decide whether to use data= (bytes/streams) or json=</span>
+</span><span id="line-124">        <span class="k">if</span> <span class="n">body</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-125">            <span class="n">data_params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-126">        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">body</span><span class="p">,</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="nb">bytearray</span><span class="p">):</span>
+</span><span id="line-127">            <span class="n">data_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">body</span><span class="p">}</span>
+</span><span id="line-128">        <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">body</span><span class="p">,</span> <span class="s2">&quot;read&quot;</span><span class="p">):</span>
+</span><span id="line-129">            <span class="c1"># any file-like / RawIOBase</span>
+</span><span id="line-130">            <span class="n">data_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">body</span><span class="p">}</span>
+</span><span id="line-131">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-132">            <span class="c1"># everything else (dict, list, etc.) goes through JSON</span>
+</span><span id="line-133">            <span class="n">data_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;json&quot;</span><span class="p">:</span> <span class="n">body</span><span class="p">}</span>
+</span><span id="line-134">
+</span><span id="line-135">        <span class="n">response</span> <span class="o">=</span> <span class="n">method_func</span><span class="p">(</span>
+</span><span id="line-136">            <span class="n">url</span><span class="o">=</span><span class="n">urljoin</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">sub_url</span><span class="p">),</span>
+</span><span id="line-137">            <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="line-138">            <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+</span><span id="line-139">            <span class="n">headers</span><span class="o">=</span><span class="n">headers</span> <span class="ow">or</span> <span class="p">{},</span>
+</span><span id="line-140">            <span class="o">**</span><span class="n">data_params</span><span class="p">,</span>  <span class="c1"># type: ignore # noqa: PGH003</span>
+</span><span id="line-141">        <span class="p">)</span>
+</span><span id="line-142">        <span class="k">if</span> <span class="ow">not</span> <span class="n">response</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+</span><span id="line-143">            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
+</span><span id="line-144">                <span class="k">return</span> <span class="kc">None</span>
+</span><span id="line-145">
+</span><span id="line-146">            <span class="k">raise</span> <span class="n">ClientError</span><span class="p">(</span>
+</span><span id="line-147">                <span class="sa">f</span><span class="s2">&quot;Problem sending data to </span><span class="si">{</span><span class="n">sub_url</span><span class="si">}</span><span class="s2">. HTTP Error </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="line-148">                <span class="n">status_code</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
+</span><span id="line-149">                <span class="n">response_text</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+</span><span id="line-150">            <span class="p">)</span>
+</span><span id="line-151">
+</span><span id="line-152">        <span class="k">if</span> <span class="n">return_headers</span><span class="p">:</span>
+</span><span id="line-153">            <span class="n">return_data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">headers</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+</span><span id="line-154">        <span class="k">else</span><span class="p">:</span>
+</span><span id="line-155">            <span class="n">return_data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span> <span class="k">if</span> <span class="n">deserialize</span> <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>  <span class="c1"># type: ignore  #noqa: PGH003</span>
+</span><span id="line-156">
+</span><span id="line-157">        <span class="k">return</span> <span class="n">return_data</span>
+</span><span id="line-158">
+</span><span id="line-159">    <span class="k">def</span><span class="w"> </span><span class="nf">_delete</span><span class="p">(</span>
+</span><span id="line-160">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-161">        <span class="n">sub_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-162">        <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-163">        <span class="n">deserialize</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+</span><span id="line-164">        <span class="n">base_override</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-165">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-166"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Method for issuing a DELETE request</span>
+</span><span id="line-167">
+</span><span id="line-168"><span class="sd">        Args:</span>
+</span><span id="line-169"><span class="sd">            sub_url (str): API sub-url to use.</span>
+</span><span id="line-170"><span class="sd">            params (dict[str, Any] | None): Params to pass in the DELETE request. Defaults to None.</span>
+</span><span id="line-171"><span class="sd">            deserialize (bool): Whether to JSON deserialize the response data or return raw bytes. Defaults to True.</span>
+</span><span id="line-172"><span class="sd">            base_override (str): Base URL to use instead of the default ADS API root URL.</span>
+</span><span id="line-173">
+</span><span id="line-174"><span class="sd">        Raises:</span>
+</span><span id="line-175"><span class="sd">            ClientError: If the response code returned is not within the range of 200-400.</span>
+</span><span id="line-176">
+</span><span id="line-177"><span class="sd">        Returns:</span>
+</span><span id="line-178"><span class="sd">            (list[dict] | dict | bytes | None): Deserialized JSON data or raw bytes. Returns None if response is a 404.</span>
+</span><span id="line-179"><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="line-180">        <span class="n">base_url</span> <span class="o">=</span> <span class="n">base_override</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">endpoint</span>
+</span><span id="line-181">        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+</span><span id="line-182">            <span class="n">url</span><span class="o">=</span><span class="n">urljoin</span><span class="p">(</span><span class="n">base_url</span><span class="p">,</span> <span class="n">sub_url</span><span class="p">),</span> <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span>
+</span><span id="line-183">        <span class="p">)</span>
+</span><span id="line-184">        <span class="k">if</span> <span class="ow">not</span> <span class="n">response</span><span class="o">.</span><span class="n">ok</span><span class="p">:</span>
+</span><span id="line-185">            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">404</span><span class="p">:</span>
+</span><span id="line-186">                <span class="k">return</span> <span class="kc">None</span>
+</span><span id="line-187">
+</span><span id="line-188">            <span class="k">raise</span> <span class="n">ClientError</span><span class="p">(</span>
+</span><span id="line-189">                <span class="sa">f</span><span class="s2">&quot;Problem deleting data at </span><span class="si">{</span><span class="n">sub_url</span><span class="si">}</span><span class="s2"> with parameters </span><span class="si">{</span><span class="n">params</span><span class="si">}</span><span class="s2">. HTTP Error </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+</span><span id="line-190">                <span class="n">status_code</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="p">,</span>
+</span><span id="line-191">                <span class="n">response_text</span><span class="o">=</span><span class="n">response</span><span class="o">.</span><span class="n">text</span><span class="p">,</span>
+</span><span id="line-192">            <span class="p">)</span>
+</span><span id="line-193">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">content</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+</span><span id="line-194">            <span class="k">return</span> <span class="kc">None</span>
+</span><span id="line-195">
+</span><span id="line-196">        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span> <span class="k">if</span> <span class="n">deserialize</span> <span class="k">else</span> <span class="n">response</span><span class="o">.</span><span class="n">content</span>
+</span><span id="line-197">
+</span><span id="line-198">    <span class="k">def</span><span class="w"> </span><span class="nf">_multi_thread</span><span class="p">(</span>
+</span><span id="line-199">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-200">        <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+</span><span id="line-201">        <span class="n">kwargs_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+</span><span id="line-202">        <span class="n">progress_bar</span><span class="p">:</span> <span class="n">Progress</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-203">        <span class="n">progress_description</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-204">        <span class="n">progress_kwargs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-205">        <span class="n">transient</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+</span><span id="line-206">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]:</span>
+</span><span id="line-207"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Handles running a function concurrently with a ThreadPoolExecutor</span>
+</span><span id="line-208">
+</span><span id="line-209"><span class="sd">        Arguments:</span>
+</span><span id="line-210"><span class="sd">            func (Callable): Function to run concurrently</span>
+</span><span id="line-211"><span class="sd">            kwargs_list (list): List of keyword argument inputs for the function</span>
+</span><span id="line-212"><span class="sd">            progress_bar (Progress | None): Progress bar to show. Defaults to None.</span>
+</span><span id="line-213"><span class="sd">            progress_description (str | None): Progress bar description.</span>
+</span><span id="line-214"><span class="sd">            progress_kwargs (dict | None): Additional kwargs to pass to the progress task.</span>
+</span><span id="line-215"><span class="sd">            transient (bool): Whether the progress bar is transient. Defaults to False,</span>
+</span><span id="line-216">
+</span><span id="line-217"><span class="sd">        Returns:</span>
+</span><span id="line-218"><span class="sd">            (list[Any]): List of results from passed function in the order of parameters passed</span>
+</span><span id="line-219"><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="line-220">        <span class="n">return_dict</span> <span class="o">=</span> <span class="p">{}</span>
+</span><span id="line-221">
+</span><span id="line-222">        <span class="n">total_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs_list</span><span class="p">)</span>
+</span><span id="line-223">        <span class="n">kwargs_gen</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">kwargs_list</span><span class="p">)</span>
 </span><span id="line-224">
-</span><span id="line-225">        <span class="n">ind</span> <span class="o">=</span> <span class="mi">0</span>
-</span><span id="line-226">        <span class="n">num_parallel</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
-</span><span id="line-227">        <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">num_parallel</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
-</span><span id="line-228">            <span class="c1"># Get list of initial futures defined by max number of parallel requests</span>
-</span><span id="line-229">            <span class="n">futures</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+</span><span id="line-225">        <span class="k">if</span> <span class="n">progress_bar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-226">            <span class="n">progress_kwargs</span> <span class="o">=</span> <span class="n">progress_kwargs</span> <span class="ow">or</span> <span class="p">{</span><span class="s2">&quot;pad&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">}</span>
+</span><span id="line-227">            <span class="n">task</span> <span class="o">=</span> <span class="n">progress_bar</span><span class="o">.</span><span class="n">add_task</span><span class="p">(</span>
+</span><span id="line-228">                <span class="n">progress_description</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="n">total_count</span><span class="p">,</span> <span class="o">**</span><span class="n">progress_kwargs</span>
+</span><span id="line-229">            <span class="p">)</span>
 </span><span id="line-230">
-</span><span id="line-231">            <span class="k">for</span> <span class="n">kwargs</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">kwargs_gen</span><span class="p">,</span> <span class="n">num_parallel</span><span class="p">):</span>
-</span><span id="line-232">                <span class="n">future</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
-</span><span id="line-233">                    <span class="n">func</span><span class="p">,</span>
-</span><span id="line-234">                    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-</span><span id="line-235">                <span class="p">)</span>
+</span><span id="line-231">        <span class="n">ind</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span id="line-232">        <span class="n">num_parallel</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="ow">or</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+</span><span id="line-233">        <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="n">num_parallel</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+</span><span id="line-234">            <span class="c1"># Get list of initial futures defined by max number of parallel requests</span>
+</span><span id="line-235">            <span class="n">futures</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
 </span><span id="line-236">
-</span><span id="line-237">                <span class="n">future</span><span class="o">.</span><span class="n">ind</span> <span class="o">=</span> <span class="n">ind</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-</span><span id="line-238">                <span class="n">futures</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
-</span><span id="line-239">                <span class="n">ind</span> <span class="o">+=</span> <span class="mi">1</span>
-</span><span id="line-240">
-</span><span id="line-241">            <span class="k">while</span> <span class="n">futures</span><span class="p">:</span>
-</span><span id="line-242">                <span class="c1"># Wait for at least one future to complete and process finished</span>
-</span><span id="line-243">                <span class="n">finished</span><span class="p">,</span> <span class="n">futures</span> <span class="o">=</span> <span class="n">wait</span><span class="p">(</span><span class="n">futures</span><span class="p">,</span> <span class="n">return_when</span><span class="o">=</span><span class="n">FIRST_COMPLETED</span><span class="p">)</span>
-</span><span id="line-244">
-</span><span id="line-245">                <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">finished</span><span class="p">:</span>
-</span><span id="line-246">                    <span class="n">data</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
-</span><span id="line-247">
-</span><span id="line-248">                    <span class="k">if</span> <span class="n">progress_bar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-249">                        <span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">advance</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+</span><span id="line-237">            <span class="k">for</span> <span class="n">kwargs</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">kwargs_gen</span><span class="p">,</span> <span class="n">num_parallel</span><span class="p">):</span>
+</span><span id="line-238">                <span class="n">future</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+</span><span id="line-239">                    <span class="n">func</span><span class="p">,</span>
+</span><span id="line-240">                    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span><span id="line-241">                <span class="p">)</span>
+</span><span id="line-242">
+</span><span id="line-243">                <span class="n">future</span><span class="o">.</span><span class="n">ind</span> <span class="o">=</span> <span class="n">ind</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+</span><span id="line-244">                <span class="n">futures</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
+</span><span id="line-245">                <span class="n">ind</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span id="line-246">
+</span><span id="line-247">            <span class="k">while</span> <span class="n">futures</span><span class="p">:</span>
+</span><span id="line-248">                <span class="c1"># Wait for at least one future to complete and process finished</span>
+</span><span id="line-249">                <span class="n">finished</span><span class="p">,</span> <span class="n">futures</span> <span class="o">=</span> <span class="n">wait</span><span class="p">(</span><span class="n">futures</span><span class="p">,</span> <span class="n">return_when</span><span class="o">=</span><span class="n">FIRST_COMPLETED</span><span class="p">)</span>
 </span><span id="line-250">
-</span><span id="line-251">                    <span class="n">return_dict</span><span class="p">[</span><span class="n">future</span><span class="o">.</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-</span><span id="line-252">
-</span><span id="line-253">                <span class="c1"># Populate more futures to replace finished</span>
-</span><span id="line-254">                <span class="k">for</span> <span class="n">kwargs</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">kwargs_gen</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">finished</span><span class="p">)):</span>
-</span><span id="line-255">                    <span class="n">new_future</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
-</span><span id="line-256">                        <span class="n">func</span><span class="p">,</span>
-</span><span id="line-257">                        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
-</span><span id="line-258">                    <span class="p">)</span>
-</span><span id="line-259">
-</span><span id="line-260">                    <span class="n">new_future</span><span class="o">.</span><span class="n">ind</span> <span class="o">=</span> <span class="n">ind</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
-</span><span id="line-261">                    <span class="n">futures</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_future</span><span class="p">)</span>
-</span><span id="line-262">                    <span class="n">ind</span> <span class="o">+=</span> <span class="mi">1</span>
-</span><span id="line-263">
-</span><span id="line-264">        <span class="k">if</span> <span class="n">progress_bar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">transient</span><span class="p">:</span>
-</span><span id="line-265">            <span class="n">progress_bar</span><span class="o">.</span><span class="n">remove_task</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>  <span class="c1"># type: ignore # noqa: PGH003</span>
-</span><span id="line-266">
-</span><span id="line-267">        <span class="k">return</span> <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">return_dict</span><span class="o">.</span><span class="n">items</span><span class="p">())]</span>
-</span><span id="line-268">
-</span><span id="line-269">    <span class="nd">@staticmethod</span>
-</span><span id="line-270">    <span class="k">def</span><span class="w"> </span><span class="nf">_create_session</span><span class="p">(</span><span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
-</span><span id="line-271"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a requests session</span>
+</span><span id="line-251">                <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">finished</span><span class="p">:</span>
+</span><span id="line-252">                    <span class="n">data</span> <span class="o">=</span> <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>
+</span><span id="line-253">
+</span><span id="line-254">                    <span class="k">if</span> <span class="n">progress_bar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-255">                        <span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">advance</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+</span><span id="line-256">
+</span><span id="line-257">                    <span class="n">return_dict</span><span class="p">[</span><span class="n">future</span><span class="o">.</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+</span><span id="line-258">
+</span><span id="line-259">                <span class="c1"># Populate more futures to replace finished</span>
+</span><span id="line-260">                <span class="k">for</span> <span class="n">kwargs</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">islice</span><span class="p">(</span><span class="n">kwargs_gen</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">finished</span><span class="p">)):</span>
+</span><span id="line-261">                    <span class="n">new_future</span> <span class="o">=</span> <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+</span><span id="line-262">                        <span class="n">func</span><span class="p">,</span>
+</span><span id="line-263">                        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+</span><span id="line-264">                    <span class="p">)</span>
+</span><span id="line-265">
+</span><span id="line-266">                    <span class="n">new_future</span><span class="o">.</span><span class="n">ind</span> <span class="o">=</span> <span class="n">ind</span>  <span class="c1"># type: ignore  # noqa: PGH003</span>
+</span><span id="line-267">                    <span class="n">futures</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">new_future</span><span class="p">)</span>
+</span><span id="line-268">                    <span class="n">ind</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span id="line-269">
+</span><span id="line-270">        <span class="k">if</span> <span class="n">progress_bar</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">transient</span><span class="p">:</span>
+</span><span id="line-271">            <span class="n">progress_bar</span><span class="o">.</span><span class="n">remove_task</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>  <span class="c1"># type: ignore # noqa: PGH003</span>
 </span><span id="line-272">
-</span><span id="line-273"><span class="sd">        Args:</span>
-</span><span id="line-274"><span class="sd">            api_key (str): API key to include in the header.</span>
-</span><span id="line-275">
-</span><span id="line-276"><span class="sd">        Returns:</span>
-</span><span id="line-277"><span class="sd">            (Session): Requests Session object</span>
+</span><span id="line-273">        <span class="k">return</span> <span class="p">[</span><span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">return_dict</span><span class="o">.</span><span class="n">items</span><span class="p">())]</span>
+</span><span id="line-274">
+</span><span id="line-275">    <span class="nd">@staticmethod</span>
+</span><span id="line-276">    <span class="k">def</span><span class="w"> </span><span class="nf">_create_session</span><span class="p">(</span><span class="n">api_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+</span><span id="line-277"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a requests session</span>
 </span><span id="line-278">
-</span><span id="line-279"><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="line-280">        <span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
-</span><span id="line-281">        <span class="n">session</span><span class="o">.</span><span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;X-API-KEY&quot;</span><span class="p">:</span> <span class="n">api_key</span><span class="p">}</span>
-</span><span id="line-282">
-</span><span id="line-283">        <span class="c1"># User agent information</span>
-</span><span id="line-284">        <span class="n">atomscale_info</span> <span class="o">=</span> <span class="s2">&quot;atomscale/&quot;</span> <span class="o">+</span> <span class="n">__version__</span>
-</span><span id="line-285">        <span class="n">python_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Python/</span><span class="si">{</span><span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="line-286">        <span class="n">platform_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">release</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
-</span><span id="line-287">        <span class="n">session</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;user-agent&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-</span><span id="line-288">            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">atomscale_info</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">python_info</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">platform_info</span><span class="si">}</span><span class="s2">)&quot;</span>
-</span><span id="line-289">        <span class="p">)</span>
-</span><span id="line-290">
-</span><span id="line-291">        <span class="c1"># TODO: Add retry setting to configuration somewhere</span>
-</span><span id="line-292">        <span class="n">max_retry_num</span> <span class="o">=</span> <span class="mi">3</span>
-</span><span id="line-293">        <span class="n">retry</span> <span class="o">=</span> <span class="n">Retry</span><span class="p">(</span>
-</span><span id="line-294">            <span class="n">total</span><span class="o">=</span><span class="n">max_retry_num</span><span class="p">,</span>
-</span><span id="line-295">            <span class="n">read</span><span class="o">=</span><span class="n">max_retry_num</span><span class="p">,</span>
-</span><span id="line-296">            <span class="n">connect</span><span class="o">=</span><span class="n">max_retry_num</span><span class="p">,</span>
-</span><span id="line-297">            <span class="n">respect_retry_after_header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-</span><span id="line-298">            <span class="n">status_forcelist</span><span class="o">=</span><span class="p">[</span><span class="mi">429</span><span class="p">,</span> <span class="mi">504</span><span class="p">,</span> <span class="mi">502</span><span class="p">],</span>
-</span><span id="line-299">        <span class="p">)</span>
-</span><span id="line-300">        <span class="n">adapter</span> <span class="o">=</span> <span class="n">HTTPAdapter</span><span class="p">(</span><span class="n">max_retries</span><span class="o">=</span><span class="n">retry</span><span class="p">)</span>
-</span><span id="line-301">        <span class="n">session</span><span class="o">.</span><span class="n">mount</span><span class="p">(</span><span class="s2">&quot;http://&quot;</span><span class="p">,</span> <span class="n">adapter</span><span class="p">)</span>
-</span><span id="line-302">        <span class="n">session</span><span class="o">.</span><span class="n">mount</span><span class="p">(</span><span class="s2">&quot;https://&quot;</span><span class="p">,</span> <span class="n">adapter</span><span class="p">)</span>
-</span><span id="line-303">
-</span><span id="line-304">        <span class="k">return</span> <span class="n">session</span></div>
+</span><span id="line-279"><span class="sd">        Args:</span>
+</span><span id="line-280"><span class="sd">            api_key (str): API key to include in the header.</span>
+</span><span id="line-281">
+</span><span id="line-282"><span class="sd">        Returns:</span>
+</span><span id="line-283"><span class="sd">            (Session): Requests Session object</span>
+</span><span id="line-284">
+</span><span id="line-285"><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="line-286">        <span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">()</span>
+</span><span id="line-287">        <span class="n">session</span><span class="o">.</span><span class="n">headers</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;X-API-KEY&quot;</span><span class="p">:</span> <span class="n">api_key</span><span class="p">}</span>
+</span><span id="line-288">
+</span><span id="line-289">        <span class="c1"># User agent information</span>
+</span><span id="line-290">        <span class="n">atomscale_info</span> <span class="o">=</span> <span class="s2">&quot;atomscale/&quot;</span> <span class="o">+</span> <span class="n">__version__</span>
+</span><span id="line-291">        <span class="n">python_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Python/</span><span class="si">{</span><span class="n">sys</span><span class="o">.</span><span class="n">version</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="line-292">        <span class="n">platform_info</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">platform</span><span class="o">.</span><span class="n">release</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="line-293">        <span class="n">session</span><span class="o">.</span><span class="n">headers</span><span class="p">[</span><span class="s2">&quot;user-agent&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="line-294">            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">atomscale_info</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">python_info</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">platform_info</span><span class="si">}</span><span class="s2">)&quot;</span>
+</span><span id="line-295">        <span class="p">)</span>
+</span><span id="line-296">
+</span><span id="line-297">        <span class="c1"># urllib3 retries are the safety net for **all** HTTP calls (including</span>
+</span><span id="line-298">        <span class="c1"># those not wrapped by `_retry_client_call`, e.g. plain `_get`).</span>
+</span><span id="line-299">        <span class="c1"># Status-code retries are kept small here because the application</span>
+</span><span id="line-300">        <span class="c1"># layer (`_retry_client_call` in `client.py`) does its own retries</span>
+</span><span id="line-301">        <span class="c1"># for retryable statuses; previously both were set to 3 retries each,</span>
+</span><span id="line-302">        <span class="c1"># giving 4 x 4 = 16 worst-case HTTP requests against a persistently</span>
+</span><span id="line-303">        <span class="c1"># failing endpoint. Capping urllib3&#39;s status retries at 1 keeps a</span>
+</span><span id="line-304">        <span class="c1"># single-transient absorber for direct callers while bounding the</span>
+</span><span id="line-305">        <span class="c1"># stacked worst case at 2 x 4 = 8.</span>
+</span><span id="line-306">        <span class="c1"># TODO: Add retry setting to configuration somewhere</span>
+</span><span id="line-307">        <span class="n">max_retry_num</span> <span class="o">=</span> <span class="mi">3</span>
+</span><span id="line-308">        <span class="n">retry</span> <span class="o">=</span> <span class="n">Retry</span><span class="p">(</span>
+</span><span id="line-309">            <span class="n">total</span><span class="o">=</span><span class="n">max_retry_num</span><span class="p">,</span>
+</span><span id="line-310">            <span class="n">read</span><span class="o">=</span><span class="n">max_retry_num</span><span class="p">,</span>
+</span><span id="line-311">            <span class="n">connect</span><span class="o">=</span><span class="n">max_retry_num</span><span class="p">,</span>
+</span><span id="line-312">            <span class="n">status</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</span><span id="line-313">            <span class="n">backoff_factor</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+</span><span id="line-314">            <span class="n">respect_retry_after_header</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="line-315">            <span class="n">status_forcelist</span><span class="o">=</span><span class="p">[</span><span class="mi">429</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="mi">502</span><span class="p">,</span> <span class="mi">503</span><span class="p">,</span> <span class="mi">504</span><span class="p">],</span>
+</span><span id="line-316">            <span class="n">raise_on_status</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+</span><span id="line-317">        <span class="p">)</span>
+</span><span id="line-318">        <span class="n">adapter</span> <span class="o">=</span> <span class="n">HTTPAdapter</span><span class="p">(</span><span class="n">max_retries</span><span class="o">=</span><span class="n">retry</span><span class="p">)</span>
+</span><span id="line-319">        <span class="n">session</span><span class="o">.</span><span class="n">mount</span><span class="p">(</span><span class="s2">&quot;http://&quot;</span><span class="p">,</span> <span class="n">adapter</span><span class="p">)</span>
+</span><span id="line-320">        <span class="n">session</span><span class="o">.</span><span class="n">mount</span><span class="p">(</span><span class="s2">&quot;https://&quot;</span><span class="p">,</span> <span class="n">adapter</span><span class="p">)</span>
+</span><span id="line-321">
+</span><span id="line-322">        <span class="k">return</span> <span class="n">session</span></div>
 
-</span><span id="line-305">
-</span><span id="line-306">
+</span><span id="line-323">
+</span><span id="line-324">
 <div class="viewcode-block" id="ClientError">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.core.client.ClientError.html#atomscale.core.client.ClientError">[docs]</a>
-</span><span id="line-307"><span class="k">class</span><span class="w"> </span><span class="nc">ClientError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
-</span><span id="line-308"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Generic error thrown by the Atomic Data Sciences API client&quot;&quot;&quot;</span></div>
+</span><span id="line-325"><span class="k">class</span><span class="w"> </span><span class="nc">ClientError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+</span><span id="line-326"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Generic error thrown by the Atomic Data Sciences API client&quot;&quot;&quot;</span>
+</span><span id="line-327">
+</span><span id="line-328">    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+</span><span id="line-329">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-330">        <span class="n">message</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-331">        <span class="n">status_code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-332">        <span class="n">response_text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-333">    <span class="p">):</span>
+</span><span id="line-334">        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</span><span id="line-335">        <span class="bp">self</span><span class="o">.</span><span class="n">status_code</span> <span class="o">=</span> <span class="n">status_code</span>
+</span><span id="line-336">        <span class="bp">self</span><span class="o">.</span><span class="n">response_text</span> <span class="o">=</span> <span class="n">response_text</span></div>
 
 </span></code></pre></div>
     </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">

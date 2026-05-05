@@ -252,38 +252,80 @@ existing tags.</p></li>
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">push</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<span class="sig-name descname"><span class="pre">push</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capture_start_ms_utc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
 <dd><p><strong>Callback mode.</strong> Push a single chunk of frames that you produced externally (e.g., from a
 camera callback). Call repeatedly for subsequent chunks.</p>
 <p>The <cite>frames</cite> argument may be <cite>(N,H,W)</cite> or <cite>(H,W)</cite>; dtype is coerced to <cite>uint8</cite>.</p>
 <p>After your last <cite>push(…)</cite>, call <strong>`finalize(data_id)`</strong> to mark the stream as complete on the server.</p>
+<section id="timestamps">
+<h2>Timestamps<a class="headerlink" href="#timestamps" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#timestamps'"><span>#</span></a></h2>
+<p>When <cite>capture_start_ms_utc</cite> is not provided, this method stamps each
+chunk with <cite>Utc::now()</cite> sampled the moment <cite>push()</cite> is entered, before
+any GIL-held packaging work. The chunk’s <cite>end_unix_ms_utc</cite> is then
+<cite>start + (n / fps) * 1000</cite>. Inter-chunk gaps therefore reflect real
+arrival jitter; intra-chunk span follows declared fps. Pass an explicit
+timestamp when you have a hardware clock (camera trigger, OS
+monotonic-to-utc conversion).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data_id</strong> (<em>str</em>) – The remote data identifier returned by <cite>initialize(…)</cite>.</p></li>
-<li><p><strong>chunk_idx</strong> (<em>int</em>) – Zero-based index of this chunk (used in Zarr shard path).</p></li>
-<li><p><strong>frames</strong> (<em>numpy.ndarray</em>) – <cite>(N,H,W)</cite> or <cite>(H,W)</cite> grayscale frames as <cite>uint8</cite>.</p></li>
-</ul>
+<dt class="field-odd">type data_id<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+<dt class="field-even">param data_id<span class="colon">:</span></dt>
+<dd class="field-even"><p>The remote data identifier returned by <cite>initialize(…)</cite>.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dt class="field-odd">type data_id<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
 </dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>RuntimeError</strong> – If packaging or upload fails internally.</p>
+<dt class="field-even">type chunk_idx<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+<dt class="field-odd">param chunk_idx<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Zero-based index of this chunk (used in Zarr shard path).</p>
+</dd>
+<dt class="field-even">type chunk_idx<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+<dt class="field-odd">type frames<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+<dt class="field-even">param frames<span class="colon">:</span></dt>
+<dd class="field-even"><p><cite>(N,H,W)</cite> or <cite>(H,W)</cite> grayscale frames as <cite>uint8</cite>.</p>
+</dd>
+<dt class="field-odd">type frames<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+<dt class="field-even">type capture_start_ms_utc<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+<dt class="field-odd">param capture_start_ms_utc<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Capture-start timestamp in milliseconds
+since UNIX epoch (UTC). Pass when you have a real capture-time clock
+(camera trigger, OS monotonic-to-utc conversion). When None, sampled
+from <cite>Utc::now()</cite> on entry.</p>
+</dd>
+<dt class="field-even">type capture_start_ms_utc<span class="colon">:</span></dt>
+<dd class="field-even"><p>Optional[int]</p>
+</dd>
+<dt class="field-odd">returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">raises RuntimeError<span class="colon">:</span></dt>
+<dd class="field-even"><p>If packaging or upload fails internally.</p>
 </dd>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p>finalize(data_id)</p>
 </div>
+</section>
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames_iter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span><span class="p"><span class="pre">[</span></span><span class="pre">numpy.ndarray</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
-<dd><p><strong>Generator/iterator mode.</strong> Iterates <cite>frames_iter</cite>, where each yielded item is either:</p>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames_iter</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Iterable</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<dd><p><strong>Generator/iterator mode.</strong> Iterates <cite>frames_iter</cite>, where each yielded item is one of:</p>
 <ul class="simple">
-<li><p><cite>(N, H, W)</cite> <cite>numpy.ndarray[uint8]</cite>: a chunk of <cite>N</cite> grayscale frames, or</p></li>
+<li><p><cite>(N, H, W)</cite> <cite>numpy.ndarray[uint8]</cite>: a chunk of <cite>N</cite> grayscale frames</p></li>
 <li><p><cite>(H, W)</cite> <cite>numpy.ndarray[uint8]</cite>: a single frame (treated as <cite>N = 1</cite>)</p></li>
+<li><p><cite>(frames, capture_start_ms_utc)</cite> 2-tuple: frames as above + an explicit
+capture-start timestamp (int milliseconds since UNIX epoch, UTC). Use
+this when you have hardware/OS-level timestamps for each chunk
+(camera trigger time, OS monotonic-to-utc conversion, etc.).</p></li>
 </ul>
 <p>For each yielded item, the method:
 1) Converts to flat <cite>uint8</cite> bytes,
@@ -292,24 +334,48 @@ camera callback). Call repeatedly for subsequent chunks.</p>
 4) Proceeds concurrently for high throughput.</p>
 <p>This method <strong>blocks until all spawned tasks complete</strong>. After <cite>run(…)</cite> returns,
 call <cite>finalize(data_id)</cite> to mark the stream complete on the server.</p>
+<section id="id1">
+<h2>Timestamps<a class="headerlink" href="#id1" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#id1'"><span>#</span></a></h2>
+<p>When the caller does not supply a <cite>capture_start_ms_utc</cite>, this method
+stamps each chunk with <cite>Utc::now()</cite> sampled the moment the iterator
+yields, before any GIL-held packaging work. The chunk’s
+<cite>end_unix_ms_utc</cite> is then <cite>start + (n / fps) * 1000</cite>. Inter-chunk
+gaps therefore reflect real arrival jitter; intra-chunk span follows
+declared fps. Pass an explicit timestamp when you have a hardware
+clock (camera trigger, OS monotonic-to-utc conversion).</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data_id</strong> (<em>str</em>) – The stream data ID returned by <cite>initialize(…)</cite>.</p></li>
-<li><p><strong>frames_iter</strong> (<em>Iterable</em><em>[</em><em>numpy.ndarray</em><em>]</em>) – Python iterable/generator of <cite>(N,H,W)</cite> or <cite>(H,W)</cite> uint8 arrays.</p></li>
-</ul>
+<dt class="field-odd">type data_id<span class="colon">:</span></dt>
+<dd class="field-odd"><p></p></dd>
+<dt class="field-even">param data_id<span class="colon">:</span></dt>
+<dd class="field-even"><p>The stream data ID returned by <cite>initialize(…)</cite>.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dt class="field-odd">type data_id<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
 </dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>RuntimeError</strong> – If any packaging/join/upload step fails.</p>
+<dt class="field-even">type frames_iter<span class="colon">:</span></dt>
+<dd class="field-even"><p></p></dd>
+<dt class="field-odd">param frames_iter<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Python iterable/generator of <cite>(N,H,W)</cite> / <cite>(H,W)</cite>
+uint8 arrays, or <cite>(frames, capture_start_ms_utc)</cite> tuples.</p>
+</dd>
+<dt class="field-even">type frames_iter<span class="colon">:</span></dt>
+<dd class="field-even"><p>Iterable</p>
+</dd>
+<dt class="field-odd">returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+<dt class="field-even">raises RuntimeError<span class="colon">:</span></dt>
+<dd class="field-even"><p>If any packaging/join/upload step fails.</p>
+</dd>
+<dt class="field-odd">raises ValueError<span class="colon">:</span></dt>
+<dd class="field-odd"><p>If a yielded tuple’s second element is not an int.</p>
 </dd>
 </dl>
 <div class="admonition seealso">
 <p class="admonition-title">See also</p>
 <p>finalize(data_id)</p>
 </div>
+</section>
 </dd></dl>
 </dd></dl>
 <dl class="py class">
