@@ -6,15 +6,57 @@ import pandas as pd
 
 from atomscale.results import MetrologyResult, OpticalResult, RHEEDVideoResult
 
-ABS_TIME_COLS = (
+# Column names whose suffix encodes the unit. Order matters: more specific
+# names (with explicit unit) take priority over unit-less display names.
+_UNIT_BY_NAME: dict[str, str] = {
+    "unix_timestamp_ns": "ns",
+    "timestamp_ns": "ns",
+    "unix_timestamp_us": "us",
+    "timestamp_us": "us",
+    "unix_timestamp_ms": "ms",
+    "timestamp_ms": "ms",
+    "unix_timestamp_seconds": "s",
+    "timestamp_seconds": "s",
+    "unix_timestamp_s": "s",
+    "timestamp_s": "s",
+}
+
+# Boundaries used to infer which unit a column's magnitude actually suggests.
+# Values above each threshold indicate the corresponding unit (or larger).
+_MAGNITUDE_THRESHOLDS: list[tuple[float, str]] = [
+    (1e18, "ns"),
+    (1e15, "us"),
+    (1e12, "ms"),
+    (1e9, "s"),
+]
+
+
+def _unit_suggested_by_magnitude(max_val: float) -> str:
+    """Best-guess unit for an absolute timestamp based on its max magnitude.
+
+    >>> _unit_suggested_by_magnitude(1.7e12)  # ms-scale
+    'ms'
+    >>> _unit_suggested_by_magnitude(1.7e9)   # s-scale
+    's'
+    """
+    for threshold, unit in _MAGNITUDE_THRESHOLDS:
+        if max_val >= threshold:
+            return unit
+    # Below year ~2001; ambiguous but assume seconds (the smallest unit).
+    return "s"
+
+# Display names that don't carry a unit. The magnitude heuristic is used
+# for these (preserving the prior behavior where users render with
+# "UNIX Timestamp" without committing to a unit suffix).
+ABS_TIME_COLS_UNITLESS = (
     "UNIX Timestamp",
     "Unix Timestamp",
-    "unix_timestamp_ms",
     "unix_timestamp",
-    "timestamp_ms",
-    "timestamp_seconds",
     "timestamp",
 )
+
+# Backwards-compatible export for any consumer importing this constant.
+ABS_TIME_COLS = tuple(_UNIT_BY_NAME.keys()) + ABS_TIME_COLS_UNITLESS
 
 REL_TIME_COLS = (
     "time_seconds",
@@ -25,16 +67,40 @@ REL_TIME_COLS = (
 
 
 def _infer_absolute_time(df: pd.DataFrame) -> pd.Series | None:
-    """Return UTC datetime index from absolute (epoch-based) columns."""
-    for col in ABS_TIME_COLS:
+    """Return UTC datetime index from absolute (epoch-based) columns.
+
+    A column whose name encodes the unit (``unix_timestamp_ms``,
+    ``timestamp_seconds``, etc.) is treated as authoritative for the
+    unit. If the values' magnitude is implausibly small for that unit
+    (e.g. a ``_ms`` column carrying values < 1e10), raise rather than
+    silently mis-parse.
+
+    Unit-less names (``UNIX Timestamp``, ``timestamp``, etc.) fall through
+    to magnitude-based heuristic detection.
+    """
+    for col, declared_unit in _UNIT_BY_NAME.items():
+        if col not in df.columns:
+            continue
+        target = pd.to_numeric(df[col], errors="coerce")
+        max_val = target.max(skipna=True)
+        if pd.notna(max_val):
+            suggested = _unit_suggested_by_magnitude(float(max_val))
+            if suggested != declared_unit:
+                raise ValueError(
+                    f"Column {col!r} declares unit {declared_unit!r} but the "
+                    f"value magnitude (max={float(max_val):g}) suggests unit "
+                    f"{suggested!r}. The column appears to be filled with "
+                    "values in a different unit."
+                )
+        return pd.to_datetime(target, unit=declared_unit, errors="coerce", utc=True)
+
+    for col in ABS_TIME_COLS_UNITLESS:
         if col not in df.columns:
             continue
         series = df[col]
 
-        # Accept numeric-looking strings as well as numeric dtypes
         numeric_series = pd.to_numeric(series, errors="coerce")
         has_numeric = numeric_series.notna().any()
-
         target = numeric_series if has_numeric else series
 
         if pd.api.types.is_integer_dtype(target) or has_numeric:
@@ -54,6 +120,7 @@ def _infer_absolute_time(df: pd.DataFrame) -> pd.Series | None:
 
         # assume already datetime-like strings
         return pd.to_datetime(target, errors="coerce", utc=True)
+
     return None
 
 
