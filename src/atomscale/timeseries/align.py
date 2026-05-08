@@ -4,7 +4,12 @@ from collections.abc import Iterable
 
 import pandas as pd
 
-from atomscale.results import MetrologyResult, OpticalResult, RHEEDVideoResult
+from atomscale.results import (
+    EllipsometryResult,
+    MetrologyResult,
+    OpticalResult,
+    RHEEDVideoResult,
+)
 
 ABS_TIME_COLS = (
     "UNIX Timestamp",
@@ -77,6 +82,9 @@ def _extract_timeseries(result):
         timeseries = result.timeseries_data
     elif isinstance(result, MetrologyResult):
         domain = "metrology"
+        timeseries = result.timeseries_data
+    elif isinstance(result, EllipsometryResult):
+        domain = "ellipsometry"
         timeseries = result.timeseries_data
     else:
         return None
