@@ -1,8 +1,9 @@
 import pandas as pd
 import pytest
 
-from atomscale.results import MetrologyResult, OpticalResult
+from atomscale.results import EllipsometryResult, MetrologyResult, OpticalResult
 from atomscale.timeseries.align import _infer_absolute_time, align_timeseries
+from atomscale.timeseries.ellipsometry import EllipsometryProvider
 from atomscale.timeseries.metrology import MetrologyProvider
 from atomscale.timeseries.optical import OpticalProvider
 
@@ -93,19 +94,44 @@ def _optical_payload():
     }
 
 
-def test_align_outer_produces_metrology_and_optical_columns():
+def _ellipsometry_payload():
+    return {
+        "properties": {
+            "psi": {
+                "relative_time_seconds": [0.0, 1.0, 2.0, 3.0],
+                "unix_timestamp_ms": [
+                    1_700_000_000_250,
+                    1_700_000_001_250,
+                    1_700_000_002_250,
+                    1_700_000_003_250,
+                ],
+                "values": [20.1, 20.3, 20.5, 20.7],
+                "units": "deg",
+            }
+        },
+        "series_max_time": 3.0,
+    }
+
+
+def test_align_outer_produces_columns_for_all_three_domains():
     """End-to-end: property-centric DataFrames flow through align_timeseries
     and the aligned MultiIndex carries (data_id, domain, metric) entries
-    for both metrology and optical."""
+    for metrology, optical, and ellipsometry."""
     metro_df = MetrologyProvider().to_dataframe(_metrology_payload())
     optical_df = OpticalProvider().to_dataframe(_optical_payload())
+    ellipso_df = EllipsometryProvider().to_dataframe(_ellipsometry_payload())
 
     metro_result = MetrologyResult(data_id="metro-1", timeseries_data=metro_df)
     optical_result = OpticalResult(
         data_id="optical-1", timeseries_data=optical_df, snapshot_image_data=None
     )
+    ellipso_result = EllipsometryResult(
+        data_id="ellipso-1", timeseries_data=ellipso_df
+    )
 
-    aligned = align_timeseries([metro_result, optical_result], how="outer")
+    aligned = align_timeseries(
+        [metro_result, optical_result, ellipso_result], how="outer"
+    )
 
     assert aligned is not None
     assert not aligned.empty
@@ -114,8 +140,11 @@ def test_align_outer_produces_metrology_and_optical_columns():
     domains = {col[1] for col in aligned.columns}
     assert "metrology" in domains
     assert "optical" in domains
+    assert "ellipsometry" in domains
 
     metro_metrics = {col[2] for col in aligned.columns if col[1] == "metrology"}
     optical_metrics = {col[2] for col in aligned.columns if col[1] == "optical"}
+    ellipso_metrics = {col[2] for col in aligned.columns if col[1] == "ellipsometry"}
     assert "Sub T setpoint" in metro_metrics
     assert "perimeter_px" in optical_metrics
+    assert "psi" in ellipso_metrics
