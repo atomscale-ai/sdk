@@ -1,45 +1,43 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import Any
 
 from pandas import DataFrame
 
 from atomscale.core import BaseClient
 from atomscale.results.metrology import MetrologyResult
-from atomscale.timeseries.provider import TimeseriesProvider, extend_with_statistics
+from atomscale.timeseries.provider import (
+    TimeseriesProvider,
+    properties_payload_to_dataframe,
+)
 
 
 class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
     TYPE = "metrology"
 
-    RENAME_MAP: Mapping[str, str] = extend_with_statistics(
-        {
-            "relative_time_seconds": "Time",
-            "frame_number": "Frame Number",
-            "unix_timestamp_ms": "UNIX Timestamp",
-            "ratio_pyrometer": "Ratio Pyrometer",
-            "sc_pyrometer": "SC Pyrometer",
-            "decay_constant_minutes": "Decay Constant",
-            "median_period": "Median Period",
-            "median_period_seconds": "Median Period",
-            "decay_fit": "Decay Fit",
-        }
-    )
-    INDEX_COLS: Sequence[str] = ["Frame Number"]
+    # The property-centric payload returns property values keyed by their
+    # human-readable API names (preserved as-is). Only the time columns
+    # are renamed to user-facing display labels.
+    RENAME_MAP: Mapping[str, str] = {
+        "relative_time_seconds": "Time",
+        "unix_timestamp_ms": "UNIX Timestamp",
+    }
 
     def fetch_raw(self, client: BaseClient, data_id: str) -> Any:
         return client._get(sub_url=f"metrology/{data_id}/timeseries/")
 
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:
-            return DataFrame(None)
-        series = raw.get("series") if isinstance(raw, dict) else raw
-        series_df = DataFrame(series or None).rename(columns=self.RENAME_MAP)
-        idx_cols = [c for c in self.INDEX_COLS if c in series_df.columns]
-        if idx_cols:
-            series_df = series_df.set_index(idx_cols)
-        return series_df
+            return DataFrame()
+        if not isinstance(raw, dict) or "properties" not in raw:
+            got = list(raw.keys()) if isinstance(raw, dict) else type(raw).__name__
+            raise ValueError(
+                f"{type(self).__name__} payload missing 'properties' key. "
+                f"Got: {got}. The legacy 'series' shape is no longer supported."
+            )
+        df = properties_payload_to_dataframe(raw["properties"])
+        return df.rename(columns=self.RENAME_MAP)
 
     def build_result(
         self,
