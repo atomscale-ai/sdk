@@ -4,7 +4,12 @@ from collections.abc import Iterable
 
 import pandas as pd
 
-from atomscale.results import MetrologyResult, OpticalResult, RHEEDVideoResult
+from atomscale.results import (
+    EllipsometryResult,
+    MetrologyResult,
+    OpticalResult,
+    RHEEDVideoResult,
+)
 
 # Column names whose suffix encodes the unit. Order matters: more specific
 # names (with explicit unit) take priority over unit-less display names.
@@ -105,11 +110,11 @@ def _infer_absolute_time(df: pd.DataFrame) -> pd.Series | None:
 
         if pd.api.types.is_integer_dtype(target) or has_numeric:
             max_val = target.max(skipna=True)
-            if max_val > 1e18:
+            if max_val >= 1e18:
                 unit = "ns"
-            elif max_val > 1e15:
+            elif max_val >= 1e15:
                 unit = "us"
-            elif max_val > 1e12:
+            elif max_val >= 1e12:
                 unit = "ms"
             else:
                 unit = "s"
@@ -144,6 +149,9 @@ def _extract_timeseries(result):
         timeseries = result.timeseries_data
     elif isinstance(result, MetrologyResult):
         domain = "metrology"
+        timeseries = result.timeseries_data
+    elif isinstance(result, EllipsometryResult):
+        domain = "ellipsometry"
         timeseries = result.timeseries_data
     else:
         return None
