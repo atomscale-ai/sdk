@@ -1,15 +1,14 @@
 from datetime import datetime
-from pathlib import Path
 from unittest import mock
-from urllib.parse import urljoin
 
 import pytest
 from pandas import DataFrame
 
 from atomscale import Client
 from atomscale.client import _RETRYABLE_STATUSES, _retry_client_call
-from atomscale.results import UnknownResult
 from atomscale.core import ClientError
+from atomscale.results import UnknownResult
+
 from .conftest import ResultIDs
 
 

@@ -1,7 +1,8 @@
 import pytest
+from matplotlib.figure import Figure
+
 from atomscale import Client
 from atomscale.results import RamanResult
-from matplotlib.figure import Figure
 
 from .conftest import ResultIDs
 

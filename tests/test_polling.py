@@ -3,13 +3,12 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
-from typing import Any, Iterable, List
+from collections.abc import Iterable
+from typing import Any
 
 import pandas as pd
 import pytest
 
-
-from .conftest import ResultIDs
 from atomscale import Client
 from atomscale.similarity.polling import (
     aiter_poll_trajectory,
@@ -24,6 +23,8 @@ from atomscale.timeseries.polling import (
     start_polling_task,
     start_polling_thread,
 )
+
+from .conftest import ResultIDs
 
 # ---------- Fixtures ----------
 
@@ -162,7 +163,7 @@ def test_iter_poll_on_error_and_continue(
 ):
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = FlakyThenOKProvider()
-    errors: List[BaseException] = []
+    errors: list[BaseException] = []
     monkeypatch.setattr(
         "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
@@ -183,10 +184,10 @@ def test_iter_poll_on_error_and_continue(
 def test_iter_poll_jitter_uses_interval_bound(
     monkeypatch: pytest.MonkeyPatch, client: Client, data_id: str
 ):
-    sleep_calls: List[float] = []
+    sleep_calls: list[float] = []
     monkeypatch.setattr(time, "sleep", lambda d: sleep_calls.append(d))
 
-    recorded_bounds: List[float] = []
+    recorded_bounds: list[float] = []
 
     def fake_uniform(a: float, b: float) -> float:
         recorded_bounds.append(b)
@@ -252,7 +253,7 @@ async def test_aiter_poll_yields_max_polls(
         "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
-    got: List[int] = []
+    got: list[int] = []
     async for r in aiter_poll(client, data_id, interval=0.01, max_polls=3):
         got.append(r["i"])
     assert got == [1, 2, 3]
@@ -273,7 +274,7 @@ async def test_aiter_poll_dedupes(
         "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
-    got: List[int] = []
+    got: list[int] = []
     async for r in aiter_poll(
         client,
         data_id,
@@ -295,12 +296,12 @@ async def test_aiter_poll_on_error_and_continue(
     monkeypatch.setattr(asyncio, "sleep", fast_sleep)
 
     provider = FlakyThenOKProvider()
-    errors: List[BaseException] = []
+    errors: list[BaseException] = []
     monkeypatch.setattr(
         "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
-    got: List[int] = []
+    got: list[int] = []
     async for r in aiter_poll(
         client,
         data_id,
@@ -330,7 +331,7 @@ async def test_start_polling_task_awaits_on_result(
         "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
-    seen: List[int] = []
+    seen: list[int] = []
 
     async def on_result(item):
         await asyncio.sleep(0)  # prove await happens
@@ -360,7 +361,7 @@ def test_start_polling_thread_stops_with_event(
         "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
 
-    seen: List[int] = []
+    seen: list[int] = []
     first_seen = threading.Event()
 
     def on_result(item):
@@ -529,7 +530,7 @@ def test_iter_poll_trajectory_on_error_and_continue(
 ):
     monkeypatch.setattr(time, "sleep", lambda *_: None)
     provider = FlakyTrajectoryProvider()
-    errors: List[BaseException] = []
+    errors: list[BaseException] = []
     monkeypatch.setattr(
         "atomscale.similarity.polling.get_provider", lambda name: provider
     )
@@ -565,7 +566,7 @@ async def test_aiter_poll_trajectory_yields_max_polls(
         "atomscale.similarity.polling.get_provider", lambda name: provider
     )
 
-    got: List[Any] = []
+    got: list[Any] = []
     async for r in aiter_poll_trajectory(client, source_id, interval=0.01, max_polls=3):
         got.append(r)
     assert len(got) == 3
@@ -586,7 +587,7 @@ async def test_aiter_poll_trajectory_default_until(
         "atomscale.similarity.polling.get_provider", lambda name: provider
     )
 
-    got: List[Any] = []
+    got: list[Any] = []
     async for r in aiter_poll_trajectory(client, source_id, interval=0.01):
         got.append(r)
     assert len(got) == 3
@@ -603,12 +604,12 @@ async def test_aiter_poll_trajectory_on_error_and_continue(
     monkeypatch.setattr(asyncio, "sleep", fast_sleep)
 
     provider = FlakyTrajectoryProvider()
-    errors: List[BaseException] = []
+    errors: list[BaseException] = []
     monkeypatch.setattr(
         "atomscale.similarity.polling.get_provider", lambda name: provider
     )
 
-    got: List[Any] = []
+    got: list[Any] = []
     async for r in aiter_poll_trajectory(
         client,
         source_id,
@@ -638,7 +639,7 @@ async def test_start_polling_trajectory_task_awaits_on_result(
         "atomscale.similarity.polling.get_provider", lambda name: provider
     )
 
-    seen: List[int] = []
+    seen: list[int] = []
 
     async def on_result(item):
         await asyncio.sleep(0)
@@ -668,7 +669,7 @@ def test_start_polling_trajectory_thread_stops_with_event(
         "atomscale.similarity.polling.get_provider", lambda name: provider
     )
 
-    seen: List[int] = []
+    seen: list[int] = []
     first_seen = threading.Event()
 
     def on_result(item):

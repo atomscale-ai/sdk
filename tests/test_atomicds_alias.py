@@ -20,18 +20,20 @@ def test_atomicds_alias_warns_and_maps_to_atomscale():
         for w in caught
     )
 
-    from atomscale import Client  # noqa: WPS433
-    from atomicds import Client as LegacyClient  # noqa: WPS433
+    from atomicds import Client as LegacyClient
+    from atomscale import Client
 
     assert LegacyClient is Client
     assert legacy_root.__version__ == importlib.import_module("atomscale").__version__
 
-    from atomicds.core import BaseClient  # noqa: WPS433
-    from atomscale.core import BaseClient as NewBaseClient  # noqa: WPS433
+    from atomicds.core import BaseClient
+
+    from atomscale.core import BaseClient as NewBaseClient
 
     assert BaseClient is NewBaseClient
 
-    from atomicds.timeseries.polling import iter_poll  # noqa: WPS433
-    from atomscale.timeseries.polling import iter_poll as new_iter_poll  # noqa: WPS433
+    from atomicds.timeseries.polling import iter_poll
+
+    from atomscale.timeseries.polling import iter_poll as new_iter_poll
 
     assert iter_poll is new_iter_poll

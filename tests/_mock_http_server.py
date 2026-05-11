@@ -26,7 +26,7 @@ class CaptureHandler(BaseHTTPRequestHandler):
     def _handle_request(self, method: str):
         try:
             self._handle_request_inner(method)
-        except Exception:  # noqa: BLE001
+        except Exception:
             # If anything throws inside the handler the response never
             # reaches the client and reqwest reports a confusing
             # "connection closed before message completed" instead of the
@@ -125,7 +125,6 @@ class CaptureHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
         """Suppress default logging."""
-        pass
 
 
 class MultiRequestServer(ThreadingHTTPServer):
@@ -156,7 +155,7 @@ class MultiRequestServer(ThreadingHTTPServer):
         self.shutdown()
         thread.join(timeout=2)
 
-    def process_request_thread(self, request, client_address):  # noqa: D401
+    def process_request_thread(self, request, client_address):
         """Override to count handled requests and signal completion."""
         try:
             super().process_request_thread(request, client_address)

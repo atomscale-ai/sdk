@@ -1,9 +1,11 @@
-from pandas import DataFrame
 import pytest
-from atomscale import Client
-from .conftest import ResultIDs
-from atomscale.results import RHEEDImageResult
+from pandas import DataFrame
 from PIL.Image import Image
+
+from atomscale import Client
+from atomscale.results import RHEEDImageResult
+
+from .conftest import ResultIDs
 
 
 @pytest.fixture
