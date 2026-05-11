@@ -50,6 +50,7 @@ def _unit_suggested_by_magnitude(max_val: float) -> str:
     # Below year ~2001; ambiguous but assume seconds (the smallest unit).
     return "s"
 
+
 # Display names that don't carry a unit. The magnitude heuristic is used
 # for these (preserving the prior behavior where users render with
 # "UNIX Timestamp" without committing to a unit suffix).

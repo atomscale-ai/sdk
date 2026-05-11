@@ -156,8 +156,12 @@ def properties_payload_to_dataframe(
             # Fix up extrapolation past either edge.
             below = unix_ms < longest_ts_ms[0]
             above = unix_ms > longest_ts_ms[-1]
-            time_col[below] = longest_rel[0] + (unix_ms[below] - longest_ts_ms[0]) / 1000.0
-            time_col[above] = longest_rel[-1] + (unix_ms[above] - longest_ts_ms[-1]) / 1000.0
+            time_col[below] = (
+                longest_rel[0] + (unix_ms[below] - longest_ts_ms[0]) / 1000.0
+            )
+            time_col[above] = (
+                longest_rel[-1] + (unix_ms[above] - longest_ts_ms[-1]) / 1000.0
+            )
         else:
             # One sample: extrapolate purely from the (anchor_ts, anchor_rel) pair.
             anchor_ts = float(longest_ts_ms[0])
