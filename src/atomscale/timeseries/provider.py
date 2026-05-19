@@ -42,7 +42,7 @@ def _to_int64_ms(values: Sequence[Any]) -> np.ndarray:
     """
     out = np.empty(len(values), dtype=np.int64)
     for i, v in enumerate(values):
-        if isinstance(v, (Decimal, int, np.integer, float)):
+        if isinstance(v, Decimal | int | np.integer | float):
             out[i] = int(v)
         else:
             out[i] = int(Decimal(str(v)))
@@ -174,6 +174,34 @@ def properties_payload_to_dataframe(
     out.insert(0, "UNIX Timestamp", unix_ms)
     out.insert(1, "Time", time_col)
     return out
+
+
+def series_payload_to_dataframe(
+    series: Sequence[Mapping[str, Any]],
+) -> DataFrame:
+    """Parse the legacy row-oriented ``series`` payload into a wide DataFrame.
+
+    Each row carries ``unix_timestamp_ms``, ``relative_time_seconds``, and one
+    key per property. This shape predates the property-centric payload and is
+    still emitted by un-migrated API deployments. Output schema mirrors
+    :func:`properties_payload_to_dataframe` so downstream code is shape-stable
+    across both API versions.
+    """
+    if not series:
+        return DataFrame()
+
+    rows = DataFrame(list(series))
+
+    if "unix_timestamp_ms" in rows.columns:
+        rows["unix_timestamp_ms"] = _to_int64_ms(rows["unix_timestamp_ms"].tolist())
+    if "relative_time_seconds" in rows.columns:
+        rows["relative_time_seconds"] = rows["relative_time_seconds"].astype("float64")
+
+    leading = [
+        c for c in ("unix_timestamp_ms", "relative_time_seconds") if c in rows.columns
+    ]
+    remaining = [c for c in rows.columns if c not in leading]
+    return rows[leading + remaining]
 
 
 class TimeseriesProvider(ABC, Generic[R]):

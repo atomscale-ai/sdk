@@ -30,7 +30,7 @@ def test_generic_search(client: Client):
         [
             "Data ID",
             "Upload Datetime",
-            "Last Accessed Datetime",
+            "Last Updated",
             "File Metadata",
             "Type",
             "File Name",
@@ -102,9 +102,32 @@ def test_upload_datetime_search(client: Client):
     assert len(data["Upload Datetime"].values)
 
 
-def test_last_accessed_datetime_search(client: Client):
-    data = client.search(last_accessed_datetime=(None, datetime.utcnow()))
-    assert len(data["Last Accessed Datetime"].values)
+def test_last_updated_search(client: Client):
+    data = client.search(last_updated=(None, datetime.utcnow()))
+    assert len(data["Last Updated"].values)
+
+
+def test_last_accessed_datetime_alias_forwards_to_last_updated(monkeypatch):
+    """Deprecated kwarg must warn and forward to last_updated_min/max params."""
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+
+    captured: dict = {}
+
+    def fake_get(sub_url, params=None):
+        captured["sub_url"] = sub_url
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(client, "_get", fake_get)
+
+    upper = datetime(2026, 1, 2, 3, 4, 5)
+    with pytest.warns(DeprecationWarning, match="last_accessed_datetime"):
+        client.search(last_accessed_datetime=(None, upper))
+
+    assert captured["params"]["last_updated_min"] is None
+    assert captured["params"]["last_updated_max"] == upper
+    assert "last_accessed_datetime_min" not in captured["params"]
+    assert "last_accessed_datetime_max" not in captured["params"]
 
 
 @pytest.mark.order(1)

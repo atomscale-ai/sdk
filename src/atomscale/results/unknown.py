@@ -35,7 +35,7 @@ class UnknownResult(MSONable):
             "pipeline_status",
             "raw_file_type",
             "upload_datetime",
-            "last_accessed_datetime",
+            "last_updated",
             "char_source_type",
             "physical_sample_id",
             "project_ids",
