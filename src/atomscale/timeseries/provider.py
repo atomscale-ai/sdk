@@ -42,7 +42,7 @@ def _to_int64_ms(values: Sequence[Any]) -> np.ndarray:
     """
     out = np.empty(len(values), dtype=np.int64)
     for i, v in enumerate(values):
-        if isinstance(v, (Decimal, int, np.integer, float)):
+        if isinstance(v, Decimal | int | np.integer | float):
             out[i] = int(v)
         else:
             out[i] = int(Decimal(str(v)))

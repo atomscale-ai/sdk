@@ -36,8 +36,8 @@ class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
                 f"{type(self).__name__} payload missing 'properties' key. "
                 f"Got: {got}. The legacy 'series' shape is no longer supported."
             )
-        df = properties_payload_to_dataframe(raw["properties"])
-        return df.rename(columns=self.RENAME_MAP)
+        properties_df = properties_payload_to_dataframe(raw["properties"])
+        return properties_df.rename(columns=self.RENAME_MAP)
 
     def build_result(
         self,
