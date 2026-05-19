@@ -1301,7 +1301,7 @@ class Client(BaseClient):
                     params={"return_as": "url-download"},
                 )
             except ClientError as err:
-                if err.status_code in {400, 404, 410, 422}:
+                if err.status_code in {400, 410, 422}:
                     raise ClientError(
                         f"No processed data found for data_id '{data_id}'"
                     ) from err
