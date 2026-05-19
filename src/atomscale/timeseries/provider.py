@@ -190,18 +190,18 @@ def series_payload_to_dataframe(
     if not series:
         return DataFrame()
 
-    df = DataFrame(list(series))
+    rows = DataFrame(list(series))
 
-    if "unix_timestamp_ms" in df.columns:
-        df["unix_timestamp_ms"] = _to_int64_ms(df["unix_timestamp_ms"].tolist())
-    if "relative_time_seconds" in df.columns:
-        df["relative_time_seconds"] = df["relative_time_seconds"].astype("float64")
+    if "unix_timestamp_ms" in rows.columns:
+        rows["unix_timestamp_ms"] = _to_int64_ms(rows["unix_timestamp_ms"].tolist())
+    if "relative_time_seconds" in rows.columns:
+        rows["relative_time_seconds"] = rows["relative_time_seconds"].astype("float64")
 
     leading = [
-        c for c in ("unix_timestamp_ms", "relative_time_seconds") if c in df.columns
+        c for c in ("unix_timestamp_ms", "relative_time_seconds") if c in rows.columns
     ]
-    remaining = [c for c in df.columns if c not in leading]
-    return df[leading + remaining]
+    remaining = [c for c in rows.columns if c not in leading]
+    return rows[leading + remaining]
 
 
 class TimeseriesProvider(ABC, Generic[R]):

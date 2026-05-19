@@ -39,15 +39,15 @@ class OpticalProvider(TimeseriesProvider):
                 f"{type(raw).__name__}."
             )
         if "properties" in raw:
-            df = properties_payload_to_dataframe(raw["properties"])
+            parsed = properties_payload_to_dataframe(raw["properties"])
         elif "series" in raw:
-            df = series_payload_to_dataframe(raw["series"])
+            parsed = series_payload_to_dataframe(raw["series"])
         else:
             raise ValueError(
                 f"{type(self).__name__} payload missing both 'properties' and "
                 f"'series' keys. Got: {list(raw.keys())}."
             )
-        return df.rename(columns=self.RENAME_MAP)
+        return parsed.rename(columns=self.RENAME_MAP)
 
     def snapshot_image_uuids(self, frames_payload: dict[str, Any]) -> list[dict]:
         out: list[dict] = []
