@@ -370,7 +370,13 @@ class RHEEDImageResult(MSONable):
 
                 new_df = pd.concat([new_df, merged_row], axis=1)
 
-            new_df = new_df.T.astype(original_dtypes).reset_index(drop=True)
+            new_df = new_df.T
+            present_dtypes = {
+                col: dtype
+                for col, dtype in original_dtypes.items()
+                if col in new_df.columns
+            }
+            new_df = new_df.astype(present_dtypes).reset_index(drop=True)
 
             agg_dict["mask_rle"] = lambda x: merge_masks(  # type: ignore  # noqa: PGH003
                 x,
