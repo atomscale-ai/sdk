@@ -30,7 +30,7 @@ def test_generic_search(client: Client):
         [
             "Data ID",
             "Upload Datetime",
-            "Last Accessed Datetime",
+            "Last Updated",
             "File Metadata",
             "Type",
             "File Name",
@@ -102,9 +102,9 @@ def test_upload_datetime_search(client: Client):
     assert len(data["Upload Datetime"].values)
 
 
-def test_last_accessed_datetime_search(client: Client):
-    data = client.search(last_accessed_datetime=(None, datetime.utcnow()))
-    assert len(data["Last Accessed Datetime"].values)
+def test_last_updated_search(client: Client):
+    data = client.search(last_updated=(None, datetime.utcnow()))
+    assert len(data["Last Updated"].values)
 
 
 @pytest.mark.order(1)

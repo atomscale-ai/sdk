@@ -138,7 +138,8 @@ class Client(BaseClient):
         ] = "all",
         growth_length: tuple[int | None, int | None] = (None, None),
         upload_datetime: tuple[datetime | None, datetime | None] = (None, None),
-        last_accessed_datetime: tuple[datetime | None, datetime | None] = (None, None),
+        last_updated: tuple[datetime | None, datetime | None] = (None, None),
+        last_accessed_datetime: tuple[datetime | None, datetime | None] | None = None,
     ) -> DataFrame:
         """Search and obtain data catalogue entries
 
@@ -156,13 +157,23 @@ class Client(BaseClient):
                 Defaults to (None, None) which will include all non-video data.
             upload_datetime (tuple[datetime | None, datetime | None]): Minimum and maximum values of the upload datetime.
                 Defaults to (None, None).
-            last_accessed_datetime (tuple[datetime | None, datetime | None]): Minimum and maximum values of the last accessed datetime.
-                Defaults to (None, None).
+            last_updated (tuple[datetime | None, datetime | None]): Minimum and maximum values of the last
+                updated datetime. Defaults to (None, None).
+            last_accessed_datetime: Deprecated alias for ``last_updated``; will be removed in a future release.
 
         Returns:
             (DataFrame): Pandas DataFrame containing matched entries in the data catalogue.
 
         """
+        if last_accessed_datetime is not None:
+            warnings.warn(
+                "Client.search(last_accessed_datetime=...) is deprecated; "
+                "use last_updated=... instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            last_updated = last_accessed_datetime
+
         params = {
             "keywords": keywords,
             "include_organization_data": include_organization_data,
@@ -175,8 +186,8 @@ class Client(BaseClient):
             "growth_length_max": growth_length[1],
             "upload_datetime_min": upload_datetime[0],
             "upload_datetime_max": upload_datetime[1],
-            "last_accessed_datetime_min": last_accessed_datetime[0],
-            "last_accessed_datetime_max": last_accessed_datetime[1],
+            "last_updated_min": last_updated[0],
+            "last_updated_max": last_updated[1],
         }
 
         data = self._get(
@@ -186,7 +197,7 @@ class Client(BaseClient):
         column_mapping = {
             "data_id": "Data ID",
             "upload_datetime": "Upload Datetime",
-            "last_accessed_datetime": "Last Accessed Datetime",
+            "last_updated": "Last Updated",
             "char_source_type": "Type",
             "raw_name": "File Name",
             "pipeline_status": "Status",
@@ -250,7 +261,7 @@ class Client(BaseClient):
             "Project Name",
             "Growth Length",
             "Upload Datetime",
-            "Last Accessed Datetime",
+            "Last Updated",
             "Sample Notes",
             "Sample Notes Last Updated",
             "File Metadata",
@@ -1284,11 +1295,18 @@ class Client(BaseClient):
         def __download_one(data_id: str) -> None:
             # 1) Resolve the presigned URL -------------------------------------
             url_type = "raw_data" if data_type == "raw" else "processed_data"
-            meta: dict = self._get(  # type: ignore  # noqa: PGH003
-                sub_url=f"data_entries/{url_type}/{data_id}",
-                params={"return_as": "url-download"},
-            )
-            if meta is None:
+            try:
+                meta: dict = self._get(  # type: ignore  # noqa: PGH003
+                    sub_url=f"data_entries/{url_type}/{data_id}",
+                    params={"return_as": "url-download"},
+                )
+            except ClientError as err:
+                if err.status_code in {400, 404, 410, 422}:
+                    raise ClientError(
+                        f"No processed data found for data_id '{data_id}'"
+                    ) from err
+                raise
+            if not meta or "url" not in meta:
                 raise ClientError(f"No processed data found for data_id '{data_id}'")
 
             url = meta["url"]
