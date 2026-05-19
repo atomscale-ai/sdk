@@ -7,16 +7,16 @@
 <meta content="white" media="(prefers-color-scheme: light)" name="theme-color"/>
 <meta content="black" media="(prefers-color-scheme: dark)" name="theme-color"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>atomscale.timeseries.provider.extend_with_statistics | Python SDK</title>
-<meta content="atomscale.timeseries.provider.extend_with_statistics | Python SDK" property="og:title"/>
-<meta content="atomscale.timeseries.provider.extend_with_statistics | Python SDK" name="twitter:title"/>
+<title>atomscale.timeseries.provider.properties_payload_to_dataframe | Python SDK</title>
+<meta content="atomscale.timeseries.provider.properties_payload_to_dataframe | Python SDK" property="og:title"/>
+<meta content="atomscale.timeseries.provider.properties_payload_to_dataframe | Python SDK" name="twitter:title"/>
 <link href="../_static/pygments.css?v=03e43079" rel="stylesheet" type="text/css"/>
 <link href="../_static/theme.css?v=42baaae4" rel="stylesheet" type="text/css"/>
 <link href="../_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="atomscale.timeseries.provider.properties_payload_to_dataframe.html" rel="next" title="atomscale.timeseries.provider.properties_payload_to_dataframe"/>
-<link href="atomscale.timeseries.provider.html" rel="prev" title="atomscale.timeseries.provider"/>
+<link href="atomscale.timeseries.provider.series_payload_to_dataframe.html" rel="next" title="atomscale.timeseries.provider.series_payload_to_dataframe"/>
+<link href="atomscale.timeseries.provider.extend_with_statistics.html" rel="prev" title="atomscale.timeseries.provider.extend_with_statistics"/>
 <script>
     <!-- Prevent Flash of wrong theme -->
       const userPreference = localStorage.getItem('darkMode');
@@ -137,37 +137,71 @@
 </a>
 <div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap" href="../modules.html">Project Modules</a>
 <div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap" href="atomscale.timeseries.provider.html">atomscale.timeseries.provider</a>
-<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">atomscale.timeseries.provider.extend_with_statistics</span>
+<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">atomscale.timeseries.provider.properties_payload_to_dataframe</span>
 </nav>
 <div id="content" role="main">
-<section id="atomscale-timeseries-provider-extend-with-statistics">
-<h1>atomscale.timeseries.provider.extend_with_statistics<a class="headerlink" href="#atomscale-timeseries-provider-extend-with-statistics" title="Link to this heading"><span>#</span></a></h1>
+<section id="atomscale-timeseries-provider-properties-payload-to-dataframe">
+<h1>atomscale.timeseries.provider.properties_payload_to_dataframe<a class="headerlink" href="#atomscale-timeseries-provider-properties-payload-to-dataframe" title="Link to this heading"><span>#</span></a></h1>
 <dl class="py function">
 <dt class="sig sig-object py">
-<span class="sig-prename descclassname"><span class="pre">atomscale.timeseries.provider.</span></span><span class="sig-name descname"><span class="pre">extend_with_statistics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rename_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/atomscale/timeseries/provider.html#extend_with_statistics"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Add suffix-based statistical labels to a rename map.</p>
+<span class="sig-prename descclassname"><span class="pre">atomscale.timeseries.provider.</span></span><span class="sig-name descname"><span class="pre">properties_payload_to_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Mapping</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/timeseries/provider.html#properties_payload_to_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Merge a property-centric payload into a wide DataFrame.</p>
+<p>The payload shape is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="p">{</span>
+</span><span id="line-2">  <span class="s2">"&lt;property_name&gt;"</span><span class="p">:</span> <span class="p">{</span>
+</span><span id="line-3">    <span class="s2">"relative_time_seconds"</span><span class="p">:</span> <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+</span><span id="line-4">    <span class="s2">"unix_timestamp_ms"</span><span class="p">:</span>     <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+</span><span id="line-5">    <span class="s2">"values"</span><span class="p">:</span>                <span class="p">[</span><span class="o">...</span><span class="p">],</span>
+</span><span id="line-6">    <span class="s2">"units"</span><span class="p">:</span> <span class="s2">"..."</span>
+</span><span id="line-7">  <span class="p">},</span>
+</span><span id="line-8">  <span class="o">...</span>
+</span><span id="line-9"><span class="p">}</span>
+</span></code></pre></div>
+</div>
+<p>Each property carries its own <code class="docutils literal notranslate"><span class="pre">unix_timestamp_ms</span></code> and
+<code class="docutils literal notranslate"><span class="pre">relative_time_seconds</span></code> arrays (potentially different sample rates).
+Values are outer-joined on the union of <code class="docutils literal notranslate"><span class="pre">unix_timestamp_ms</span></code> across
+all properties and forward-filled onto that index.</p>
+<p>Forward-fill (rather than numerical interpolation) is correct for
+setpoints and shutter states, which are step functions that hold
+constant between samples. For dense continuous sensors (pyrometers
+etc.) the error between samples is bounded. Forward-fill preserves
+real measurements rather than manufacturing synthetic values.</p>
+<dl class="simple">
+<dt>Returned columns:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">UNIX</span> <span class="pre">Timestamp</span></code> (int64, milliseconds)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Time</span></code> (float64, relative seconds; anchored to the longest
+property’s t=0 via piecewise-linear extrapolation)</p></li>
+<li><p>one column per property keyed by its API name (case preserved —
+these are setpoint/shutter/etc. names users grep for)</p></li>
+</ul>
+</dd>
+</dl>
+<p>Index is row number. Empty input → empty DataFrame.</p>
+<p>Unix timestamps are accepted as <code class="docutils literal notranslate"><span class="pre">Decimal</span></code>, <code class="docutils literal notranslate"><span class="pre">float</span></code>, <code class="docutils literal notranslate"><span class="pre">int</span></code>, or
+numeric strings; they are cast to int64 for the DataFrame column.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>rename_map</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>)</p>
+<dd class="field-odd"><p><strong>properties</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code>]]</span>)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">dict</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span></p>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span></p>
 </dd>
 </dl>
 </dd></dl>
 </section>
 </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">
 <div class="mr-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.timeseries.provider.html">
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.timeseries.provider.extend_with_statistics.html">
 <svg class="mr-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="15 18 9 12 15 6"></polyline>
 </svg>
-        atomscale.timeseries.provider
+        atomscale.timeseries.provider.extend_with_statistics
       </a>
 </div>
 <div class="ml-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.timeseries.provider.properties_payload_to_dataframe.html">
-        atomscale.timeseries.provider.properties_payload_to_dataframe
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.timeseries.provider.series_payload_to_dataframe.html">
+        atomscale.timeseries.provider.series_payload_to_dataframe
         <svg class="ml-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="9 18 15 12 9 6"></polyline>
 </svg>

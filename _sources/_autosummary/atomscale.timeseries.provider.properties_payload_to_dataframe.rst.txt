@@ -1,0 +1,6 @@
+atomscale.timeseries.provider.properties\_payload\_to\_dataframe
+================================================================
+
+.. currentmodule:: atomscale.timeseries.provider
+
+.. autofunction:: properties_payload_to_dataframe

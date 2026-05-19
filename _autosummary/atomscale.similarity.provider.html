@@ -142,6 +142,14 @@
 <section id="atomscale-similarity-provider">
 <h1>atomscale.similarity.provider<a class="headerlink" href="#atomscale-similarity-provider" title="Link to this heading"><span>#</span></a></h1>
 <p>Provider classes for similarity trajectory data.</p>
+<p>Note on unix-time units: the similarity API emits <code class="docutils literal notranslate"><span class="pre">unix_times</span></code> in
+<strong>seconds</strong> (raw DB values), unlike the metrology / optical /
+ellipsometry endpoints which ship <code class="docutils literal notranslate"><span class="pre">unix_timestamp_ms</span></code> in milliseconds.
+The column is renamed to <code class="docutils literal notranslate"><span class="pre">UNIX</span> <span class="pre">Timestamp</span></code> (unit-less display name);
+the magnitude-based fallback in <code class="xref py py-func docutils literal notranslate"><span class="pre">align._infer_absolute_time()</span></code>
+correctly detects seconds for these values. In typed Python surfaces
+the canonical type for individual unix_times values is
+<code class="xref py py-class docutils literal notranslate"><span class="pre">decimal.Decimal</span></code>; pandas columns stay numeric for performance.</p>
 <p class="rubric">Classes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
