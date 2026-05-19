@@ -10,6 +10,7 @@ from atomscale.results.metrology import MetrologyResult
 from atomscale.timeseries.provider import (
     TimeseriesProvider,
     properties_payload_to_dataframe,
+    series_payload_to_dataframe,
 )
 
 
@@ -30,14 +31,21 @@ class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:
             return DataFrame()
-        if not isinstance(raw, dict) or "properties" not in raw:
-            got = list(raw.keys()) if isinstance(raw, dict) else type(raw).__name__
+        if not isinstance(raw, dict):
             raise ValueError(
-                f"{type(self).__name__} payload missing 'properties' key. "
-                f"Got: {got}. The legacy 'series' shape is no longer supported."
+                f"{type(self).__name__} payload must be a dict; got "
+                f"{type(raw).__name__}."
             )
-        properties_df = properties_payload_to_dataframe(raw["properties"])
-        return properties_df.rename(columns=self.RENAME_MAP)
+        if "properties" in raw:
+            df = properties_payload_to_dataframe(raw["properties"])
+        elif "series" in raw:
+            df = series_payload_to_dataframe(raw["series"])
+        else:
+            raise ValueError(
+                f"{type(self).__name__} payload missing both 'properties' and "
+                f"'series' keys. Got: {list(raw.keys())}."
+            )
+        return df.rename(columns=self.RENAME_MAP)
 
     def build_result(
         self,

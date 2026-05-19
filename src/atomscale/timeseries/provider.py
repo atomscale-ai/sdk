@@ -176,6 +176,34 @@ def properties_payload_to_dataframe(
     return out
 
 
+def series_payload_to_dataframe(
+    series: Sequence[Mapping[str, Any]],
+) -> DataFrame:
+    """Parse the legacy row-oriented ``series`` payload into a wide DataFrame.
+
+    Each row carries ``unix_timestamp_ms``, ``relative_time_seconds``, and one
+    key per property. This shape predates the property-centric payload and is
+    still emitted by un-migrated API deployments. Output schema mirrors
+    :func:`properties_payload_to_dataframe` so downstream code is shape-stable
+    across both API versions.
+    """
+    if not series:
+        return DataFrame()
+
+    df = DataFrame(list(series))
+
+    if "unix_timestamp_ms" in df.columns:
+        df["unix_timestamp_ms"] = _to_int64_ms(df["unix_timestamp_ms"].tolist())
+    if "relative_time_seconds" in df.columns:
+        df["relative_time_seconds"] = df["relative_time_seconds"].astype("float64")
+
+    leading = [
+        c for c in ("unix_timestamp_ms", "relative_time_seconds") if c in df.columns
+    ]
+    remaining = [c for c in df.columns if c not in leading]
+    return df[leading + remaining]
+
+
 class TimeseriesProvider(ABC, Generic[R]):
     """Strategy interface for parsing timeseries by domain."""
 

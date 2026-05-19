@@ -1,4 +1,3 @@
-import pytest
 from pandas import DataFrame
 
 from atomscale.timeseries.ellipsometry import EllipsometryProvider
@@ -39,11 +38,25 @@ def test_property_centric_parse():
     assert df["Time"].is_monotonic_increasing
 
 
-def test_legacy_series_payload_rejected():
-    with pytest.raises(ValueError, match="properties"):
-        EllipsometryProvider().to_dataframe(
-            {"series": [{"unix_timestamp_ms": 1, "psi": 1.0}]}
-        )
+def test_legacy_series_payload_parses():
+    df = EllipsometryProvider().to_dataframe(
+        {
+            "series": [
+                {
+                    "unix_timestamp_ms": 1_700_000_000_000,
+                    "relative_time_seconds": 0.0,
+                    "psi": 1.0,
+                },
+                {
+                    "unix_timestamp_ms": 1_700_000_000_500,
+                    "relative_time_seconds": 0.5,
+                    "psi": 1.5,
+                },
+            ]
+        }
+    )
+    assert {"UNIX Timestamp", "Time", "psi"} <= set(df.columns)
+    assert str(df["UNIX Timestamp"].dtype) == "int64"
 
 
 def test_empty_payload_returns_empty_df():

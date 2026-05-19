@@ -50,11 +50,25 @@ def test_property_centric_parse():
     assert df["Time"].is_monotonic_increasing
 
 
-def test_legacy_series_payload_rejected():
-    with pytest.raises(ValueError, match="properties"):
-        OpticalProvider().to_dataframe(
-            {"series": [{"unix_timestamp_ms": 1, "perimeter_px": 1.0}]}
-        )
+def test_legacy_series_payload_parses():
+    df = OpticalProvider().to_dataframe(
+        {
+            "series": [
+                {
+                    "unix_timestamp_ms": 1_700_000_000_000,
+                    "relative_time_seconds": 0.0,
+                    "perimeter_px": 1.0,
+                },
+                {
+                    "unix_timestamp_ms": 1_700_000_000_500,
+                    "relative_time_seconds": 0.5,
+                    "perimeter_px": 1.5,
+                },
+            ]
+        }
+    )
+    assert {"UNIX Timestamp", "Time", "perimeter_px"} <= set(df.columns)
+    assert str(df["UNIX Timestamp"].dtype) == "int64"
 
 
 def test_empty_payload_returns_empty_df():

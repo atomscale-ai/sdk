@@ -86,11 +86,25 @@ def test_decimal_unix_ms_input_preserved_to_int64():
     assert int(df["UNIX Timestamp"].iloc[0]) == 1_700_000_000_123
 
 
-def test_legacy_series_payload_rejected():
-    with pytest.raises(ValueError, match="properties"):
-        MetrologyProvider().to_dataframe(
-            {"series": [{"unix_timestamp_ms": 1, "ratio_pyrometer": 1.0}]}
-        )
+def test_legacy_series_payload_parses():
+    df = MetrologyProvider().to_dataframe(
+        {
+            "series": [
+                {
+                    "unix_timestamp_ms": 1_700_000_000_000,
+                    "relative_time_seconds": 0.0,
+                    "ratio_pyrometer": 1.0,
+                },
+                {
+                    "unix_timestamp_ms": 1_700_000_000_500,
+                    "relative_time_seconds": 0.5,
+                    "ratio_pyrometer": 1.5,
+                },
+            ]
+        }
+    )
+    assert {"UNIX Timestamp", "Time", "ratio_pyrometer"} <= set(df.columns)
+    assert str(df["UNIX Timestamp"].dtype) == "int64"
 
 
 def test_empty_payload_returns_empty_df():
