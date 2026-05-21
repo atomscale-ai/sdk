@@ -217,6 +217,7 @@ class Client(BaseClient):
             "project_names": "Project Name",
             "sha3_256": "sha256",
             "collected_datetime": "Collected Datetime",
+            "has_instrument_logs": "Has Instrument Logs",
         }
 
         columns_to_drop = [
@@ -270,6 +271,7 @@ class Client(BaseClient):
             "Workspaces",
             "sha256",
             "Collected Datetime",
+            "Has Instrument Logs",
         ]
         ordered_cols = [col for col in desired_order if col in catalogue.columns] + [
             col for col in catalogue.columns if col not in desired_order
