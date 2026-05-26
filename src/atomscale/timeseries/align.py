@@ -168,7 +168,7 @@ def align_timeseries(
     """Align timeseries results by time index.
 
     Args:
-        results: Iterable of result objects (RHEEDVideoResult, OpticalResult, MetrologyResult).
+        results: Iterable of result objects (RHEEDVideoResult, OpticalResult, MetrologyResult, EllipsometryResult).
         how: Join strategy for the outer alignment. Defaults to "outer".
 
     Returns:

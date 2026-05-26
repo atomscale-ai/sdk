@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import threading
 import time
 from collections.abc import Callable
@@ -62,7 +63,7 @@ def parse_sentinel(path: Path) -> RunMetadata:
         tags.append(f"model:{data['recipe']}")
 
     return RunMetadata(
-        stream_name=data.get("recipe") or path.stem.replace(".run-start", ""),
+        stream_name=data.get("recipe") or re.sub(r"\.(run-start|run-end)$", "", path.stem),
         physical_sample=data.get("physical_sample"),
         project_id=data.get("project_id"),
         tags=tags,

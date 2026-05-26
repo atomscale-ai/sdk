@@ -26,7 +26,7 @@ _THICKNESS_LAYER_RE = re.compile(r"^Thickness_(\d+)$")
 _STATIC_RENAMES: dict[str, str] = {
     "thickness": "thickness",
     "mse": "mse_fit",
-    "fitdiff": "mse_fit",
+    "fitdiff": "fit_diff",
     "aveint": "intensity_avg",
     "alignx": "align_x",
     "aligny": "align_y",
@@ -48,6 +48,7 @@ _DEFAULT_UNITS: dict[str, str] = {
     # Static channels:
     "thickness": "nm",
     "mse_fit": "",
+    "fit_diff": "",
     "intensity_avg": "counts",
     "align_x": "mm",
     "align_y": "mm",
