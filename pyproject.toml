@@ -29,6 +29,9 @@ dependencies = [
   "pillow",
   "networkx",
   "requests",
+  # Enables zstd response decoding in urllib3 2.x on Python < 3.14
+  # (3.14+ provides this via the stdlib `compression.zstd` module).
+  "backports.zstd; python_version < '3.14'",
   "rich",
   "matplotlib",
   "pycocotools",
