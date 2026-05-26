@@ -1,8 +1,10 @@
 import pytest
-from atomscale import Client
-from .conftest import ResultIDs
-from atomscale.results import RHEEDVideoResult
 from pandas import DataFrame
+
+from atomscale import Client
+from atomscale.results import RHEEDVideoResult
+
+from .conftest import ResultIDs
 
 
 @pytest.fixture

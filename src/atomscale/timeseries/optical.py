@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from io import BytesIO
 from typing import Any
 
@@ -9,24 +9,20 @@ from PIL import Image
 
 from atomscale.core import BaseClient
 from atomscale.results.optical import OpticalImageResult, OpticalResult
-from atomscale.timeseries.provider import TimeseriesProvider, extend_with_statistics
+from atomscale.timeseries.provider import (
+    TimeseriesProvider,
+    properties_payload_to_dataframe,
+    series_payload_to_dataframe,
+)
 
 
 class OpticalProvider(TimeseriesProvider):
     TYPE = "optical"
 
-    RENAME_MAP: Mapping[str, str] = extend_with_statistics(
-        {
-            "relative_time_seconds": "Time",
-            "frame_number": "Frame Number",
-            "unix_timestamp_ms": "UNIX Timestamp",
-            "perimeter_px": "Edge Perimeter",
-            "circularity": "Edge Circularity",
-            "edge_roughness": "Edge Roughness",
-            "hausdorff_px": "Hausdorff Similarity",
-        }
-    )
-    INDEX_COLS: Sequence[str] = ["Frame Number"]
+    RENAME_MAP: Mapping[str, str] = {
+        "relative_time_seconds": "Time",
+        "unix_timestamp_ms": "UNIX Timestamp",
+    }
 
     def snapshot_url(self, data_id: str) -> str:
         return f"optical/frame/video_single_frames/{data_id}"
@@ -36,15 +32,22 @@ class OpticalProvider(TimeseriesProvider):
 
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:
-            return DataFrame(None)
-
-        # Handle both {"series": [...]} or raw list
-        series = raw.get("series") if isinstance(raw, dict) else raw
-        series_df = DataFrame(series or None).rename(columns=self.RENAME_MAP)
-        idx_cols = [c for c in self.INDEX_COLS if c in series_df.columns]
-        if idx_cols:
-            series_df = series_df.set_index(idx_cols)
-        return series_df
+            return DataFrame()
+        if not isinstance(raw, dict):
+            raise ValueError(
+                f"{type(self).__name__} payload must be a dict; got "
+                f"{type(raw).__name__}."
+            )
+        if "properties" in raw:
+            parsed = properties_payload_to_dataframe(raw["properties"])
+        elif "series" in raw:
+            parsed = series_payload_to_dataframe(raw["series"])
+        else:
+            raise ValueError(
+                f"{type(self).__name__} payload missing both 'properties' and "
+                f"'series' keys. Got: {list(raw.keys())}."
+            )
+        return parsed.rename(columns=self.RENAME_MAP)
 
     def snapshot_image_uuids(self, frames_payload: dict[str, Any]) -> list[dict]:
         out: list[dict] = []

@@ -1,7 +1,8 @@
 import pytest
+from pandas import DataFrame
+
 from atomscale import Client
 from atomscale.results import ChangepointResult
-from pandas import DataFrame
 
 from .conftest import ResultIDs
 

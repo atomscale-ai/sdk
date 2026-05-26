@@ -9,8 +9,8 @@ import json
 import socket
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import pytest
 
@@ -33,8 +33,8 @@ class MockServer:
         self.response_data = response_data
         self._proc: subprocess.Popen | None = None
         self._captured_body: dict | None = None
-        self._stdout_queue: "_queue.Queue[str | None]" = _queue.Queue()
-        self._reader_thread: "object | None" = None
+        self._stdout_queue: _queue.Queue[str | None] = _queue.Queue()
+        self._reader_thread: object | None = None
 
     def start(self) -> None:
         """Start the server subprocess."""
@@ -78,7 +78,7 @@ class MockServer:
             try:
                 if self._proc.stderr is not None:
                     self._stderr_dump = self._proc.stderr.read() or ""
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
             self._proc = None
 
@@ -686,7 +686,7 @@ class TestStreamingE2E:
                 requests = server.get_captured_requests(
                     expected_count=6, timeout_s=15
                 )
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 run_error = e
                 # Pull whatever the mock managed to record before the failure.
                 partial_requests = server.get_captured_requests(

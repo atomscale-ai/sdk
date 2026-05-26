@@ -1,9 +1,11 @@
-from pandas import DataFrame
 import pytest
-from atomscale import Client
-from .conftest import ResultIDs
-from atomscale.results import RHEEDImageResult
+from pandas import DataFrame
 from PIL.Image import Image
+
+from atomscale import Client
+from atomscale.results import RHEEDImageResult
+
+from .conftest import ResultIDs
 
 
 @pytest.fixture
@@ -62,6 +64,14 @@ def test_get_dataframe(result: RHEEDImageResult):
         "roughness_metric",
         "axis_major_length",
         "axis_minor_length",
+        "skew_0",
+        "kurtosis_0",
+        "n_peaks",
+        "intensity_axis_major_length",
+        "intensity_axis_minor_length",
+        "intensity_orientation",
+        "participation_ratio",
+        "peak_snr",
         "data_id",
         "test",
     }

@@ -7,27 +7,42 @@ from pandas import DataFrame
 
 from atomscale.core import BaseClient
 from atomscale.results.ellipsometry import EllipsometryResult
-from atomscale.timeseries.provider import TimeseriesProvider, extend_with_statistics
+from atomscale.timeseries.provider import (
+    TimeseriesProvider,
+    properties_payload_to_dataframe,
+    series_payload_to_dataframe,
+)
 
 
 class EllipsometryProvider(TimeseriesProvider[EllipsometryResult]):
     TYPE = "ellipsometry"
 
-    RENAME_MAP: Mapping[str, str] = extend_with_statistics(
-        {
-            "relative_time_seconds": "Time",
-            "unix_timestamp_ms": "UNIX Timestamp",
-        }
-    )
+    RENAME_MAP: Mapping[str, str] = {
+        "relative_time_seconds": "Time",
+        "unix_timestamp_ms": "UNIX Timestamp",
+    }
 
     def fetch_raw(self, client: BaseClient, data_id: str) -> Any:
         return client._get(sub_url=f"ellipsometry/{data_id}/timeseries/")
 
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:
-            return DataFrame(None)
-        series = raw.get("series") if isinstance(raw, dict) else raw
-        return DataFrame(series or None).rename(columns=self.RENAME_MAP)
+            return DataFrame()
+        if not isinstance(raw, dict):
+            raise ValueError(
+                f"{type(self).__name__} payload must be a dict; got "
+                f"{type(raw).__name__}."
+            )
+        if "properties" in raw:
+            parsed = properties_payload_to_dataframe(raw["properties"])
+        elif "series" in raw:
+            parsed = series_payload_to_dataframe(raw["series"])
+        else:
+            raise ValueError(
+                f"{type(self).__name__} payload missing both 'properties' and "
+                f"'series' keys. Got: {list(raw.keys())}."
+            )
+        return parsed.rename(columns=self.RENAME_MAP)
 
     def build_result(
         self,

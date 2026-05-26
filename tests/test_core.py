@@ -1,9 +1,8 @@
-from pytest_httpserver import HTTPServer
 import pytest
+from pytest_httpserver import HTTPServer
 from requests import Session
 
 from atomscale.core import BaseClient, _make_progress
-
 from atomscale.core.client import ClientError
 
 

@@ -1,4 +1,14 @@
-"""Provider classes for similarity trajectory data."""
+"""Provider classes for similarity trajectory data.
+
+Note on unix-time units: the similarity API emits ``unix_times`` in
+**seconds** (raw DB values), unlike the metrology / optical /
+ellipsometry endpoints which ship ``unix_timestamp_ms`` in milliseconds.
+The column is renamed to ``UNIX Timestamp`` (unit-less display name);
+the magnitude-based fallback in :func:`align._infer_absolute_time`
+correctly detects seconds for these values. In typed Python surfaces
+the canonical type for individual unix_times values is
+:class:`decimal.Decimal`; pandas columns stay numeric for performance.
+"""
 
 from __future__ import annotations
 
