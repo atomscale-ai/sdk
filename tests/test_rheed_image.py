@@ -13,10 +13,47 @@ def client():
     return Client()
 
 
+# Number of rheed_image catalogue entries to sample when looking for one with a
+# populated fingerprint. Some entries legitimately have empty fingerprints, so we
+# search up to this many before giving up.
+_SAMPLE_LIMIT = 15
+
+
+def _has_pattern_data(res: RHEEDImageResult | None) -> bool:
+    return (
+        res is not None
+        and res.pattern_graph is not None
+        and res.pattern_graph.number_of_nodes() > 0
+    )
+
+
 @pytest.fixture
 def result(client: Client):
-    results = client.get(data_ids=ResultIDs.rheed_image)
-    return results[0]
+    # Honour a pinned id if one is configured, otherwise discover candidates.
+    if ResultIDs.rheed_image:
+        data_ids = [ResultIDs.rheed_image]
+    else:
+        catalogue = client.search(data_type="rheed_image", status="success")
+        data_ids = (
+            catalogue["Data ID"].tolist()[:_SAMPLE_LIMIT]
+            if "Data ID" in catalogue.columns
+            else []
+        )
+
+    if not data_ids:
+        pytest.skip("No successful rheed_image entries available to test against.")
+
+    # Sample entries until we find one with a populated fingerprint. Empty
+    # fingerprints are fine to skip over.
+    for data_id in data_ids:
+        res = client.get(data_ids=data_id)[0]
+        if _has_pattern_data(res):
+            return res
+
+    pytest.skip(
+        f"No rheed_image entry with a populated fingerprint found in the first "
+        f"{len(data_ids)} sampled entries."
+    )
 
 
 def test_get_plot(result: RHEEDImageResult):

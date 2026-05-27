@@ -139,6 +139,13 @@ class RHEEDImageResult(MSONable):
             )
 
         node_df = pd.concat(node_data, axis=0).reset_index(drop=True)
+
+        if node_df.empty:
+            raise ValueError(
+                f"Pattern graph for data_id {self.data_id} has no nodes; "
+                "cannot compute the zeroth order Laue zone radius for an empty fingerprint."
+            )
+
         node_df, _ = self._symmetrize(node_df)
 
         image_array = np.array(self.processed_image)
@@ -235,6 +242,12 @@ class RHEEDImageResult(MSONable):
 
         node_df = pd.concat(node_data, axis=0).reset_index(drop=True)
 
+        if node_df.empty:
+            raise ValueError(
+                f"Pattern graph for data_id {self.data_id} has no nodes; "
+                "cannot build a pattern dataframe from an empty fingerprint."
+            )
+
         if symmetrize:
             node_df, _ = self._symmetrize(node_df)
 
@@ -270,6 +283,11 @@ class RHEEDImageResult(MSONable):
     @staticmethod
     def _symmetrize(node_df: pd.DataFrame):
         """Symmetrize a DataFrame object containing RHEED image node data"""
+
+        if node_df.empty:
+            raise ValueError(
+                "Cannot symmetrize an empty pattern graph (no nodes in the fingerprint)."
+            )
 
         def reflect_mask(
             mask_obj: str, height: int, width: int, origin: float
