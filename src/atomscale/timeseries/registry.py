@@ -14,6 +14,9 @@ _PROVIDER_CLASSES: dict[str, type[TimeseriesProvider]] = {
     RHEEDProvider.TYPE: RHEEDProvider,
     OpticalProvider.TYPE: OpticalProvider,
     MetrologyProvider.TYPE: MetrologyProvider,
+    # The backend renamed the "metrology" char-source/data-stream to "tool_state".
+    # Accept both so dispatch works whether the API returns the legacy or new value.
+    "tool_state": MetrologyProvider,
     EllipsometryProvider.TYPE: EllipsometryProvider,
     SimilarityTrajectoryProvider.TYPE: SimilarityTrajectoryProvider,
 }

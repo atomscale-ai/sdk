@@ -26,7 +26,10 @@ class MetrologyProvider(TimeseriesProvider[MetrologyResult]):
     }
 
     def fetch_raw(self, client: BaseClient, data_id: str) -> Any:
-        return client._get(sub_url=f"metrology/{data_id}/timeseries/")
+        # Endpoint renamed metrology -> tool-state. The backend still serves the
+        # legacy /metrology/* path as a deprecated alias during the transition,
+        # but call the new name so this keeps working once that alias is dropped.
+        return client._get(sub_url=f"tool-state/{data_id}/timeseries/")
 
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:

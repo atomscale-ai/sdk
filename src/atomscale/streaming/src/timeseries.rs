@@ -118,7 +118,7 @@ impl TimeseriesStreamer {
     ///
     /// Initialize a new time series stream on the server.
     ///
-    /// Creates data_catalogue and processed_metrology_catalogue entries.
+    /// Creates data_catalogue and processed_tool_state_catalogue entries.
     /// Returns data_id to use for subsequent push() calls.
     ///
     /// Args:
@@ -169,7 +169,7 @@ impl TimeseriesStreamer {
             project_id: project_id.clone(),
         };
 
-        let url = format!("{}/metrology/stream/initialize", self.endpoint);
+        let url = format!("{}/tool-state/stream/initialize", self.endpoint);
 
         let result = self.rt.block_on(async {
             let resp = self
@@ -455,7 +455,7 @@ impl TimeseriesStreamer {
     #[pyo3(signature = (data_id))]
     #[pyo3(text_signature = "(data_id)")]
     fn finalize(&self, data_id: String) -> PyResult<()> {
-        let url = format!("{}/metrology/stream/{}/finalize", self.endpoint, data_id);
+        let url = format!("{}/tool-state/stream/{}/finalize", self.endpoint, data_id);
 
         let result = self.rt.block_on(async {
             let resp = self
@@ -589,7 +589,7 @@ impl TimeseriesStreamer {
     fn spawn_upload_tracked(&self, payload: ChunkPayload) -> JoinHandle<Result<()>> {
         let client = self.client.clone();
         let api_key = self.api_key.clone();
-        let url = format!("{}/metrology/stream/chunk", self.endpoint);
+        let url = format!("{}/tool-state/stream/chunk", self.endpoint);
 
         debug!(
             "[timeseries_stream] spawn: chunk {} for channel '{}'",

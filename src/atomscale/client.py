@@ -39,7 +39,7 @@ from atomscale.results.group import PhysicalSampleResult, ProjectResult
 from atomscale.timeseries.align import align_timeseries
 from atomscale.timeseries.registry import get_provider
 
-TimeseriesDomain = Literal["rheed", "optical", "metrology"]
+TimeseriesDomain = Literal["rheed", "optical", "metrology", "tool_state"]
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 
@@ -122,6 +122,7 @@ class Client(BaseClient):
             "recipe",
             "optical",
             "metrology",
+            "tool_state",
             "ellipsometry",
             "all",
         ] = "all",
@@ -180,7 +181,16 @@ class Client(BaseClient):
             "data_ids": data_ids,
             "physical_sample_ids": physical_sample_ids,
             "project_ids": project_ids,
-            "data_type": None if data_type == "all" else data_type,
+            # Map the legacy "metrology" filter to its renamed "tool_state"
+            # char-source so it resolves against the current backend, which
+            # validates this param as an enum that no longer accepts "metrology".
+            "data_type": (
+                None
+                if data_type == "all"
+                else "tool_state"
+                if data_type == "metrology"
+                else data_type
+            ),
             "status": status,
             "growth_length_min": growth_length[0],
             "growth_length_max": growth_length[1],
@@ -836,6 +846,7 @@ class Client(BaseClient):
             "rheed_rotating",
             "rheed_xscan",
             "metrology",
+            "tool_state",
             "recipe",
             "optical",
             "ellipsometry",
@@ -929,15 +940,18 @@ class Client(BaseClient):
             "rheed_rotating",
             "rheed_xscan",
             "metrology",
+            "tool_state",
             "recipe",
             "optical",
             "ellipsometry",
         ]:
-            # recipe timeseries are served from the metrology endpoint; reuse that provider.
+            # recipe timeseries are served from the tool-state (formerly metrology)
+            # endpoint; reuse that provider. "metrology" is the legacy char-source
+            # value, "tool_state" the renamed one — both resolve to the same provider.
             timeseries_type = (
                 "rheed"
                 if "rheed" in data_type
-                else "metrology"
+                else "tool_state"
                 if data_type == "recipe"
                 else data_type
             )
