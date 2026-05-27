@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -100,12 +100,19 @@ class FilmSenseRunner:
         client_factory: Any | None = None,
         wal: ChunkWal | None = None,
         clock: Any = time.time,
+        events: Callable[[str, dict[str, Any]], None] | None = None,
     ) -> None:
         self.config = config
         self.streamer = streamer
         self._client_factory = client_factory or self._default_client_factory
         self._wal = wal or ChunkWal(config.wal.path)
         self._clock = clock
+        self._events = events
+
+    def _event(self, name: str, **fields: Any) -> None:
+        """Forward a status event to the injected sink, if any."""
+        if self._events is not None:
+            self._events(name, fields)
 
     def _default_client_factory(self) -> FilmSenseClient:
         return FilmSenseClient(self.config.fs1.host, self.config.fs1.port)
@@ -128,6 +135,9 @@ class FilmSenseRunner:
             tags=metadata.tags or None,
         )
         logger.info("atomscale stream initialized: data_id=%s", data_id)
+        self._event(
+            "session_initialized", data_id=data_id, stream_name=metadata.stream_name
+        )
 
         chunk_index = 0
         buffers: dict[str, _ChannelBuffer] = {}
@@ -232,6 +242,13 @@ class FilmSenseRunner:
 
         if not channels:
             return
+
+        self._event(
+            "chunk",
+            chunk_index=chunk_index,
+            points=sum(len(c["values"]) for c in channels.values()),
+            channels=sorted(channels),
+        )
 
         if self.config.dry_run:
             logger.info(
