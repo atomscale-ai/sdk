@@ -54,7 +54,7 @@ jobs:
       - name: Build wheels with cibuildwheel
         env:
           # Build CPython for version 3.x . Adjust as needed.
-          CIBW_BUILD: "cp3{10,11,12}-*"
+          CIBW_BUILD: "cp3{10,11,12,13}-*"
           # Skip 32-bit, PyPy, and musllinux
           CIBW_SKIP: "pp* *-manylinux_i686 *-musllinux_*"
           # Architectures

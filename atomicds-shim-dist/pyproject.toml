@@ -14,11 +14,12 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: Unix",
   "Operating System :: MacOS",
 ]
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10, <3.14"
 dependencies = ["atomscale>=0"]
 
 [project.urls]
