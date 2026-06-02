@@ -15,13 +15,14 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering",
   "Operating System :: Microsoft :: Windows",
   "Operating System :: Unix",
   "Operating System :: MacOS",
 ]
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10, <3.14"
 dependencies = [
   "numpy",
   "pandas",
