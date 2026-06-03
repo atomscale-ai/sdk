@@ -9,6 +9,7 @@ from atomscale.core import BaseClient
 from atomscale.results.ellipsometry import EllipsometryResult
 from atomscale.timeseries.provider import (
     TimeseriesProvider,
+    finalize_dataframe,
     properties_payload_to_dataframe,
     series_payload_to_dataframe,
 )
@@ -25,7 +26,7 @@ class EllipsometryProvider(TimeseriesProvider[EllipsometryResult]):
     def fetch_raw(self, client: BaseClient, data_id: str) -> Any:
         return client._get(sub_url=f"ellipsometry/{data_id}/timeseries/")
 
-    def to_dataframe(self, raw: Any) -> DataFrame:
+    def to_dataframe(self, raw: Any, *, display: bool = True) -> DataFrame:
         if not raw:
             return DataFrame()
         if not isinstance(raw, dict):
@@ -34,7 +35,7 @@ class EllipsometryProvider(TimeseriesProvider[EllipsometryResult]):
                 f"{type(raw).__name__}."
             )
         if "properties" in raw:
-            parsed = properties_payload_to_dataframe(raw["properties"])
+            parsed = properties_payload_to_dataframe(raw["properties"], display=display)
         elif "series" in raw:
             parsed = series_payload_to_dataframe(raw["series"])
         else:
@@ -42,7 +43,7 @@ class EllipsometryProvider(TimeseriesProvider[EllipsometryResult]):
                 f"{type(self).__name__} payload missing both 'properties' and "
                 f"'series' keys. Got: {list(raw.keys())}."
             )
-        return parsed.rename(columns=self.RENAME_MAP)
+        return finalize_dataframe(parsed, self.RENAME_MAP, display=display)
 
     def build_result(
         self,

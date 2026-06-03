@@ -36,6 +36,7 @@ dependencies = [
   "matplotlib",
   "pycocotools",
   "trackpy",
+  "marimo>=0.23.8",
 ]
 
 [project.urls]
@@ -131,16 +132,16 @@ lint.extend-ignore = [
   "EM102", # Exception must not use an f-string literal
 ]
 lint.typing-modules = ["mypackage._compat.typing"]
-src = ["src"]
 lint.unfixable = [
   "T20",  # Removes print statements
   "F841", # Removes unused variables
 ]
-exclude = []
 lint.flake8-unused-arguments.ignore-variadic-names = true
-extend-exclude = ["tests", "examples", "*.ipynb"]
 lint.pydocstyle.convention = "google"
 lint.isort.known-first-party = ["atomscale"]
+src = ["src"]
+exclude = []
+extend-exclude = ["tests", "examples", "*.ipynb"]
 
 [tool.docformatter]
 pre-summary-newline = true

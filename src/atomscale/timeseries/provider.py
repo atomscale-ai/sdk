@@ -51,6 +51,8 @@ def _to_int64_ms(values: Sequence[Any]) -> np.ndarray:
 
 def properties_payload_to_dataframe(
     properties: Mapping[str, Mapping[str, Any]],
+    *,
+    display: bool = True,
 ) -> DataFrame:
     """Merge a property-centric payload into a wide DataFrame.
 
@@ -83,6 +85,11 @@ def properties_payload_to_dataframe(
         property's t=0 via piecewise-linear extrapolation)
       - one column per property keyed by its API name (case preserved —
         these are setpoint/shutter/etc. names users grep for)
+
+    When ``display`` is False the two time columns are emitted under their
+    raw API names (``unix_timestamp_ms`` / ``relative_time_seconds``)
+    instead of the user-facing ``UNIX Timestamp`` / ``Time`` labels. The
+    per-property columns are already raw API names, so they are unaffected.
 
     Index is row number. Empty input → empty DataFrame.
 
@@ -171,8 +178,8 @@ def properties_payload_to_dataframe(
         time_col = np.zeros(len(unix_ms), dtype=np.float64)
 
     out = merged.reset_index(drop=True)
-    out.insert(0, "UNIX Timestamp", unix_ms)
-    out.insert(1, "Time", time_col)
+    out.insert(0, "UNIX Timestamp" if display else "unix_timestamp_ms", unix_ms)
+    out.insert(1, "Time" if display else "relative_time_seconds", time_col)
     return out
 
 
@@ -204,6 +211,31 @@ def series_payload_to_dataframe(
     return rows[leading + remaining]
 
 
+def finalize_dataframe(
+    df: DataFrame,
+    rename_map: Mapping[str, str],
+    *,
+    display: bool = True,
+    index_cols: Sequence[str] = (),
+) -> DataFrame:
+    """Apply user-facing column names and set the domain index.
+
+    ``index_cols`` are given as raw (API/source) column names. When
+    ``display`` is True the frame's columns are renamed to their display
+    labels via ``rename_map`` and the index names are resolved through the
+    same map; when False the raw snake_case API names are preserved on both
+    the columns and the index. Index columns absent from the frame are
+    skipped so the result stays shape-stable across payload variants.
+    """
+    if display:
+        df = df.rename(columns=rename_map)
+    resolved = [rename_map.get(c, c) if display else c for c in index_cols]
+    present = [c for c in resolved if c in df.columns]
+    if present:
+        df = df.set_index(present)
+    return df
+
+
 class TimeseriesProvider(ABC, Generic[R]):
     """Strategy interface for parsing timeseries by domain."""
 
@@ -215,8 +247,12 @@ class TimeseriesProvider(ABC, Generic[R]):
         """Perform the HTTP GET(s) to retrieve raw payload(s)."""
 
     @abstractmethod
-    def to_dataframe(self, raw: Any) -> DataFrame:
-        """Convert raw payload to a tidy DataFrame with domain-specific renames/index."""
+    def to_dataframe(self, raw: Any, *, display: bool = True) -> DataFrame:
+        """Convert raw payload to a tidy DataFrame with domain-specific renames/index.
+
+        When ``display`` is True (default) columns carry user-facing display
+        labels; when False they keep their raw snake_case API names.
+        """
 
     @abstractmethod
     def build_result(

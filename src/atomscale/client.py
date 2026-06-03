@@ -140,6 +140,7 @@ class Client(BaseClient):
         upload_datetime: tuple[datetime | None, datetime | None] = (None, None),
         last_updated: tuple[datetime | None, datetime | None] = (None, None),
         last_accessed_datetime: tuple[datetime | None, datetime | None] | None = None,
+        display: bool = True,
     ) -> DataFrame:
         """Search and obtain data catalogue entries
 
@@ -160,6 +161,9 @@ class Client(BaseClient):
             last_updated (tuple[datetime | None, datetime | None]): Minimum and maximum values of the last
                 updated datetime. Defaults to (None, None).
             last_accessed_datetime: Deprecated alias for ``last_updated``; will be removed in a future release.
+            display (bool): If True (default), columns carry user-facing display
+                labels (e.g. "Data ID", "File Name"). If False, columns keep their
+                raw snake_case API names (e.g. "data_id", "raw_name").
 
         Returns:
             (DataFrame): Pandas DataFrame containing matched entries in the data catalogue.
@@ -246,7 +250,8 @@ class Client(BaseClient):
             drop_cols = [col for col in columns_to_drop if col in catalogue.columns]
             catalogue = catalogue.drop(columns=drop_cols)
 
-        catalogue = catalogue.rename(columns=column_mapping)
+        if display:
+            catalogue = catalogue.rename(columns=column_mapping)
 
         desired_order = [
             "Data ID",
@@ -273,6 +278,11 @@ class Client(BaseClient):
             "Collected Datetime",
             "Has Instrument Logs",
         ]
+        if not display:
+            # Resolve the preferred ordering back to raw API column names.
+            source_by_display = {v: k for k, v in column_mapping.items()}
+            desired_order = [source_by_display.get(col, col) for col in desired_order]
+
         ordered_cols = [col for col in desired_order if col in catalogue.columns] + [
             col for col in catalogue.columns if col not in desired_order
         ]
@@ -280,7 +290,7 @@ class Client(BaseClient):
         return catalogue[ordered_cols]
 
     def get(
-        self, data_ids: str | list[str]
+        self, data_ids: str | list[str], *, display: bool = True
     ) -> list[
         RHEEDVideoResult
         | RHEEDImageResult
@@ -297,6 +307,10 @@ class Client(BaseClient):
 
         Args:
             data_ids (str | list[str]): Data ID or list of data IDs from the data catalogue to obtain analyzed results for.
+            display (bool): If True (default), timeseries DataFrame columns carry
+                user-facing display labels (e.g. "UNIX Timestamp", "Strain"). If
+                False, columns keep their raw snake_case API names (e.g.
+                "unix_timestamp_ms", "referenced_strain").
 
         Returns:
             list[atomscale.results.RHEEDVideoResult | atomscale.results.RHEEDImageResult | atomscale.results.XPSResult | atomscale.results.XRDResult]:
@@ -336,6 +350,7 @@ class Client(BaseClient):
                     "data_id": data_id,
                     "data_type": data_type,
                     "catalogue_entry": entry,
+                    "display": display,
                 }
             )
 
@@ -434,6 +449,7 @@ class Client(BaseClient):
         reference_ids: list[str] | None = None,
         softmax_mode: str | None = None,
         reference_n_values: int | None = None,
+        display: bool = True,
     ) -> SimilarityTrajectoryResult:
         """Fetch a one-shot similarity trajectory for a source data_id or physical_sample_id.
 
@@ -446,6 +462,8 @@ class Client(BaseClient):
             reference_ids: Optional list of reference data IDs to compare against.
             softmax_mode: Optional softmax mode forwarded to the provider.
             reference_n_values: Optional number of reference values forwarded to the provider.
+            display: If True (default), timeseries DataFrame columns carry user-facing
+                display labels; if False they keep their raw snake_case API names.
 
         Returns:
             SimilarityTrajectoryResult with the populated timeseries DataFrame.
@@ -464,7 +482,7 @@ class Client(BaseClient):
             kwargs["reference_n_values"] = reference_n_values
 
         raw = provider.fetch_raw(self, source_id, **kwargs)
-        ts_df = provider.to_dataframe(raw)
+        ts_df = provider.to_dataframe(raw, display=display)
         return provider.build_result(
             self,
             source_id,
@@ -558,8 +576,14 @@ class Client(BaseClient):
             **kwargs,
         )
 
-    def list_physical_samples(self) -> DataFrame:
-        """List physical samples available to the user."""
+    def list_physical_samples(self, *, display: bool = True) -> DataFrame:
+        """List physical samples available to the user.
+
+        Args:
+            display (bool): If True (default), columns carry user-facing display
+                labels (e.g. "Physical Sample ID"). If False, columns keep their
+                raw snake_case API names (e.g. "id", "name").
+        """
         data = self._get(sub_url="physical_samples/")
         if data is None:
             return DataFrame(None)
@@ -630,7 +654,8 @@ class Client(BaseClient):
             drop_cols = [col for col in columns_to_drop if col in samples.columns]
             samples = samples.drop(columns=drop_cols)
 
-        samples = samples.rename(columns=column_mapping)
+        if display:
+            samples = samples.rename(columns=column_mapping)
 
         desired_order = [
             "Physical Sample ID",
@@ -647,14 +672,25 @@ class Client(BaseClient):
             "Last Updated",
             "Owner",
         ]
+        if not display:
+            # Resolve the preferred ordering back to raw API column names.
+            source_by_display = {v: k for k, v in column_mapping.items()}
+            desired_order = [source_by_display.get(col, col) for col in desired_order]
+
         ordered_cols = [col for col in desired_order if col in samples.columns] + [
             col for col in samples.columns if col not in desired_order
         ]
 
         return samples[ordered_cols]
 
-    def list_projects(self) -> DataFrame:
-        """List projects available to the user."""
+    def list_projects(self, *, display: bool = True) -> DataFrame:
+        """List projects available to the user.
+
+        Args:
+            display (bool): If True (default), columns carry user-facing display
+                labels (e.g. "Project ID", "Project Name"). If False, columns keep
+                their raw snake_case API names (e.g. "id", "name").
+        """
         data = self._get(sub_url="projects/")
         if data is None:
             return DataFrame(None)
@@ -692,7 +728,8 @@ class Client(BaseClient):
             drop_cols = [col for col in columns_to_drop if col in projects.columns]
             projects = projects.drop(columns=drop_cols)
 
-        projects = projects.rename(columns=column_mapping)
+        if display:
+            projects = projects.rename(columns=column_mapping)
 
         desired_order = [
             "Project ID",
@@ -703,6 +740,11 @@ class Client(BaseClient):
             "Last Updated",
             "Owner",
         ]
+        if not display:
+            # Resolve the preferred ordering back to raw API column names.
+            source_by_display = {v: k for k, v in column_mapping.items()}
+            desired_order = [source_by_display.get(col, col) for col in desired_order]
+
         ordered_cols = [col for col in desired_order if col in projects.columns] + [
             col for col in projects.columns if col not in desired_order
         ]
@@ -841,6 +883,8 @@ class Client(BaseClient):
             "ellipsometry",
         ],
         catalogue_entry: dict[str, Any] | None = None,
+        *,
+        display: bool = True,
     ) -> (
         RHEEDVideoResult
         | RHEEDImageResult
@@ -945,7 +989,7 @@ class Client(BaseClient):
 
             # Get timeseries data
             raw = provider.fetch_raw(self, data_id)
-            ts_df = provider.to_dataframe(raw)
+            ts_df = provider.to_dataframe(raw, display=display)
 
             result_obj = provider.build_result(self, data_id, data_type, ts_df)
             if catalogue_entry:

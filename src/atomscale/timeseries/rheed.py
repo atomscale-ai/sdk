@@ -11,7 +11,7 @@ from atomscale.results import (
     RHEEDVideoResult,
     _get_rheed_image_result,
 )
-from atomscale.timeseries.provider import TimeseriesProvider
+from atomscale.timeseries.provider import TimeseriesProvider, finalize_dataframe
 
 
 class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
@@ -19,6 +19,7 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
 
     # Mapping from API fields → user-facing column names
     RENAME_MAP: Mapping[str, str] = {
+        "angle": "Angle",
         "time_seconds": "Time",
         "relative_time_seconds": "Relative Time",
         "unix_timestamp_ms": "UNIX Timestamp",
@@ -48,12 +49,13 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         "tar_metric",
         "composition_metric",
     ]
-    INDEX_COLS: Sequence[str] = ["Angle", "Frame Number"]
+    # Index columns as raw API names; resolved to display labels when display=True.
+    INDEX_COLS: Sequence[str] = ["angle", "frame_number"]
 
     def fetch_raw(self, client: BaseClient, data_id: str, **kwargs) -> Any:
         return client._get(sub_url=f"rheed/timeseries/{data_id}/", params=kwargs)
 
-    def to_dataframe(self, raw: Any) -> DataFrame:
+    def to_dataframe(self, raw: Any, *, display: bool = True) -> DataFrame:
         if not raw:
             return DataFrame(None)
 
@@ -67,7 +69,7 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             # otherwise pandas issues a FutureWarning about empty/all-NA entries
             # widening the result dtype.
             angle_df = DataFrame(series).dropna(axis=1, how="all")
-            angle_df["Angle"] = angle_block["angle"]
+            angle_df["angle"] = angle_block["angle"]
             frames.append(angle_df)
 
         if not frames:
@@ -80,14 +82,9 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             if col in df_all and df_all[col].isna().all():
                 df_all = df_all.drop(columns=[col])
 
-        df_all = df_all.rename(columns=self.RENAME_MAP)
-
-        # Ensure index exists even if Angle/Frame Number are missing
-        idx_cols = [c for c in self.INDEX_COLS if c in df_all.columns]
-        if idx_cols:
-            df_all = df_all.set_index(idx_cols)
-
-        return df_all
+        return finalize_dataframe(
+            df_all, self.RENAME_MAP, display=display, index_cols=self.INDEX_COLS
+        )
 
     def snapshot_url(self, data_id: str) -> str:
         return f"data_entries/video_single_frames/{data_id}"

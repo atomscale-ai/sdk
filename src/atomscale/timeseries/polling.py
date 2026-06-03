@@ -23,13 +23,17 @@ ErrorHandler = Callable[[BaseException], None]
 _drift_corrected_sleep = drift_corrected_sleep
 
 
-def _fetch_result(client, data_id: str, last_n: int | None) -> Result:
+def _fetch_result(
+    client, data_id: str, last_n: int | None, *, display: bool = True
+) -> Result:
     """Build a result via provider -> fetch_raw -> to_dataframe.
 
     Args:
         client: API client instance passed to the provider.
         data_id: Identifier of the resource to fetch.
         last_n: Last number of entries to poll for
+        display: If True (default), DataFrame columns carry user-facing display
+            labels; if False they keep their raw snake_case API names.
 
     Returns:
         Any: The provider-converted result (typically a pandas.DataFrame).
@@ -37,7 +41,7 @@ def _fetch_result(client, data_id: str, last_n: int | None) -> Result:
     provider = get_provider("rheed")
     kwargs = {"last_n": last_n} if last_n is not None else {}
     raw = provider.fetch_raw(client, data_id, **kwargs)
-    return provider.to_dataframe(raw)
+    return provider.to_dataframe(raw, display=display)
 
 
 def iter_poll(
@@ -46,6 +50,7 @@ def iter_poll(
     *,
     interval: float = 1.0,
     last_n: int | None = None,
+    display: bool = True,
     distinct_by: DistinctFn | None = None,
     until: Predicate | None = None,
     max_polls: int | None = None,
@@ -64,6 +69,8 @@ def iter_poll(
         data_id: Identifier to fetch data for.
         last_n: Last number of time series data points to poll. None is all.
         interval: Seconds between polls. Defaults to 1.0.
+        display: If True (default), DataFrame columns use user-facing display
+            labels; if False they keep raw snake_case API names.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
         until: Optional predicate; stop when it returns True for a result.
@@ -93,7 +100,7 @@ def iter_poll(
     while True:
         polls += 1
         try:
-            result = _fetch_result(client, data_id, last_n)
+            result = _fetch_result(client, data_id, last_n, display=display)
         except BaseException as exc:
             if on_error:
                 on_error(exc)
@@ -121,6 +128,7 @@ async def aiter_poll(
     *,
     interval: float = 1.0,
     last_n: int | None = None,
+    display: bool = True,
     distinct_by: DistinctFn | None = None,
     until: Predicate | None = None,
     max_polls: int | None = None,
@@ -138,6 +146,8 @@ async def aiter_poll(
         data_id: Identifier to fetch data for.
         interval: Seconds between polls. Defaults to 1.0.
         last_n: Last number of time series data points to poll. None is all.
+        display: If True (default), DataFrame columns use user-facing display
+            labels; if False they keep raw snake_case API names.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
         until: Optional predicate; stop when it returns True for a result.
@@ -168,7 +178,9 @@ async def aiter_poll(
     while True:
         polls += 1
         try:
-            result = await asyncio.to_thread(_fetch_result, client, data_id, last_n)
+            result = await asyncio.to_thread(
+                _fetch_result, client, data_id, last_n, display=display
+            )
         except BaseException as exc:
             if on_error:
                 on_error(exc)
@@ -216,8 +228,8 @@ def start_polling_thread(
         last_n: Last number of time series data points to poll for. None is all.
         on_result: Callback invoked with each yielded result.
         **kwargs: Additional keyword arguments forwarded to `iter_poll`
-            (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,
-            `jitter`, `on_error`).
+            (e.g., `display`, `distinct_by`, `until`, `max_polls`,
+            `fire_immediately`, `jitter`, `on_error`).
 
     Returns:
         threading.Event: Event that, when set, requests the polling thread to stop.
@@ -259,8 +271,8 @@ def start_polling_task(
         on_result: Optional callback invoked with each yielded result. If it
             returns a coroutine, it will be awaited.
         **kwargs: Additional keyword arguments forwarded to `aiter_poll`
-            (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,
-            `jitter`, `on_error`).
+            (e.g., `display`, `distinct_by`, `until`, `max_polls`,
+            `fire_immediately`, `jitter`, `on_error`).
 
     Returns:
         asyncio.Task[None]: A created and started Task. Cancel it to stop polling.

@@ -64,7 +64,7 @@ class SeqProvider:
         except StopIteration:
             return {"rev": self.calls}  # continue returning a stable value
 
-    def to_dataframe(self, raw: Any) -> Any:
+    def to_dataframe(self, raw: Any, *, display: bool = True) -> Any:
         # In tests we just pass-through; in prod this is a DataFrame typically.
         return raw
 
@@ -81,7 +81,7 @@ class FlakyThenOKProvider:
             raise RuntimeError("boom")
         return {"rev": self.calls}
 
-    def to_dataframe(self, raw: Any) -> Any:
+    def to_dataframe(self, raw: Any, *, display: bool = True) -> Any:
         return raw
 
 
@@ -422,7 +422,7 @@ class TrajectorySeqProvider:
         active = self._active_list[idx]
         return {"Active": active, "call": self.calls}
 
-    def to_dataframe(self, raw: Any) -> pd.DataFrame:
+    def to_dataframe(self, raw: Any, *, display: bool = True) -> pd.DataFrame:
         # Return a DataFrame with Active column (matching real provider output)
         return pd.DataFrame({"Active": [raw["Active"]], "call": [raw["call"]]})
 
@@ -439,7 +439,7 @@ class FlakyTrajectoryProvider:
             raise RuntimeError("trajectory fetch failed")
         return {"Active": True, "call": self.calls}
 
-    def to_dataframe(self, raw: Any) -> pd.DataFrame:
+    def to_dataframe(self, raw: Any, *, display: bool = True) -> pd.DataFrame:
         return pd.DataFrame({"Active": [raw["Active"]], "call": [raw["call"]]})
 
 

@@ -20,7 +20,7 @@ from pandas import DataFrame, concat
 
 from atomscale.core import BaseClient
 from atomscale.results.similarity_trajectory import SimilarityTrajectoryResult
-from atomscale.timeseries.provider import TimeseriesProvider
+from atomscale.timeseries.provider import TimeseriesProvider, finalize_dataframe
 
 
 class SimilarityTrajectoryProvider(TimeseriesProvider[SimilarityTrajectoryResult]):
@@ -35,7 +35,8 @@ class SimilarityTrajectoryProvider(TimeseriesProvider[SimilarityTrajectoryResult
         "is_active": "Active",
         "averaged_count": "Averaged Count",
     }
-    INDEX_COLS: Sequence[str] = ["Reference ID", "Time"]
+    # Index columns as raw API names; resolved to display labels when display=True.
+    INDEX_COLS: Sequence[str] = ["reference_id", "real_time_seconds"]
 
     def fetch_raw(self, client: BaseClient, data_id: str, **kwargs: Any) -> Any:
         """Fetch similarity trajectory data from the API.
@@ -58,7 +59,7 @@ class SimilarityTrajectoryProvider(TimeseriesProvider[SimilarityTrajectoryResult
             params=kwargs,
         )
 
-    def to_dataframe(self, raw: Any) -> DataFrame:
+    def to_dataframe(self, raw: Any, *, display: bool = True) -> DataFrame:
         if not raw:
             return DataFrame(None)
 
@@ -97,13 +98,10 @@ class SimilarityTrajectoryProvider(TimeseriesProvider[SimilarityTrajectoryResult
             return DataFrame(None)
 
         df_all = concat(frames, axis=0, ignore_index=True)
-        df_all = df_all.rename(columns=self.RENAME_MAP)
 
-        idx_cols = [c for c in self.INDEX_COLS if c in df_all.columns]
-        if idx_cols:
-            df_all = df_all.set_index(idx_cols)
-
-        return df_all
+        return finalize_dataframe(
+            df_all, self.RENAME_MAP, display=display, index_cols=self.INDEX_COLS
+        )
 
     def build_result(
         self,

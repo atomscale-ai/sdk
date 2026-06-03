@@ -28,7 +28,11 @@ from .polling import (
     start_polling_task,
     start_polling_thread,
 )
-from .provider import TimeseriesProvider, properties_payload_to_dataframe
+from .provider import (
+    TimeseriesProvider,
+    finalize_dataframe,
+    properties_payload_to_dataframe,
+)
 from .registry import get_provider
 from .rheed import RHEEDProvider
 
@@ -40,6 +44,7 @@ __all__ = [
     "TimeseriesProvider",
     "aiter_poll",
     "align_timeseries",
+    "finalize_dataframe",
     "get_provider",
     "iter_poll",
     "properties_payload_to_dataframe",

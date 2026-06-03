@@ -22,30 +22,41 @@ ErrorHandler = Callable[[BaseException], None]
 _DEFAULT_TRAJECTORY_WORKFLOW = "rheed_stationary"
 
 
-def _fetch_trajectory_result(client, source_id: str, last_n: int | None) -> Result:
+def _fetch_trajectory_result(
+    client, source_id: str, last_n: int | None, *, display: bool = True
+) -> Result:
     """Fetch trajectory data via SimilarityTrajectoryProvider.
 
     Args:
         client: API client instance passed to the provider.
         source_id: The data_id or physical_sample_id to fetch trajectory for.
         last_n: Last number of entries to poll for.
+        display: If True (default), DataFrame columns carry user-facing display
+            labels; if False they keep their raw snake_case API names.
 
     Returns:
-        DataFrame: Trajectory data with multi-index ["Reference ID", "Time"].
+        DataFrame: Trajectory data with multi-index ["Reference ID", "Time"]
+        (or ["reference_id", "real_time_seconds"] when ``display`` is False).
     """
     provider = get_provider("similarity_trajectory")
     kwargs: dict[str, Any] = {"workflow": _DEFAULT_TRAJECTORY_WORKFLOW}
     if last_n is not None:
         kwargs["last_n"] = last_n
     raw = provider.fetch_raw(client, source_id, **kwargs)
-    return provider.to_dataframe(raw)
+    return provider.to_dataframe(raw, display=display)
 
 
 def _default_trajectory_until(df: Result) -> bool:
-    """Default stop condition: stop when trajectory has data and is no longer active."""
+    """Default stop condition: stop when trajectory has data and is no longer active.
+
+    Reads the active flag under either its display label (``Active``) or its
+    raw API name (``is_active``) so the predicate works regardless of the
+    ``display`` mode the poller was started with.
+    """
     if len(df) == 0:
         return False
-    return not df["Active"].any()
+    active_col = "Active" if "Active" in df.columns else "is_active"
+    return not df[active_col].any()
 
 
 def iter_poll_trajectory(
@@ -54,6 +65,7 @@ def iter_poll_trajectory(
     *,
     interval: float = 1.0,
     last_n: int | None = None,
+    display: bool = True,
     distinct_by: DistinctFn | None = None,
     until: Predicate | None = None,
     max_polls: int | None = None,
@@ -68,6 +80,8 @@ def iter_poll_trajectory(
         source_id: The data_id or physical_sample_id to poll trajectory for.
         interval: Seconds between polls. Defaults to 1.0.
         last_n: Last number of trajectory data points to poll. None is all.
+        display: If True (default), DataFrame columns use user-facing display
+            labels; if False they keep raw snake_case API names.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
         until: Optional predicate; stop when it returns True for a result.
@@ -100,7 +114,9 @@ def iter_poll_trajectory(
     while True:
         polls += 1
         try:
-            result = _fetch_trajectory_result(client, source_id, last_n)
+            result = _fetch_trajectory_result(
+                client, source_id, last_n, display=display
+            )
         except BaseException as exc:
             if on_error:
                 on_error(exc)
@@ -127,6 +143,7 @@ async def aiter_poll_trajectory(
     *,
     interval: float = 1.0,
     last_n: int | None = None,
+    display: bool = True,
     distinct_by: DistinctFn | None = None,
     until: Predicate | None = None,
     max_polls: int | None = None,
@@ -143,6 +160,8 @@ async def aiter_poll_trajectory(
         source_id: The data_id or physical_sample_id to poll trajectory for.
         interval: Seconds between polls. Defaults to 1.0.
         last_n: Last number of trajectory data points to poll. None is all.
+        display: If True (default), DataFrame columns use user-facing display
+            labels; if False they keep raw snake_case API names.
         distinct_by: Optional function mapping a result to a hashable key for
             deduping. If provided, only results with a new key are yielded.
         until: Optional predicate; stop when it returns True for a result.
@@ -177,7 +196,7 @@ async def aiter_poll_trajectory(
         polls += 1
         try:
             result = await asyncio.to_thread(
-                _fetch_trajectory_result, client, source_id, last_n
+                _fetch_trajectory_result, client, source_id, last_n, display=display
             )
         except BaseException as exc:
             if on_error:
@@ -225,8 +244,8 @@ def start_polling_trajectory_thread(
         last_n: Last number of trajectory data points to poll for. None is all.
         on_result: Callback invoked with each yielded result.
         **kwargs: Additional keyword arguments forwarded to `iter_poll_trajectory`
-            (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,
-            `jitter`, `on_error`).
+            (e.g., `display`, `distinct_by`, `until`, `max_polls`,
+            `fire_immediately`, `jitter`, `on_error`).
 
     Returns:
         threading.Event: Event that, when set, requests the polling thread to stop.
@@ -270,8 +289,8 @@ def start_polling_trajectory_task(
         on_result: Optional callback invoked with each yielded result. If it
             returns a coroutine, it will be awaited.
         **kwargs: Additional keyword arguments forwarded to `aiter_poll_trajectory`
-            (e.g., `distinct_by`, `until`, `max_polls`, `fire_immediately`,
-            `jitter`, `on_error`).
+            (e.g., `display`, `distinct_by`, `until`, `max_polls`,
+            `fire_immediately`, `jitter`, `on_error`).
 
     Returns:
         asyncio.Task[None]: A created and started Task. Cancel it to stop polling.
