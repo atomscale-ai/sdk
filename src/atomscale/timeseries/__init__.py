@@ -29,6 +29,7 @@ from .polling import (
     start_polling_thread,
 )
 from .provider import TimeseriesProvider, properties_payload_to_dataframe
+from .recipe import RecipeProvider
 from .registry import get_provider
 from .rheed import RHEEDProvider
 
@@ -37,6 +38,7 @@ __all__ = [
     "MetrologyProvider",
     "OpticalProvider",
     "RHEEDProvider",
+    "RecipeProvider",
     "TimeseriesProvider",
     "aiter_poll",
     "align_timeseries",

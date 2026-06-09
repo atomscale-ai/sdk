@@ -8,6 +8,7 @@ from .ellipsometry import EllipsometryProvider
 from .metrology import MetrologyProvider
 from .optical import OpticalProvider
 from .provider import TimeseriesProvider
+from .recipe import RecipeProvider
 from .rheed import RHEEDProvider
 
 _PROVIDER_CLASSES: dict[str, type[TimeseriesProvider]] = {
@@ -17,6 +18,9 @@ _PROVIDER_CLASSES: dict[str, type[TimeseriesProvider]] = {
     # The backend renamed the "metrology" char-source/data-stream to "tool_state".
     # Accept both so dispatch works whether the API returns the legacy or new value.
     "tool_state": MetrologyProvider,
+    # Recipe (process plan) is a distinct first-class type, served from its own
+    # /recipe endpoint — not folded into tool-state.
+    RecipeProvider.TYPE: RecipeProvider,
     EllipsometryProvider.TYPE: EllipsometryProvider,
     SimilarityTrajectoryProvider.TYPE: SimilarityTrajectoryProvider,
 }

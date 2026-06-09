@@ -945,16 +945,10 @@ class Client(BaseClient):
             "optical",
             "ellipsometry",
         ]:
-            # recipe timeseries are served from the tool-state (formerly metrology)
-            # endpoint; reuse that provider. "metrology" is the legacy char-source
-            # value, "tool_state" the renamed one — both resolve to the same provider.
-            timeseries_type = (
-                "rheed"
-                if "rheed" in data_type
-                else "tool_state"
-                if data_type == "recipe"
-                else data_type
-            )
+            # Each data_type resolves to its own provider/endpoint. "metrology" is
+            # the legacy char-source value for "tool_state"; both map to the
+            # tool-state provider. recipe is distinct (its own /recipe endpoint).
+            timeseries_type = "rheed" if "rheed" in data_type else data_type
             provider = get_provider(timeseries_type)
 
             # Get timeseries data

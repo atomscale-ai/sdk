@@ -25,6 +25,7 @@ class ResultIDs:
     xps = ""
     optical = ""
     metrology = ""
+    recipe = ""
     photoluminescence = ""
     raman = ""
     changepoint = ""
