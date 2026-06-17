@@ -107,6 +107,42 @@ def test_legacy_series_payload_parses():
     assert str(df["UNIX Timestamp"].dtype) == "int64"
 
 
+def test_duplicate_timestamps_within_property_do_not_crash():
+    # A property emitting two samples at the same unix-ms used to crash the
+    # outer-join with "cannot reindex on an axis with duplicate labels"
+    # whenever a second property was present (regression test).
+    payload = {
+        "properties": {
+            "Sub T setpoint": {
+                "relative_time_seconds": [0.0, 0.0, 1.0],
+                "unix_timestamp_ms": [
+                    1_700_000_000_000,
+                    1_700_000_000_000,  # duplicate instant
+                    1_700_000_001_000,
+                ],
+                "values": [400.0, 410.0, 450.0],
+                "units": "C",
+            },
+            "Ratio Pyrometer": {
+                "relative_time_seconds": [0.0, 1.0],
+                "unix_timestamp_ms": [
+                    1_700_000_000_000,
+                    1_700_000_001_000,
+                ],
+                "values": [395.2, 451.3],
+                "units": "C",
+            },
+        }
+    }
+    df = MetrologyProvider().to_dataframe(payload)
+    # Duplicate instant collapsed to a single row; index stays unique.
+    assert df["UNIX Timestamp"].is_unique
+    assert df["UNIX Timestamp"].is_monotonic_increasing
+    # "keep last" wins at the duplicated instant.
+    row = df.loc[df["UNIX Timestamp"] == 1_700_000_000_000].iloc[0]
+    assert row["Sub T setpoint"] == 410.0
+
+
 def test_empty_payload_returns_empty_df():
     assert MetrologyProvider().to_dataframe({}).empty
     assert MetrologyProvider().to_dataframe({"properties": {}}).empty
