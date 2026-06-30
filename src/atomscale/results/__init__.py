@@ -5,6 +5,7 @@ from .metrology import MetrologyResult
 from .optical import OpticalResult
 from .photoluminescence import PhotoluminescenceResult
 from .raman import RamanResult
+from .rheed_embedding import RHEEDEmbeddingResult
 from .rheed_image import RHEEDImageCollection, RHEEDImageResult, _get_rheed_image_result
 from .rheed_video import RHEEDVideoResult
 from .similarity_trajectory import SimilarityTrajectoryResult
@@ -20,6 +21,7 @@ __all__ = [
     "PhotoluminescenceResult",
     "PhysicalSampleResult",
     "ProjectResult",
+    "RHEEDEmbeddingResult",
     "RHEEDImageCollection",
     "RHEEDImageResult",
     "RHEEDVideoResult",

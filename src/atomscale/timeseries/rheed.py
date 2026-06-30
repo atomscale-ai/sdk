@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, json_normalize
 
 from atomscale.core import BaseClient
 from atomscale.results import (
@@ -63,10 +63,14 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             series = angle_block.get("series") or []
             if not series:
                 continue
+            # Flatten the nested low_level_features dict (present only when the
+            # request set include_low_level_features) into one column per feature
+            # BEFORE the all-NA drop, so empty low-level columns get pruned too.
+            angle_df = self._expand_low_level_features(DataFrame(series))
             # Drop columns that are all-NA within this angle block before concat;
             # otherwise pandas issues a FutureWarning about empty/all-NA entries
             # widening the result dtype.
-            angle_df = DataFrame(series).dropna(axis=1, how="all")
+            angle_df = angle_df.dropna(axis=1, how="all")
             angle_df["Angle"] = angle_block["angle"]
             frames.append(angle_df)
 
@@ -88,6 +92,29 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             df_all = df_all.set_index(idx_cols)
 
         return df_all
+
+    @staticmethod
+    def _expand_low_level_features(angle_df: DataFrame) -> DataFrame:
+        """Flatten the nested ``low_level_features`` column into one column per
+        feature.
+
+        The backend attaches a ``low_level_features`` dict (e.g.
+        ``{"area_0": ..., "eccentricity_0": ...}``) to each point only when the
+        request set ``include_low_level_features``. Expand it so each feature
+        becomes its own column; missing keys/points become NaN. These columns
+        are not in ``RENAME_MAP``, so they keep their raw backend names.
+        """
+        if "low_level_features" not in angle_df.columns:
+            return angle_df
+        nested = angle_df["low_level_features"]
+        expanded = json_normalize([v if isinstance(v, dict) else {} for v in nested])
+        expanded.index = angle_df.index
+        angle_df = angle_df.drop(columns=["low_level_features"])
+        # Defensive: never clobber an existing top-level column.
+        new_cols = [c for c in expanded.columns if c not in angle_df.columns]
+        if new_cols:
+            angle_df = concat([angle_df, expanded[new_cols]], axis=1)
+        return angle_df
 
     def snapshot_url(self, data_id: str) -> str:
         return f"data_entries/video_single_frames/{data_id}"
