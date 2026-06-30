@@ -6,6 +6,11 @@ name: Build adapters exe
 
 on:
   workflow_dispatch:
+  # On a published GitHub Release, build and attach the host binaries as
+  # release assets (same release that release.yml publishes to PyPI), so the
+  # file-watcher can pin the SDK release tag and download the matching exe.
+  release:
+    types: [published]
   push:
     branches: [adapter-host-packaging, filmsense-adapters]
     paths:
@@ -18,6 +23,8 @@ jobs:
   build:
     name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write # attach the built exe to the GitHub Release (release events)
     strategy:
       fail-fast: false
       matrix:
@@ -48,3 +55,25 @@ jobs:
           name: atomscale-adapters-${{ matrix.os }}
           path: dist/atomscale-adapters*
           if-no-files-found: error
+
+      # --- Release assets (only on a published GitHub Release) ---------------
+      # Give each OS binary a stable, platform-specific asset name so the
+      # file-watcher fetch step can request exactly one.
+      - name: Stage release asset
+        if: github.event_name == 'release'
+        shell: bash
+        run: |
+          mkdir -p release-asset
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp dist/atomscale-adapters.exe "release-asset/atomscale-adapters-windows-x64.exe"
+          else
+            cp dist/atomscale-adapters "release-asset/atomscale-adapters-macos-arm64"
+          fi
+
+      - name: Attach binary to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: release-asset/*
+          fail_on_unmatched_files: true
