@@ -71,6 +71,9 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+#  ...but the adapter-host build spec is hand-maintained and must be tracked so
+#  the build scripts and CI can find it (the `*.spec` rule above hides it).
+!packaging/atomscale-adapters.spec
 
 # Installer logs
 pip-log.txt

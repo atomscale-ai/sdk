@@ -42,6 +42,13 @@ dependencies = [
 Homepage = "https://www.atomscale.ai"
 Documentation = "https://atomscale-ai.github.io/sdk"
 
+# Console entry point for the ingestion-adapter host. A plain `pip install`
+# then exposes the `atomscale-adapters` command (list / run <adapter>); the
+# frozen build (packaging/atomscale-adapters.spec) ships the same CLI as a
+# standalone executable for the file-watcher app to bundle.
+[project.scripts]
+atomscale-adapters = "atomscale.adapters.__main__:main"
+
 [tool.setuptools_scm]
 
 [project.optional-dependencies]
