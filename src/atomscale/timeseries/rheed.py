@@ -107,7 +107,9 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         if "low_level_features" not in angle_df.columns:
             return angle_df
         nested = angle_df["low_level_features"]
-        expanded = json_normalize([v if isinstance(v, dict) else {} for v in nested], max_level=1)
+        expanded = json_normalize(
+            [v if isinstance(v, dict) else {} for v in nested], max_level=1
+        )
         expanded.index = angle_df.index
         angle_df = angle_df.drop(columns=["low_level_features"])
         # Defensive: never clobber an existing top-level column.

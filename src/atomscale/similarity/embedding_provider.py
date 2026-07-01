@@ -46,7 +46,9 @@ class RHEEDEmbeddingProvider:
             params=kwargs,
         )
 
-    def fetch_neighbors_raw(self, client: BaseClient, data_id: str, **kwargs: Any) -> Any:
+    def fetch_neighbors_raw(
+        self, client: BaseClient, data_id: str, **kwargs: Any
+    ) -> Any:
         """Fetch k-NN neighbors ("find similar") for a data_id.
 
         Args:
@@ -68,7 +70,9 @@ class RHEEDEmbeddingProvider:
         kind = raw.get("kind", "window")
 
         if points:
-            vectors = np.asarray([p.get("vector", []) for p in points], dtype=np.float32)
+            vectors = np.asarray(
+                [p.get("vector", []) for p in points], dtype=np.float32
+            )
         else:
             vectors = np.zeros((0, 0), dtype=np.float32)
         indices = [p["index"] for p in points]
@@ -104,7 +108,7 @@ class RHEEDEmbeddingProvider:
         neighbors = (raw or {}).get("neighbors", []) or []
         if not neighbors:
             return DataFrame(columns=_NEIGHBOR_COLUMNS)
-        df = DataFrame(neighbors)
-        ordered = [c for c in _NEIGHBOR_COLUMNS if c in df.columns]
-        extra = [c for c in df.columns if c not in _NEIGHBOR_COLUMNS]
-        return df[ordered + extra]
+        frame = DataFrame(neighbors)
+        ordered = [c for c in _NEIGHBOR_COLUMNS if c in frame.columns]
+        extra = [c for c in frame.columns if c not in _NEIGHBOR_COLUMNS]
+        return frame[ordered + extra]

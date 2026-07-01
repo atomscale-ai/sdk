@@ -55,7 +55,9 @@ class RHEEDEmbeddingResult(MSONable):
         self.kind = kind
         arr = np.asarray(vectors, dtype=np.float32)
         # Normalize an empty/degenerate array to a clean (0, 0) shape.
-        self.vectors: NDArray = arr if arr.ndim == 2 and arr.size else np.zeros((0, 0), np.float32)
+        self.vectors: NDArray = (
+            arr if arr.ndim == 2 and arr.size else np.zeros((0, 0), np.float32)
+        )
         self.indices: list[int] = list(indices)
         self.real_time_seconds = (
             np.asarray(real_time_seconds, dtype=np.float64)
@@ -63,12 +65,16 @@ class RHEEDEmbeddingResult(MSONable):
             else None
         )
         self.unix_time_ms = (
-            np.asarray(unix_time_ms, dtype=np.float64) if unix_time_ms is not None else None
+            np.asarray(unix_time_ms, dtype=np.float64)
+            if unix_time_ms is not None
+            else None
         )
         # float64 (not int64) so a partial/missing cluster_size (None) coerces to
         # NaN rather than raising at array construction.
         self.cluster_sizes = (
-            np.asarray(cluster_sizes, dtype=np.float64) if cluster_sizes is not None else None
+            np.asarray(cluster_sizes, dtype=np.float64)
+            if cluster_sizes is not None
+            else None
         )
         self.count = count if count is not None else int(self.vectors.shape[0])
         self.truncated = truncated
@@ -94,13 +100,13 @@ class RHEEDEmbeddingResult(MSONable):
             cols["unix_time_ms"] = list(self.unix_time_ms)
         if self.cluster_sizes is not None:
             cols["cluster_size"] = list(self.cluster_sizes)
-        df = DataFrame(cols)
+        frame = DataFrame(cols)
 
         dim = self.dimension
         if len(self) and dim:
             vec_df = DataFrame(self.vectors, columns=[f"v{i}" for i in range(dim)])
-            df = concat([df, vec_df], axis=1)
+            frame = concat([frame, vec_df], axis=1)
 
-        if "index" in df.columns:
-            df = df.set_index("index")
-        return df
+        if "index" in frame.columns:
+            frame = frame.set_index("index")
+        return frame
