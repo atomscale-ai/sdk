@@ -30,7 +30,7 @@ def build_streamer(config: AdapterConfig) -> StreamerProtocol:
     Imported lazily so callers that inject a streamer (tests, or a dry run
     against a stub) don't trigger the Rust extension load.
     """
-    from atomscale.streaming import TimeseriesStreamer  # noqa: PLC0415
+    from atomscale.streaming import TimeseriesStreamer
 
     return TimeseriesStreamer(
         api_key=config.streamer.api_key,
@@ -71,7 +71,9 @@ def run_filmsense(
         runner = FilmSenseRunner(config, streamer, events=_runner_event_sink(emit))
 
     state_lock = threading.Lock()
-    current: dict[str, Any] = {}  # {"stop": Event, "thread": Thread} while a run is live
+    current: dict[
+        str, Any
+    ] = {}  # {"stop": Event, "thread": Thread} while a run is live
 
     def on_start(event: SentinelEvent) -> None:
         with state_lock:

@@ -31,7 +31,7 @@ repos:
       - id: codespell
         stages: [pre-commit, commit-msg]
         exclude_types: [json, bib, svg]
-        args: [--ignore-words-list, "mater,fwe,te"]
+        args: [--ignore-words-list, "mater,fwe,te,parms"]
 
   - repo: local
     hooks:

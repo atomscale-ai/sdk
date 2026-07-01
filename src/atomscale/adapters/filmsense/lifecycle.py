@@ -63,7 +63,8 @@ def parse_sentinel(path: Path) -> RunMetadata:
         tags.append(f"model:{data['recipe']}")
 
     return RunMetadata(
-        stream_name=data.get("recipe") or re.sub(r"\.(run-start|run-end)$", "", path.stem),
+        stream_name=data.get("recipe")
+        or re.sub(r"\.(run-start|run-end)$", "", path.stem),
         physical_sample=data.get("physical_sample"),
         project_id=data.get("project_id"),
         tags=tags,

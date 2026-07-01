@@ -12,11 +12,11 @@ from typing import Any
 def _load_tomllib():
     """Lazy import so callers using only ``from_dict`` don't need tomli on 3.10."""
     if sys.version_info >= (3, 11):
-        import tomllib  # noqa: PLC0415
+        import tomllib
 
         return tomllib
     try:
-        import tomli  # type: ignore[import-not-found]  # noqa: PLC0415
+        import tomli  # type: ignore[import-not-found]
     except ImportError as e:  # pragma: no cover
         msg = (
             "Python 3.10 requires the 'tomli' package to read TOML config files. "
@@ -105,9 +105,7 @@ class AdapterConfig:
 
         api_key = streamer_data.get("api_key") or os.environ.get("AS_API_KEY")
         if not api_key:
-            msg = (
-                "streamer.api_key is required (set in TOML or via AS_API_KEY env var)"
-            )
+            msg = "streamer.api_key is required (set in TOML or via AS_API_KEY env var)"
             raise ValueError(msg)
 
         return cls(

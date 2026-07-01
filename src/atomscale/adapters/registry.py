@@ -10,8 +10,7 @@ from atomscale.adapters.base import Adapter
 from atomscale.adapters.filmsense.adapter import FilmSenseAdapter
 
 _ADAPTERS: dict[str, Adapter] = {
-    adapter.id: adapter
-    for adapter in (FilmSenseAdapter(),)
+    adapter.id: adapter for adapter in (FilmSenseAdapter(),)
 }
 
 

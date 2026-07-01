@@ -153,4 +153,4 @@ include = ["src/atomicds"]
 exclude = ["tests", "examples", "docs"]
 
 [tool.codespell]
-ignore-words-list = "fpr"
+ignore-words-list = "fpr,parms"
