@@ -65,8 +65,10 @@ class RHEEDEmbeddingResult(MSONable):
         self.unix_time_ms = (
             np.asarray(unix_time_ms, dtype=np.float64) if unix_time_ms is not None else None
         )
+        # float64 (not int64) so a partial/missing cluster_size (None) coerces to
+        # NaN rather than raising at array construction.
         self.cluster_sizes = (
-            np.asarray(cluster_sizes, dtype=np.int64) if cluster_sizes is not None else None
+            np.asarray(cluster_sizes, dtype=np.float64) if cluster_sizes is not None else None
         )
         self.count = count if count is not None else int(self.vectors.shape[0])
         self.truncated = truncated

@@ -71,7 +71,7 @@ class RHEEDEmbeddingProvider:
             vectors = np.asarray([p.get("vector", []) for p in points], dtype=np.float32)
         else:
             vectors = np.zeros((0, 0), dtype=np.float32)
-        indices = [p.get("index") for p in points]
+        indices = [p["index"] for p in points]
 
         real_time = None
         unix_time = None

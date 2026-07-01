@@ -79,6 +79,27 @@ def test_to_result_prototype():
     assert "cluster_size" in r.to_dataframe().columns
 
 
+def test_to_result_prototype_partial_cluster_size():
+    """cluster_size present on some points but missing on others must coerce the
+    gaps to NaN (float64) instead of crashing at array construction."""
+    raw = {
+        "kind": "prototype",
+        "data_id": "abc",
+        "workflow": "w",
+        "window_span": 30.0,
+        "count": 3,
+        "points": [
+            {"index": 0, "vector": [1.0, 2.0], "cluster_size": 7},
+            {"index": 1, "vector": [3.0, 4.0]},  # missing cluster_size
+            {"index": 2, "vector": [5.0, 6.0], "cluster_size": 5},
+        ],
+    }
+    r = RHEEDEmbeddingProvider().to_result(raw)
+    assert r.cluster_sizes[0] == 7
+    assert np.isnan(r.cluster_sizes[1])
+    assert r.cluster_sizes[2] == 5
+
+
 def test_to_result_empty():
     r = RHEEDEmbeddingProvider().to_result({"kind": "window", "points": []})
     assert len(r) == 0
