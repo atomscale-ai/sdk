@@ -44,6 +44,11 @@ def test_missing_api_key_raises(tmp_path: Path, monkeypatch):
 
 def test_from_toml(tmp_path: Path):
     cfg_path = tmp_path / "filmsense.toml"
+    # Embed paths as TOML *literal* strings (single quotes): on Windows a path
+    # like C:\Users\... contains backslash sequences that a basic (double-quoted)
+    # string would parse as escapes, failing with "Invalid hex value" on \U.
+    watch_dir = tmp_path / "watch"
+    wal_path = tmp_path / "wal.sqlite"
     cfg_path.write_text(
         f"""
 dry_run = true
@@ -56,10 +61,10 @@ acquisition_seconds = 0.5
 api_key = "toml-key"
 
 [lifecycle]
-watch_dir = "{tmp_path / 'watch'}"
+watch_dir = '{watch_dir}'
 
 [wal]
-path = "{tmp_path / 'wal.sqlite'}"
+path = '{wal_path}'
 
 [archive]
 enabled = true
@@ -68,6 +73,8 @@ folder = "Hinkle"
     )
     cfg = AdapterConfig.from_toml(cfg_path)
     assert cfg.streamer.api_key == "toml-key"
+    assert cfg.lifecycle.watch_dir == watch_dir
+    assert cfg.wal.path == wal_path
     assert cfg.archive.enabled is True
     assert cfg.archive.folder == "Hinkle"
     assert cfg.dry_run is True
