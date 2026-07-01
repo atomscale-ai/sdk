@@ -15,10 +15,11 @@ python -m venv $Venv
 & "$Venv\Scripts\Activate.ps1"
 
 python -m pip install --upgrade pip
-python -m pip install . pyinstaller
+python -m pip install . "pyinstaller>=6.0,<7"
 
 pyinstaller --clean --noconfirm packaging\atomscale-adapters.spec
 
 Write-Host "Built: $RepoRoot\dist\atomscale-adapters.exe"
 & ".\dist\atomscale-adapters.exe" list | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Smoke test 'list' FAILED (exit $LASTEXITCODE)" }
 Write-Host "Smoke test 'list' OK"

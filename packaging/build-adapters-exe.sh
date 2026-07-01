@@ -19,7 +19,7 @@ source "$VENV/bin/activate"
 
 python -m pip install --upgrade pip
 # Install the SDK (compiles the Rust extension) plus PyInstaller.
-python -m pip install . pyinstaller
+python -m pip install . "pyinstaller>=6.0,<7"
 
 pyinstaller --clean --noconfirm packaging/atomscale-adapters.spec
 

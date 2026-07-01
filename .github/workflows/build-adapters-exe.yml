@@ -42,7 +42,7 @@ jobs:
       - name: Install SDK + PyInstaller
         run: |
           python -m pip install --upgrade pip
-          python -m pip install . pyinstaller
+          python -m pip install . "pyinstaller>=6.0,<7"
 
       - name: Build executable
         run: pyinstaller --clean --noconfirm packaging/atomscale-adapters.spec
