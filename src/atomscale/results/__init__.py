@@ -1,5 +1,6 @@
 from .changepoint import ChangepointResult
 from .ellipsometry import EllipsometryResult
+from .embeddings import EmbeddingsResult
 from .group import PhysicalSampleResult, ProjectResult
 from .metrology import MetrologyResult
 from .optical import OpticalResult
@@ -15,6 +16,7 @@ from .xrd import XRDResult
 __all__ = [
     "ChangepointResult",
     "EllipsometryResult",
+    "EmbeddingsResult",
     "MetrologyResult",
     "OpticalResult",
     "PhotoluminescenceResult",

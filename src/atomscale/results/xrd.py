@@ -28,7 +28,7 @@ class XRDResult(MSONable):
         Args:
             data_id: Data catalogue identifier.
             xrd_id: Unique identifier for the XRD result.
-            two_theta: 2-theta angle values in degrees.
+            two_theta: 2-theta angle values, expressed in the unit given by `two_theta_unit` (degrees by default).
             intensities: Intensity values aligned with `two_theta`.
             detected_peaks: Optional list of detected peak dicts with keys
                 two_theta, intensity, d_spacing_angstrom, prominence, fwhm_degrees.

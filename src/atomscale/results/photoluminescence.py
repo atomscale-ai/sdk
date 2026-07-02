@@ -27,7 +27,7 @@ class PhotoluminescenceResult(MSONable):
             photoluminescence_id: Unique identifier for the photoluminescence result.
             energies: Energy axis values.
             intensities: Intensity values aligned with `energies`.
-            detected_peaks: Optional mapping of peak labels to positions/metadata.
+            detected_peaks: Optional mapping of detected-peak labels to each peak's value, where a value is either a numeric position along the energy axis (float) or a descriptive string (str).
             last_updated: Optional last-updated timestamp string.
             collected_datetime: Datetime when the data was collected.
         """
