@@ -575,13 +575,13 @@ class Client(BaseClient):
 
         # Responses may use camelCase keys; normalize to the snake_case column
         # names (snake_case keys pass through unchanged).
-        df = DataFrame(rows).rename(
+        matches = DataFrame(rows).rename(
             columns={"dataId": "data_id", "itemName": "item_name"}
         )
 
         # Always return exactly these columns: any missing one is filled with NA
         # and any extra fields are dropped, so empty and populated results match.
-        return df.reindex(columns=columns)
+        return matches.reindex(columns=columns)
 
     def get_rheed_timeseries(
         self,
