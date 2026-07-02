@@ -23,6 +23,7 @@ from atomscale.core.utils import _make_progress, normalize_path
 from atomscale.results import (
     ChangepointResult,
     EllipsometryResult,
+    EmbeddingsResult,
     MetrologyResult,
     OpticalResult,
     PhotoluminescenceResult,
@@ -42,6 +43,10 @@ from atomscale.timeseries.registry import get_provider
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
+
+# Fixed metric identifier the matches endpoint requires. Kept internal so callers
+# don't have to choose one; this value is available for effectively all RHEED data.
+_DEFAULT_SIMILARITY_METRIC = "specular_intensity"
 
 
 def _retry_client_call(
@@ -472,6 +477,188 @@ class Client(BaseClient):
             ts_df,
             workflow=workflow,
             window_span=window_span or 0.0,
+        )
+
+    def get_embeddings(
+        self,
+        data_id: str,
+        *,
+        workflow: str = "rheed_stationary",
+        window_span: float = 60.0,
+        kind: Literal["window", "prototype"] = "window",
+        offset: int = 0,
+        limit: int | None = None,
+    ) -> EmbeddingsResult:
+        """Fetch embedding vectors for a data entry.
+
+        Args:
+            data_id: Data ID to fetch embeddings for.
+            workflow: Similarity workflow name. Defaults to ``"rheed_stationary"``.
+            window_span: Window span in seconds. Defaults to ``60.0``.
+            kind: ``"window"`` for one time-resolved vector per window (with
+                ``real_times`` / ``unix_times_ms``), or ``"prototype"`` for a small
+                set of representative vectors (with ``cluster_sizes``). Defaults to
+                ``"window"``.
+            offset: Number of leading vectors to skip. Defaults to ``0``.
+            limit: Maximum number of vectors to return. ``None`` (default) returns
+                all available vectors.
+
+        Returns:
+            EmbeddingsResult: The embedding vectors and associated metadata. When
+            no embeddings are available for this data (workflow / window span), a
+            :class:`UserWarning` is emitted and an empty result is returned, so
+            loops over many IDs don't crash. ``result.count`` is the total number
+            of vectors available before ``offset`` / ``limit``; the number actually
+            returned is ``len(result.vectors)``.
+        """
+        payload: dict | None = self._get(  # type: ignore[assignment]
+            sub_url=f"similarity/{workflow}/{data_id}/embeddings/",
+            params={
+                "window_span": window_span,
+                "kind": kind,
+                "offset": offset,
+                "limit": limit,
+            },
+        )
+        return EmbeddingsResult.from_api(
+            payload,
+            data_id=data_id,
+            workflow=workflow,
+            kind=kind,
+            window_span=window_span,
+        )
+
+    def get_similarity_matches(
+        self,
+        source_id: str,
+        *,
+        workflow: str = "rheed_stationary",
+        window_span: float = 60.0,
+        live_comparison: bool = False,
+        limit: int | None = None,
+    ) -> DataFrame:
+        """Fetch the top similarity matches for a source data entry.
+
+        Args:
+            source_id: Data ID (or physical sample ID) to find matches for.
+            workflow: Similarity workflow name. Defaults to ``"rheed_stationary"``.
+            window_span: Window span in seconds. Defaults to ``60.0``.
+            live_comparison: When ``True``, also include the source entry's most
+                recent (still-streaming) data in the comparison. Defaults to ``False``.
+            limit: Maximum number of matches to return. ``None`` (default) uses the
+                server default.
+
+        Returns:
+            DataFrame: Columns ``["data_id", "item_name", "similarity"]``, one row
+            per match. Empty (with those columns) when there are no matches or the
+            source is not found.
+        """
+        payload = self._get(
+            sub_url=f"similarity/{workflow}/{source_id}/matches/",
+            params={
+                "metric": _DEFAULT_SIMILARITY_METRIC,
+                "windowSpan": window_span,
+                "usePrototypes": True,
+                "liveComparison": live_comparison,
+                "limit": limit,
+            },
+        )
+
+        columns = ["data_id", "item_name", "similarity"]
+        if not payload:
+            rows: list[dict] = []
+        elif isinstance(payload, dict):
+            # Tolerate a wrapped ``{"matches": [...]}`` shape.
+            rows = payload.get("matches", []) or []
+        else:
+            rows = payload
+
+        # Responses may use camelCase keys; normalize to the snake_case column
+        # names (snake_case keys pass through unchanged).
+        df = DataFrame(rows).rename(
+            columns={"dataId": "data_id", "itemName": "item_name"}
+        )
+
+        # Always return exactly these columns: any missing one is filled with NA
+        # and any extra fields are dropped, so empty and populated results match.
+        return df.reindex(columns=columns)
+
+    def get_rheed_timeseries(
+        self,
+        data_id: str,
+        *,
+        property_names: list[str] | None = None,
+        include_low_level_features: bool = False,
+        last_n: int | None = None,
+        elapsed_seconds: float | None = None,
+    ) -> DataFrame:
+        """Fetch the RHEED feature timeseries for a data entry.
+
+        Unlike :meth:`get`, which returns only the standard feature set, this
+        method can also return the full set of low-level features and filter which
+        points are returned.
+
+        Args:
+            data_id: Data ID of the RHEED video.
+            property_names: Restrict the result to these feature names. These are
+                the underlying property names (e.g. ``specular_intensity``,
+                ``referenced_strain``), which may differ from the display column
+                names in the returned DataFrame. ``None`` (default) returns the
+                standard set.
+            include_low_level_features: When ``True``, include the full set of
+                low-level per-point features as additional columns. Defaults to
+                ``False``.
+            last_n: If set, only return the last ``N`` points.
+            elapsed_seconds: If set, only return points within the last
+                ``elapsed_seconds`` of the recording.
+
+        Returns:
+            DataFrame: The RHEED timeseries, indexed by ``["Angle", "Frame Number"]``
+            when available. Low-level feature columns are included when
+            ``include_low_level_features=True``.
+        """
+        provider = get_provider("rheed")
+        raw = provider.fetch_raw(
+            self,
+            data_id,
+            include_low_level_features=include_low_level_features,
+            property_names=property_names,
+            last_n=last_n,
+            elapsed_seconds=elapsed_seconds,
+        )
+        return provider.to_dataframe(raw)
+
+    def get_frame(
+        self,
+        data_id: str,
+        *,
+        frame_index: int = 0,
+    ) -> RHEEDImageResult | None:
+        """Fetch a single extracted RHEED frame as a :class:`RHEEDImageResult`.
+
+        Args:
+            data_id: Data ID of the RHEED video.
+            frame_index: Index into the video's extracted-frame list (supports
+                negative indexing). Defaults to ``0`` (first extracted frame).
+
+        Returns:
+            RHEEDImageResult | None: The frame's image result, or ``None`` if the
+            video has no extracted frames, ``frame_index`` is out of range, or the
+            selected frame has no image.
+        """
+        provider = get_provider("rheed")
+        frames_payload: dict | None = self._get(  # type: ignore[assignment]
+            sub_url=provider.snapshot_url(data_id)
+        )
+        frames = (frames_payload or {}).get("frames", [])
+        if not frames or not (-len(frames) <= frame_index < len(frames)):
+            return None
+
+        frame = frames[frame_index]
+        metadata = {k: v for k, v in frame.items() if k == "timestamp_seconds"}
+        # Returns None when the selected frame has no associated image.
+        return provider.fetch_snapshot(
+            self, {"image_uuid": frame.get("image_uuid"), "metadata": metadata}
         )
 
     def iter_poll_similarity_trajectory(
