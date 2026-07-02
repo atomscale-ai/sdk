@@ -130,7 +130,7 @@ class EmbeddingsResult(MSONable):
                 f"{workflow!r}, kind {resolved_kind!r}, window_span "
                 f"{resolved_span}). The entry may not be embedded for this "
                 "workflow/window span.",
-                stacklevel=2,
+                stacklevel=3,
             )
             return cls(
                 data_id=data_id,
