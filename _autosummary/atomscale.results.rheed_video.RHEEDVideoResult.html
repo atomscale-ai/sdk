@@ -93,6 +93,7 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -105,6 +106,7 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -151,11 +153,13 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_id</strong> (<em>UUID</em><em> | </em><em>str</em>) – Data ID for the entry in the data catalogue.</p></li>
-<li><p><strong>timeseries_data</strong> (<em>DataFrame</em>) – Pandas DataFrame with timeseries data associated with the video.
-Includes cluster assignments, specular intensity, strain, etc…</p></li>
-<li><p><strong>snapshot_image_data</strong> (<em>list</em><em>[</em><em>atomscale.results.rheed_image.RHEEDImageResult</em><em>]</em>) – List of
-<code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.results.rheed_image.RHEEDImageResult</span></code> objects containing data for images associated
-with each user extracted snapshot in the video.</p></li>
+<li><p><strong>timeseries_data</strong> (<em>DataFrame</em>) – Pandas DataFrame with per-frame RHEED features, indexed
+against a “Time” column. Columns are capitalized labels such as “Cluster ID”,
+“Specular Intensity”, “Strain”, “Cumulative Strain”, “Oscillation Period”,
+“Diffraction Spot Count”, and “Lattice Spacing”.</p></li>
+<li><p><strong>snapshot_image_data</strong> (<em>list</em><em>[</em><em>atomscale.results.rheed_image.RHEEDImageResult</em><em>] </em><em>| </em><em>None</em>) – One
+<code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.results.rheed_image.RHEEDImageResult</span></code> per snapshot extracted from the
+video, or None if no snapshots were extracted.</p></li>
 <li><p><strong>rotating</strong> (<em>bool</em>) – Whether the video was taken of a rotating stage.</p></li>
 <li><p><strong>collected_datetime</strong> (<em>str</em><em> | </em><em>None</em>) – Datetime when the data was collected.</p></li>
 </ul>
@@ -169,11 +173,13 @@ with each user extracted snapshot in the video.</p></li>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_id</strong> (<em>UUID</em><em> | </em><em>str</em>) – Data ID for the entry in the data catalogue.</p></li>
-<li><p><strong>timeseries_data</strong> (<em>DataFrame</em>) – Pandas DataFrame with timeseries data associated with the video.
-Includes cluster assignments, specular intensity, strain, etc…</p></li>
-<li><p><strong>snapshot_image_data</strong> (<em>list</em><em>[</em><em>atomscale.results.rheed_image.RHEEDImageResult</em><em>]</em>) – List of
-<code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.results.rheed_image.RHEEDImageResult</span></code> objects containing data for images associated
-with each user extracted snapshot in the video.</p></li>
+<li><p><strong>timeseries_data</strong> (<em>DataFrame</em>) – Pandas DataFrame with per-frame RHEED features, indexed
+against a “Time” column. Columns are capitalized labels such as “Cluster ID”,
+“Specular Intensity”, “Strain”, “Cumulative Strain”, “Oscillation Period”,
+“Diffraction Spot Count”, and “Lattice Spacing”.</p></li>
+<li><p><strong>snapshot_image_data</strong> (<em>list</em><em>[</em><em>atomscale.results.rheed_image.RHEEDImageResult</em><em>] </em><em>| </em><em>None</em>) – One
+<code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.results.rheed_image.RHEEDImageResult</span></code> per snapshot extracted from the
+video, or None if no snapshots were extracted.</p></li>
 <li><p><strong>rotating</strong> (<em>bool</em>) – Whether the video was taken of a rotating stage.</p></li>
 <li><p><strong>collected_datetime</strong> (<em>str</em><em> | </em><em>None</em>) – Datetime when the data was collected.</p></li>
 </ul>

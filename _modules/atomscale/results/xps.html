@@ -124,6 +124,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -136,6 +137,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../_autosummary/atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -225,45 +227,47 @@
 </span><span id="line-30"><span class="sd">            intensities (list[float]): List of intensity values.</span>
 </span><span id="line-31"><span class="sd">            predicted_composition (dict[str, float]): Mapping between element symbols and</span>
 </span><span id="line-32"><span class="sd">                predicted fractional composition values.</span>
-</span><span id="line-33"><span class="sd">            detected_peaks (dict[str, float | str]): Mapping with peak transition labels.</span>
-</span><span id="line-34"><span class="sd">            elements_manually_set (bool): Whether the elements represented in the predicted composition</span>
-</span><span id="line-35"><span class="sd">                were manually specified by the user.</span>
-</span><span id="line-36"><span class="sd">            collected_datetime (str | None): Datetime when the data was collected.</span>
-</span><span id="line-37"><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="line-38">        <span class="bp">self</span><span class="o">.</span><span class="n">data_id</span> <span class="o">=</span> <span class="n">data_id</span>
-</span><span id="line-39">        <span class="bp">self</span><span class="o">.</span><span class="n">xps_id</span> <span class="o">=</span> <span class="n">xps_id</span>
-</span><span id="line-40">        <span class="bp">self</span><span class="o">.</span><span class="n">binding_energies</span> <span class="o">=</span> <span class="n">binding_energies</span>
-</span><span id="line-41">        <span class="bp">self</span><span class="o">.</span><span class="n">intensities</span> <span class="o">=</span> <span class="n">intensities</span>
-</span><span id="line-42">        <span class="bp">self</span><span class="o">.</span><span class="n">predicted_composition</span> <span class="o">=</span> <span class="n">predicted_composition</span>
-</span><span id="line-43">        <span class="bp">self</span><span class="o">.</span><span class="n">detected_peaks</span> <span class="o">=</span> <span class="n">detected_peaks</span>
-</span><span id="line-44">        <span class="bp">self</span><span class="o">.</span><span class="n">elements_manually_set</span> <span class="o">=</span> <span class="n">elements_manually_set</span>
-</span><span id="line-45">        <span class="bp">self</span><span class="o">.</span><span class="n">collected_datetime</span> <span class="o">=</span> <span class="n">collected_datetime</span></div>
+</span><span id="line-33"><span class="sd">            detected_peaks (dict[str, float | str]): Mapping from detected peak transition labels</span>
+</span><span id="line-34"><span class="sd">                (e.g. &quot;C 1s&quot;, &quot;O 1s&quot;) to each peak&#39;s binding energy position in eV, or to a string</span>
+</span><span id="line-35"><span class="sd">                annotation of that peak.</span>
+</span><span id="line-36"><span class="sd">            elements_manually_set (bool): Whether the elements represented in the predicted composition</span>
+</span><span id="line-37"><span class="sd">                were manually specified by the user.</span>
+</span><span id="line-38"><span class="sd">            collected_datetime (str | None): Datetime when the data was collected.</span>
+</span><span id="line-39"><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="line-40">        <span class="bp">self</span><span class="o">.</span><span class="n">data_id</span> <span class="o">=</span> <span class="n">data_id</span>
+</span><span id="line-41">        <span class="bp">self</span><span class="o">.</span><span class="n">xps_id</span> <span class="o">=</span> <span class="n">xps_id</span>
+</span><span id="line-42">        <span class="bp">self</span><span class="o">.</span><span class="n">binding_energies</span> <span class="o">=</span> <span class="n">binding_energies</span>
+</span><span id="line-43">        <span class="bp">self</span><span class="o">.</span><span class="n">intensities</span> <span class="o">=</span> <span class="n">intensities</span>
+</span><span id="line-44">        <span class="bp">self</span><span class="o">.</span><span class="n">predicted_composition</span> <span class="o">=</span> <span class="n">predicted_composition</span>
+</span><span id="line-45">        <span class="bp">self</span><span class="o">.</span><span class="n">detected_peaks</span> <span class="o">=</span> <span class="n">detected_peaks</span>
+</span><span id="line-46">        <span class="bp">self</span><span class="o">.</span><span class="n">elements_manually_set</span> <span class="o">=</span> <span class="n">elements_manually_set</span>
+</span><span id="line-47">        <span class="bp">self</span><span class="o">.</span><span class="n">collected_datetime</span> <span class="o">=</span> <span class="n">collected_datetime</span></div>
 
-</span><span id="line-46">
+</span><span id="line-48">
 <div class="viewcode-block" id="XPSResult.get_plot">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.results.xps.XPSResult.html#atomscale.results.xps.XPSResult.get_plot">[docs]</a>
-</span><span id="line-47">    <span class="k">def</span><span class="w"> </span><span class="nf">get_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Figure</span><span class="p">:</span>
-</span><span id="line-48"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get plot of X-ray Photoelectron Spectrum</span>
-</span><span id="line-49">
-</span><span id="line-50"><span class="sd">        Returns:</span>
-</span><span id="line-51"><span class="sd">            (Figure): Matplotlib Figure object containing plot data</span>
-</span><span id="line-52"><span class="sd">        &quot;&quot;&quot;</span>
-</span><span id="line-53">        <span class="c1"># TODO: Add option to include peak identification data</span>
-</span><span id="line-54">        <span class="c1"># TODO: Add option for different backend including plotly for interactivity</span>
-</span><span id="line-55">        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">binding_energies</span>
-</span><span id="line-56">        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensities</span>
-</span><span id="line-57">
-</span><span id="line-58">        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
-</span><span id="line-59">        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#348ABD&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-</span><span id="line-60">        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Binding Energy [eV]&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
-</span><span id="line-61">        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Intensity&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
-</span><span id="line-62">
-</span><span id="line-63">        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;#E0E0E0&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
-</span><span id="line-64">        <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;major&quot;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-</span><span id="line-65">
-</span><span id="line-66">        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
-</span><span id="line-67">        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</span><span id="line-68">        <span class="k">return</span> <span class="n">fig</span></div>
+</span><span id="line-49">    <span class="k">def</span><span class="w"> </span><span class="nf">get_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Figure</span><span class="p">:</span>
+</span><span id="line-50"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Get plot of X-ray Photoelectron Spectrum</span>
+</span><span id="line-51">
+</span><span id="line-52"><span class="sd">        Returns:</span>
+</span><span id="line-53"><span class="sd">            (Figure): Matplotlib Figure object containing plot data</span>
+</span><span id="line-54"><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="line-55">        <span class="c1"># TODO: Add option to include peak identification data</span>
+</span><span id="line-56">        <span class="c1"># TODO: Add option for different backend including plotly for interactivity</span>
+</span><span id="line-57">        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">binding_energies</span>
+</span><span id="line-58">        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensities</span>
+</span><span id="line-59">
+</span><span id="line-60">        <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+</span><span id="line-61">        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#348ABD&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+</span><span id="line-62">        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Binding Energy [eV]&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+</span><span id="line-63">        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Intensity&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+</span><span id="line-64">
+</span><span id="line-65">        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">color</span><span class="o">=</span><span class="s2">&quot;#E0E0E0&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+</span><span id="line-66">        <span class="n">ax</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;major&quot;</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</span><span id="line-67">
+</span><span id="line-68">        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+</span><span id="line-69">        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</span><span id="line-70">        <span class="k">return</span> <span class="n">fig</span></div>
 </div>
 
 </span></code></pre></div>

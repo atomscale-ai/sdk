@@ -1,0 +1,31 @@
+﻿atomscale.results.embeddings
+============================
+
+.. automodule:: atomscale.results.embeddings
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+      :toctree:
+      :template: custom-class-template.rst
+   
+      EmbeddingsResult
+   
+   
+
+   
+   
+   
+
+
+

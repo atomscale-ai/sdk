@@ -93,6 +93,7 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -105,6 +106,7 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -156,7 +158,9 @@
 <li><p><strong>intensities</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – List of intensity values.</p></li>
 <li><p><strong>predicted_composition</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>float</em><em>]</em>) – Mapping between element symbols and
 predicted fractional composition values.</p></li>
-<li><p><strong>detected_peaks</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>float</em><em> | </em><em>str</em><em>]</em>) – Mapping with peak transition labels.</p></li>
+<li><p><strong>detected_peaks</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>float</em><em> | </em><em>str</em><em>]</em>) – Mapping from detected peak transition labels
+(e.g. “C 1s”, “O 1s”) to each peak’s binding energy position in eV, or to a string
+annotation of that peak.</p></li>
 <li><p><strong>elements_manually_set</strong> (<em>bool</em>) – Whether the elements represented in the predicted composition
 were manually specified by the user.</p></li>
 <li><p><strong>collected_datetime</strong> (<em>str</em><em> | </em><em>None</em>) – Datetime when the data was collected.</p></li>
@@ -176,7 +180,9 @@ were manually specified by the user.</p></li>
 <li><p><strong>intensities</strong> (<em>list</em><em>[</em><em>float</em><em>]</em>) – List of intensity values.</p></li>
 <li><p><strong>predicted_composition</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>float</em><em>]</em>) – Mapping between element symbols and
 predicted fractional composition values.</p></li>
-<li><p><strong>detected_peaks</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>float</em><em> | </em><em>str</em><em>]</em>) – Mapping with peak transition labels.</p></li>
+<li><p><strong>detected_peaks</strong> (<em>dict</em><em>[</em><em>str</em><em>, </em><em>float</em><em> | </em><em>str</em><em>]</em>) – Mapping from detected peak transition labels
+(e.g. “C 1s”, “O 1s”) to each peak’s binding energy position in eV, or to a string
+annotation of that peak.</p></li>
 <li><p><strong>elements_manually_set</strong> (<em>bool</em>) – Whether the elements represented in the predicted composition
 were manually specified by the user.</p></li>
 <li><p><strong>collected_datetime</strong> (<em>str</em><em> | </em><em>None</em>) – Datetime when the data was collected.</p></li>

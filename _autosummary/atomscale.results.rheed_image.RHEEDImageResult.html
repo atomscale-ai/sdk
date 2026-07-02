@@ -93,6 +93,7 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -105,6 +106,7 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -194,7 +196,7 @@
 <td><p>Get the radius of the zeroth order Laue zone.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pattern_dataframe</span></code>([extra_data, ...])</p></td>
-<td><p>Featurize the RHEED image collection into a dataframe of node features and edge features.</p></td>
+<td><p>Featurize this RHEED image into a DataFrame of per-node features.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_plot</span></code>([show_mask, show_spot_nodes, ...])</p></td>
 <td><p>Get diffraction pattern image with optional overlays</p></td>
@@ -236,8 +238,8 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>show_mask</strong> (<em>bool</em>) – Whether to show mask overlay of identified pattern. Defaults to True.</p></li>
 <li><p><strong>show_spot_nodes</strong> (<em>bool</em>) – Whether to show identified diffraction node overlays. Defaults to True.</p></li>
-<li><p><strong>symmetrize</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>)</p></li>
-<li><p><strong>alpha</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>)</p></li>
+<li><p><strong>symmetrize</strong> (<em>bool</em>) – Whether to mirror the pattern across the vertical axis before drawing overlays. Defaults to False.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Opacity of the mask overlay, from 0 (transparent) to 1 (opaque). Defaults to 0.2.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -265,18 +267,19 @@ vertical axis before the Laue zone is searched for.</p>
 <dl class="py method">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">get_pattern_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symmetrize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_as_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/results/rheed_image.html#RHEEDImageResult.get_pattern_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Featurize the RHEED image collection into a dataframe of node features and edge features.</p>
+<dd><p>Featurize this RHEED image into a DataFrame of per-node features.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>extra_data</strong> (<em>dict</em><em> | </em><em>None</em>) – Dictionary containing field names and values of extra data to be included in the DataFrame object.
 Defaults to None.</p></li>
 <li><p><strong>symmetrize</strong> (<em>bool</em>) – Whether to symmetrize the data across the vertical axis. Defaults to False.</p></li>
-<li><p><strong>return_as_features</strong> (<em>bool</em>) – Whether to return a feature-foward version of the DataFrame. Defaults to False.</p></li>
+<li><p><strong>return_as_features</strong> (<em>bool</em>) – When True, return a wide feature table with one row per image and
+one column per (feature, node) pair; when False, return the raw per-node rows. Defaults to False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Pandas DataFrame object of RHEED node and edge features.</p>
+<dd class="field-even"><p>Pandas DataFrame of per-node features.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>(DataFrame)</p>

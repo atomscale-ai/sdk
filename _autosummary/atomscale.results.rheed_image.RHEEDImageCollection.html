@@ -93,6 +93,7 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -105,6 +106,7 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
@@ -188,7 +190,7 @@ Defaults to None.</p></li>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pattern_dataframe</span></code>([streamline, ...])</p></td>
-<td><p>Featurize the RHEED image collection into a dataframe of node features and edge features.</p></td>
+<td><p>Featurize the RHEED image collection into a DataFrame of per-node features across all images.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code>(file_path)</p></td>
 <td><p>Loads a class from a provided json file.</p></td>
@@ -234,10 +236,14 @@ Defaults to None.</p></li>
 features across RHEED patterns, based on relative position to the center feature.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Pandas DataFrame object with aligned RHEED fingerprint data</p>
+<dd class="field-odd"><p><dl class="simple">
+<dt>A new collection whose RHEED fingerprints have had their nodes</dt><dd><p>relabeled so that matching scattering features share the same node ID across images.</p>
+</dd>
+</dl>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>(tuple[DataFrame, list[RHEEDImageResult])</p>
+<dd class="field-even"><p>(RHEEDImageCollection)</p>
 </dd>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -250,19 +256,20 @@ features across RHEED patterns, based on relative position to the center feature
 <dl class="py method">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">get_pattern_dataframe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">streamline</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symmetrize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_as_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/atomscale/results/rheed_image.html#RHEEDImageCollection.get_pattern_dataframe"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Featurize the RHEED image collection into a dataframe of node features and edge features.</p>
+<dd><p>Featurize the RHEED image collection into a DataFrame of per-node features across all images.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>streamline</strong> (<em>bool</em>) – Whether to streamline the DataFrame object and remove null values. Defaults to True.</p></li>
 <li><p><strong>normalize</strong> (<em>bool</em>) – Whether to min/max normalize the feature data across all images. Defaults to True.</p></li>
-<li><p><strong>symmetrize</strong> (<em>bool</em>) – Whether to symmetrize the RHEEED images and segmented patterns about the vertical axis before
+<li><p><strong>symmetrize</strong> (<em>bool</em>) – Whether to symmetrize the RHEED images and segmented patterns about the vertical axis before
 obtaining the DataFrame representation. Defaults to False.</p></li>
-<li><p><strong>return_as_features</strong> (<em>bool</em>) – Whether to return the final feature-forward DataFrame. Defaults to True.</p></li>
+<li><p><strong>return_as_features</strong> (<em>bool</em>) – When True, return a wide feature table (one column per feature/node);
+when False, return the raw per-node rows. Defaults to True.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Pandas DataFrame object of RHEED node and edge features.</p>
+<dd class="field-even"><p>Pandas DataFrame of per-node features across all images.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>(DataFrame)</p>

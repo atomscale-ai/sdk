@@ -1,0 +1,40 @@
+atomscale.results.embeddings.EmbeddingsResult
+=============================================
+
+.. currentmodule:: atomscale.results.embeddings
+
+.. autoclass:: EmbeddingsResult
+   :members:
+   :show-inheritance:
+   :inherited-members:
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~EmbeddingsResult.__init__
+      ~EmbeddingsResult.as_dict
+      ~EmbeddingsResult.from_api
+      ~EmbeddingsResult.from_dict
+      ~EmbeddingsResult.load
+      ~EmbeddingsResult.save
+      ~EmbeddingsResult.to_json
+      ~EmbeddingsResult.unsafe_hash
+      ~EmbeddingsResult.validate_monty_v1
+      ~EmbeddingsResult.validate_monty_v2
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~EmbeddingsResult.REDIRECT
+   
+   
