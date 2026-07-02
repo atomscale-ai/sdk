@@ -740,8 +740,10 @@ def _get_rheed_image_result(
     )
 
     # Get mask data
-    mask_data: dict = client._get(sub_url=f"rheed/images/{data_id}/mask")  # type: ignore  #noqa: PGH003
-    mask_rle = mask_data.get("mask_rle")
+    mask_data: dict | None = client._get(sub_url=f"rheed/images/{data_id}/mask")  # type: ignore  #noqa: PGH003
+    # The mask endpoint 404s (→ None) for frames without a segmentation mask,
+    # so guard the .get() rather than dereferencing a possibly-None payload.
+    mask_rle = mask_data.get("mask_rle") if mask_data is not None else None
     mask_array = None
 
     if mask_data is not None and mask_rle is not None:
