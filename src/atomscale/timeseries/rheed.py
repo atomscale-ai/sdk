@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, json_normalize
 
 from atomscale.core import BaseClient
 from atomscale.results import (
@@ -53,6 +53,31 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
     def fetch_raw(self, client: BaseClient, data_id: str, **kwargs) -> Any:
         return client._get(sub_url=f"rheed/timeseries/{data_id}/", params=kwargs)
 
+    @staticmethod
+    def _flatten_low_level_features(df: DataFrame) -> DataFrame:
+        """Expand a ``low_level_features`` column of per-point dicts into columns.
+
+        Each point in the raw series may carry a ``low_level_features`` mapping
+        (present only when the timeseries was fetched with
+        ``include_low_level_features=True`` via
+        :meth:`atomscale.Client.get_rheed_timeseries`). This lifts those keys to
+        top-level columns — nested keys flattened with a dotted path — and drops
+        the original nested column. Points missing the mapping contribute NA for
+        those columns. Existing top-level columns win on name collision so known
+        metrics are never clobbered by a low-level feature of the same name.
+        """
+        normalized = df["low_level_features"].apply(
+            lambda v: v if isinstance(v, dict) else {}
+        )
+        expanded = json_normalize(normalized.tolist())
+        expanded.index = df.index
+
+        collisions = [c for c in expanded.columns if c in df.columns]
+        if collisions:
+            expanded = expanded.drop(columns=collisions)
+
+        return df.drop(columns=["low_level_features"]).join(expanded)
+
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:
             return DataFrame(None)
@@ -63,10 +88,15 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             series = angle_block.get("series") or []
             if not series:
                 continue
+            angle_df = DataFrame(series)
+            # Flatten per-point low-level feature dicts into their own columns
+            # before the all-NA prune below so the pruning applies to them too.
+            if "low_level_features" in angle_df.columns:
+                angle_df = self._flatten_low_level_features(angle_df)
             # Drop columns that are all-NA within this angle block before concat;
             # otherwise pandas issues a FutureWarning about empty/all-NA entries
             # widening the result dtype.
-            angle_df = DataFrame(series).dropna(axis=1, how="all")
+            angle_df = angle_df.dropna(axis=1, how="all")
             angle_df["Angle"] = angle_block["angle"]
             frames.append(angle_df)
 
