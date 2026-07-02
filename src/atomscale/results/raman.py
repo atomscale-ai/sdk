@@ -27,7 +27,7 @@ class RamanResult(MSONable):
             raman_id: Unique identifier for the Raman result.
             raman_shift: Raman shift axis values.
             intensities: Intensity values aligned with `raman_shift`.
-            detected_peaks: Optional mapping of peak labels to positions/metadata.
+            detected_peaks: Optional mapping of detected peak labels (keys) to their values, where each value is either the peak position (a Raman shift value, as a float) or a descriptive string.
             last_updated: Optional last-updated timestamp string.
             collected_datetime: Datetime when the data was collected.
         """

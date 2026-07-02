@@ -26,6 +26,9 @@ class OpticalResult(MSONable):
         Args:
             data_id (UUID | str): Data ID for the entry in the data catalogue.
             timeseries_data (DataFrame): Pandas DataFrame with timeseries data associated with the video.
+            snapshot_image_data (list[OpticalImageResult] | None): Snapshot images captured during the
+                measurement, or None if no snapshots are available. Each item provides its ``.data_id``
+                and its ``.processed_image`` (a PIL Image).
             collected_datetime (str | None): Datetime when the data was collected.
         """
         self.data_id = data_id
