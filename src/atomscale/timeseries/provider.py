@@ -129,8 +129,14 @@ def properties_payload_to_dataframe(
         # Real instrument logs occasionally emit a repeated timestamp for a
         # channel. A duplicate-labeled index cannot be reindexed, which would
         # break the axis=1 concat below, so collapse duplicates (last wins).
+        # Keep ts_ms/kept_rel aligned to the deduped series so the "longest"
+        # election below counts unique points and np.interp gets a non-repeating
+        # x-axis.
         if series.index.has_duplicates:
-            series = series[~series.index.duplicated(keep="last")]
+            mask = ~series.index.duplicated(keep="last")
+            series = series[mask]
+            kept_rel = [r for r, m in zip(kept_rel, mask) if m]
+            ts_ms = np.asarray(series.index, dtype=np.int64)
         series_by_name[name] = series
 
         if len(ts_ms) > longest_len:
