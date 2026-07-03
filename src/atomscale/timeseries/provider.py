@@ -135,7 +135,7 @@ def properties_payload_to_dataframe(
         if series.index.has_duplicates:
             mask = ~series.index.duplicated(keep="last")
             series = series[mask]
-            kept_rel = [r for r, m in zip(kept_rel, mask) if m]
+            kept_rel = [r for r, m in zip(kept_rel, mask, strict=False) if m]
             ts_ms = np.asarray(series.index, dtype=np.int64)
         series_by_name[name] = series
 
