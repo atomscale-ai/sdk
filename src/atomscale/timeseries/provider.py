@@ -125,7 +125,19 @@ def properties_payload_to_dataframe(
 
         ts_ms = _to_int64_ms(kept_ts)
         # Stable order is enforced by the merged index sort below.
-        series_by_name[name] = pd.Series(kept_values, index=ts_ms, name=name)
+        series = pd.Series(kept_values, index=ts_ms, name=name)
+        # Real instrument logs occasionally emit a repeated timestamp for a
+        # channel. A duplicate-labeled index cannot be reindexed, which would
+        # break the axis=1 concat below, so collapse duplicates (last wins).
+        # Keep ts_ms/kept_rel aligned to the deduped series so the "longest"
+        # election below counts unique points and np.interp gets a non-repeating
+        # x-axis.
+        if series.index.has_duplicates:
+            mask = ~series.index.duplicated(keep="last")
+            series = series[mask]
+            kept_rel = [r for r, m in zip(kept_rel, mask, strict=False) if m]
+            ts_ms = np.asarray(series.index, dtype=np.int64)
+        series_by_name[name] = series
 
         if len(ts_ms) > longest_len:
             longest_len = len(ts_ms)
