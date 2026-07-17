@@ -1,15 +1,16 @@
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use numpy::PyArrayMethods;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyModule};
 use reqwest::Client;
 use serde::Serialize;
+use std::num::NonZeroU64;
 use std::sync::Arc;
 use zarrs::{
     array::{
         codec::{array_to_bytes::sharding::ShardingCodecBuilder, bytes_to_bytes::zstd::ZstdCodec},
-        ArrayBuilder, DataType, FillValue,
+        data_type, ArrayBuilder,
     },
     storage::store::MemoryStore,
 };
@@ -42,14 +43,14 @@ pub struct FrameChunkMetadata {
 pub fn numpy_frames_to_flat(obj: Bound<PyAny>) -> PyResult<(Vec<u8>, usize, usize, usize)> {
     let py = obj.py();
 
-    // downcast() returns &Bound<...>; clone it to get Bound<...>.
-    let arr_u8: Bound<PyArrayDyn<u8>> = if let Ok(a) = obj.downcast::<PyArrayDyn<u8>>() {
+    // cast() returns &Bound<...>; clone it to get Bound<...>.
+    let arr_u8: Bound<PyArrayDyn<u8>> = if let Ok(a) = obj.cast::<PyArrayDyn<u8>>() {
         a.clone()
     } else {
         let np = PyModule::import(py, "numpy")?;
         let a = np.getattr("asarray")?.call1((obj,))?;
         let a = a.call_method1("astype", ("uint8",))?;
-        a.downcast::<PyArrayDyn<u8>>()?.clone()
+        a.cast::<PyArrayDyn<u8>>()?.clone()
     };
 
     let ro: PyReadonlyArrayDyn<u8> = arr_u8.readonly();
@@ -105,25 +106,32 @@ pub fn package_to_zarr_bytes(frames_flat: &[u8], n: usize, h: usize, w: usize) -
         return Err(anyhow!("flat len {} != N*H*W {}", frames_flat.len(), need));
     }
 
+    // zarrs 0.23 chunk shapes are `Vec<NonZeroU64>`. All dims are > 0 here (a
+    // zero dim would force `need == 0` and mismatch a non-empty buffer above),
+    // but convert defensively rather than unwrap.
+    let to_nonzero = |x: usize| {
+        NonZeroU64::new(x as u64).ok_or_else(|| anyhow!("zarr chunk dimension must be non-zero"))
+    };
+    let subchunk_shape: Vec<NonZeroU64> = vec![to_nonzero(1)?, to_nonzero(h)?, to_nonzero(w)?];
+
     let store = Arc::new(MemoryStore::new());
+    // ArrayBuilder::new arg order in 0.23: (shape, chunk_grid, data_type, fill_value).
     let arr = ArrayBuilder::new(
         vec![n as u64, h as u64, w as u64],
-        DataType::UInt8,
-        vec![n as u64, h as u64, w as u64]
-            .try_into()
-            .context("chunk grid")?,
-        FillValue::from(0u8),
+        vec![n as u64, h as u64, w as u64],
+        data_type::uint8(),
+        0u8,
     )
     .array_to_bytes_codec(
         // Lower compression for quick tests; bump to 9 if desired.
-        ShardingCodecBuilder::new(vec![1u64, h as u64, w as u64].try_into()?)
+        ShardingCodecBuilder::new(subchunk_shape, &data_type::uint8())
             .bytes_to_bytes_codecs(vec![Arc::new(ZstdCodec::new(3, false))])
             .build_arc(),
     )
     .build(store, "/frames")?;
 
     arr.store_metadata()?;
-    arr.store_chunk_elements(&[0, 0, 0], frames_flat)?;
+    arr.store_chunk(&[0, 0, 0], frames_flat)?;
     arr.retrieve_encoded_chunk(&[0, 0, 0])?
         .ok_or_else(|| anyhow!("missing encoded chunk"))
 }
