@@ -957,6 +957,66 @@ class Client(BaseClient):
             non_timeseries=non_timeseries,
         )
 
+    def get_physical_sample_timeseries(
+        self,
+        physical_sample_id: str,
+        *,
+        property_name: str | None = None,
+        as_dataframe: bool = True,
+    ) -> DataFrame | list[dict]:
+        """Fetch a physical sample's derived timeseries results.
+
+        These are per-physical-sample timeseries produced by platform pipelines (one
+        latest result per property), distinct from the per-data-entry RHEED / metrology
+        timeseries. The composition-ridge pipeline writes
+        ``property_name="composition_metric"`` (sign convention: ``+`` = Ti-rich,
+        ``-`` = Ba-rich); ``real_time_seconds`` is run-relative growth time.
+
+        Args:
+            physical_sample_id: Physical sample UUID.
+            property_name: If set, return only this property (e.g.
+                ``"composition_metric"``). ``None`` (default) returns every property.
+            as_dataframe: If True (default) return a long DataFrame with columns
+                ``["property_name", "real_time_seconds", "value", "result_id",
+                "last_updated"]`` (one row per time-point). If False, return the raw
+                list of property dicts as the API delivered them.
+
+        Returns:
+            DataFrame | list[dict]: Matching timeseries records. Empty (with the
+            documented columns) when the sample has no such results.
+        """
+        payload: dict | None = self._get(  # type: ignore[assignment]
+            sub_url=f"physical_samples/{physical_sample_id}/timeseries/",
+        )
+        props: list[dict] = (payload or {}).get("properties", [])
+        if property_name is not None:
+            props = [p for p in props if p.get("property_name") == property_name]
+        if not as_dataframe:
+            return props
+        rows = [
+            {
+                "property_name": p.get("property_name"),
+                "real_time_seconds": _t,
+                "value": _v,
+                "result_id": p.get("result_id"),
+                "last_updated": p.get("last_updated"),
+            }
+            for p in props
+            for _t, _v in zip(
+                p.get("real_time_seconds") or [], p.get("property_values") or []
+            )
+        ]
+        return DataFrame(
+            rows,
+            columns=[
+                "property_name",
+                "real_time_seconds",
+                "value",
+                "result_id",
+                "last_updated",
+            ],
+        )
+
     def get_project(
         self,
         project_id: str,
