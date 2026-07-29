@@ -1053,8 +1053,8 @@ class Client(BaseClient):
                 xps_id=result.get("xps_id"),
                 binding_energies=result.get("binding_energies", []),
                 intensities=result.get("intensities", []),
-                predicted_composition=result.get("predicted_composition", {}),
-                detected_peaks=result.get("detected_peaks", {}),
+                predicted_composition=result.get("predicted_composition") or {},
+                detected_peaks=result.get("detected_peaks") or [],
                 elements_manually_set=bool(result.get("set_elements", False)),
                 collected_datetime=collected_dt,
             )
