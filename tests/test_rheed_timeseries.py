@@ -182,3 +182,131 @@ def test_get_rheed_timeseries_defaults(client, monkeypatch):
 
     assert captured["params"]["include_low_level_features"] is False
     assert captured["params"]["property_names"] is None
+
+
+# --------------------------------------------------------------------------
+# Per-frame mask attachment.
+# --------------------------------------------------------------------------
+
+
+def _ts_df(provider, frame_numbers):
+    """Build a small timeseries DataFrame indexed by (Angle, Frame Number)."""
+    raw = {
+        "series_by_angle": [
+            {
+                "angle": 0.0,
+                "series": [
+                    {"frame_number": fn, "specular_intensity": float(fn)}
+                    for fn in frame_numbers
+                ],
+            }
+        ]
+    }
+    return provider.to_dataframe(raw)
+
+
+def _mask_row(frame_number: int) -> dict:
+    return {
+        "data_id": "video-1",
+        "processed_data_id": "proc-1",
+        "frame_number": frame_number,
+        "mask_rle": f"rle-{frame_number}",
+        "mask_height": 6,
+        "mask_width": 5,
+    }
+
+
+def test_attach_frame_masks_sparse_coverage(provider):
+    """Masks join on Frame Number; frames without a mask get NA."""
+    df = _ts_df(provider, [0, 1, 2, 3])
+    out = provider.attach_frame_masks(df, [_mask_row(0), _mask_row(2)])
+
+    assert list(out.index.names) == ["Angle", "Frame Number"]
+    assert set(provider.MASK_COLS).issubset(out.columns)
+    by_frame = out["mask_rle"].groupby("Frame Number").first()
+    assert by_frame[0] == "rle-0"
+    assert by_frame[2] == "rle-2"
+    assert by_frame[1] != by_frame[1]  # NaN
+    assert by_frame[3] != by_frame[3]  # NaN
+    # Height/width carried through for the populated frames.
+    assert out.xs(0, level="Frame Number")["mask_width"].iloc[0] == 5
+
+
+def test_attach_frame_masks_empty_adds_all_na_columns(provider):
+    """No mask artifact → columns still present, all NA."""
+    df = _ts_df(provider, [0, 1])
+    out = provider.attach_frame_masks(df, [])
+
+    assert set(provider.MASK_COLS).issubset(out.columns)
+    assert out["mask_rle"].isna().all()
+    assert list(out.index.names) == ["Angle", "Frame Number"]
+
+
+def test_attach_frame_masks_no_frame_axis_passthrough(provider):
+    """A DataFrame with no Frame Number axis is returned unchanged."""
+    df = DataFrame({"a": [1, 2]})
+    out = provider.attach_frame_masks(df, [_mask_row(0)])
+    assert "mask_rle" not in out.columns
+    assert out.equals(df)
+
+
+def test_attach_frame_masks_reattach_no_duplicate_columns(provider):
+    """Re-attaching replaces mask columns rather than suffixing them."""
+    df = _ts_df(provider, [0, 1])
+    once = provider.attach_frame_masks(df, [_mask_row(0)])
+    twice = provider.attach_frame_masks(once, [_mask_row(0), _mask_row(1)])
+
+    assert list(twice.columns).count("mask_rle") == 1
+    assert twice["mask_rle"].groupby("Frame Number").first()[1] == "rle-1"
+
+
+def test_get_rheed_timeseries_include_masks(client, monkeypatch):
+    """include_masks=True fetches masks and merges them into the DataFrame."""
+    captured: list[str] = []
+
+    def fake_get(sub_url, params=None, **kwargs):
+        captured.append(sub_url)
+        if sub_url.endswith("/frame_masks"):
+            return [_mask_row(1), _mask_row(2)]
+        return {
+            "series_by_angle": [
+                {
+                    "angle": 0.0,
+                    "series": [
+                        {"frame_number": 1, "specular_intensity": 100.0},
+                        {"frame_number": 2, "specular_intensity": 110.0},
+                    ],
+                }
+            ]
+        }
+
+    monkeypatch.setattr(client, "_get", fake_get)
+
+    df = client.get_rheed_timeseries("video-1", include_masks=True)
+
+    assert "rheed/timeseries/video-1/" in captured
+    assert "rheed/images/video-1/frame_masks" in captured
+    assert "mask_rle" in df.columns
+    assert df["mask_rle"].groupby("Frame Number").first().to_dict() == {
+        1: "rle-1",
+        2: "rle-2",
+    }
+
+
+def test_get_rheed_timeseries_without_masks_makes_no_mask_call(client, monkeypatch):
+    """Default (include_masks=False) must not hit the frame_masks endpoint."""
+    seen: list[str] = []
+
+    def fake_get(sub_url, params=None, **kwargs):
+        seen.append(sub_url)
+        return {
+            "series_by_angle": [
+                {"angle": 0.0, "series": [{"frame_number": 1, "spot_count": 3}]}
+            ]
+        }
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    df = client.get_rheed_timeseries("video-1")
+
+    assert not any(s.endswith("/frame_masks") for s in seen)
+    assert "mask_rle" not in df.columns

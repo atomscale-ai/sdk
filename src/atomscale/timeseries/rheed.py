@@ -49,6 +49,8 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         "composition_metric",
     ]
     INDEX_COLS: Sequence[str] = ["Angle", "Frame Number"]
+    # Columns added to the timeseries DataFrame when per-frame masks are attached.
+    MASK_COLS: Sequence[str] = ["mask_rle", "mask_height", "mask_width"]
 
     def fetch_raw(self, client: BaseClient, data_id: str, **kwargs) -> Any:
         return client._get(sub_url=f"rheed/timeseries/{data_id}/", params=kwargs)
@@ -118,6 +120,46 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             df_all = df_all.set_index(idx_cols)
 
         return df_all
+
+    @classmethod
+    def attach_frame_masks(
+        cls, df: DataFrame, mask_rows: Sequence[Mapping[str, Any]]
+    ) -> DataFrame:
+        """Attach per-frame RLE segmentation masks to a RHEED timeseries DataFrame.
+
+        Joins each mask row onto the timeseries row(s) with the matching absolute
+        frame number, adding ``mask_rle`` / ``mask_height`` / ``mask_width`` columns
+        (see :data:`MASK_COLS`). ``mask_rows`` are the raw rows returned by
+        :meth:`atomscale.Client.get_frame_masks` (each with ``frame_number``,
+        ``mask_rle``, ``mask_height``, ``mask_width``).
+
+        Coverage is sparse — masks exist only for featurized frames — so timeseries
+        rows whose frame has no mask get NA in the mask columns. When ``mask_rows``
+        is empty (no mask artifact for the video), the columns are still added and
+        are all-NA, so a caller that asked for masks always gets the columns.
+
+        Returns ``df`` unchanged (no mask columns) when it has no ``Frame Number``
+        axis to key on, since masks cannot be aligned without it.
+        """
+        has_frame_axis = "Frame Number" in (df.index.names or []) or (
+            "Frame Number" in df.columns
+        )
+        if df.empty or not has_frame_axis:
+            return df
+
+        cols = ["frame_number", *cls.MASK_COLS]
+        mask_df = (
+            DataFrame(list(mask_rows), columns=cols)
+            .rename(columns={"frame_number": "Frame Number"})
+            .set_index("Frame Number")
+        )
+
+        # Drop any pre-existing mask columns so a re-attach doesn't create
+        # duplicate/suffixed columns via the join.
+        clashing = [c for c in cls.MASK_COLS if c in df.columns]
+        base = df.drop(columns=clashing) if clashing else df
+
+        return base.join(mask_df, on="Frame Number")
 
     def snapshot_url(self, data_id: str) -> str:
         return f"data_entries/video_single_frames/{data_id}"

@@ -1,13 +1,15 @@
 from io import BytesIO
 
+import numpy as np
 import pytest
 from pandas import DataFrame
 from PIL import Image as PILImage
 from PIL.Image import Image
+from pycocotools import mask as mask_util
 
 from atomscale import Client
 from atomscale.results import RHEEDImageResult
-from atomscale.results.rheed_image import _get_rheed_image_result
+from atomscale.results.rheed_image import _get_rheed_image_result, decode_mask_rle
 
 from .conftest import ResultIDs
 
@@ -249,3 +251,110 @@ def test_get_frame_no_frames_returns_none(monkeypatch):
     unit_client = Client(api_key="key_test", endpoint="http://example.com/")
     monkeypatch.setattr(unit_client, "_get", lambda *a, **k: None)
     assert unit_client.get_frame("video-1") is None
+
+
+# --------------------------------------------------------------------------
+# Unit tests (no live API) for per-frame mask fetching / decoding.
+# --------------------------------------------------------------------------
+
+
+def _mask_row(frame_number: int, height: int = 6, width: int = 5) -> dict:
+    """Build a frame-mask row with a real COCO RLE counts string (as JSON str)."""
+    mask = np.zeros((height, width), dtype=np.uint8)
+    # A small filled block so the decoded mask is non-trivial and frame-specific.
+    mask[1 : 1 + (frame_number % height or 1), 0:2] = 1
+    counts = mask_util.encode(np.asfortranarray(mask))["counts"].decode("utf-8")
+    return {
+        "data_id": "video-1",
+        "processed_data_id": "proc-1",
+        "frame_number": frame_number,
+        "mask_rle": counts,
+        "mask_height": height,
+        "mask_width": width,
+    }
+
+
+def test_decode_mask_rle_roundtrips():
+    row = _mask_row(3)
+    mask = decode_mask_rle(row["mask_rle"], row["mask_height"], row["mask_width"])
+    assert mask.shape == (row["mask_height"], row["mask_width"])
+    assert set(np.unique(mask)).issubset({0, 1})
+    assert mask.sum() > 0
+
+
+def test_get_frame_masks_returns_raw_rows(monkeypatch):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    rows = [_mask_row(0), _mask_row(5)]
+    captured: dict = {}
+
+    def fake_get(sub_url, params=None, **kwargs):
+        captured["sub_url"] = sub_url
+        captured["params"] = params
+        return rows
+
+    monkeypatch.setattr(unit_client, "_get", fake_get)
+
+    out = unit_client.get_frame_masks("video-1")
+
+    assert out is rows  # raw rows passed through untouched
+    assert captured["sub_url"] == "rheed/images/video-1/frame_masks"
+    # to_frame=None → whole video via the clamp sentinel
+    assert captured["params"]["from"] == 0
+    assert captured["params"]["to"] == 2**31 - 1
+
+
+def test_get_frame_masks_explicit_range(monkeypatch):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    captured: dict = {}
+
+    def fake_get(sub_url, params=None, **kwargs):  # noqa: ARG001
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(unit_client, "_get", fake_get)
+
+    unit_client.get_frame_masks("video-1", from_frame=10, to_frame=200)
+    assert captured["params"] == {"from": 10, "to": 200}
+
+
+def test_get_frame_masks_decode(monkeypatch):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    rows = [_mask_row(0), _mask_row(7)]
+    monkeypatch.setattr(unit_client, "_get", lambda *a, **k: rows)
+
+    masks = unit_client.get_frame_masks("video-1", decode=True)
+
+    assert isinstance(masks, dict)
+    assert set(masks) == {0, 7}
+    for row in rows:
+        arr = masks[row["frame_number"]]
+        assert arr.shape == (row["mask_height"], row["mask_width"])
+        expected = decode_mask_rle(
+            row["mask_rle"], row["mask_height"], row["mask_width"]
+        )
+        assert np.array_equal(arr, expected)
+
+
+def test_get_frame_masks_no_artifact_returns_empty(monkeypatch):
+    """A 404 on the frame-mask endpoint (→ _get returns None) yields empty."""
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    monkeypatch.setattr(unit_client, "_get", lambda *a, **k: None)
+
+    assert unit_client.get_frame_masks("video-1") == []
+    assert unit_client.get_frame_masks("video-1", decode=True) == {}
+
+
+@pytest.mark.parametrize(
+    ("from_frame", "to_frame"),
+    [(-1, None), (0, -5), (10, 5)],
+)
+def test_get_frame_masks_invalid_range_raises(monkeypatch, from_frame, to_frame):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    # _get must never be reached when validation fails.
+    monkeypatch.setattr(
+        unit_client,
+        "_get",
+        lambda *a, **k: pytest.fail("_get should not be called on invalid range"),
+    )
+    with pytest.raises(ValueError):  # noqa: PT011
+        unit_client.get_frame_masks("video-1", from_frame=from_frame, to_frame=to_frame)
