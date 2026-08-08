@@ -161,6 +161,29 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
 
         return base.join(mask_df, on="Frame Number")
 
+    @staticmethod
+    def frame_number_bounds(df: DataFrame) -> tuple[int, int] | None:
+        """Inclusive ``(min, max)`` absolute frame numbers present in ``df``.
+
+        Reads the ``Frame Number`` axis (index level or column). Returns ``None``
+        when the DataFrame is empty or has no frame-number axis, so callers can fall
+        back to a whole-video fetch. Used to scope a per-frame mask request to just
+        the frames a (possibly windowed via ``last_n`` / ``elapsed_seconds``)
+        timeseries actually spans, rather than fetching the whole video's masks.
+        """
+        if df.empty:
+            return None
+        if "Frame Number" in (df.index.names or []):
+            values = df.index.get_level_values("Frame Number")
+        elif "Frame Number" in df.columns:
+            values = df["Frame Number"]
+        else:
+            return None
+        values = values.dropna()
+        if len(values) == 0:
+            return None
+        return int(values.min()), int(values.max())
+
     def snapshot_url(self, data_id: str) -> str:
         return f"data_entries/video_single_frames/{data_id}"
 

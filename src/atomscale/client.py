@@ -715,10 +715,12 @@ class Client(BaseClient):
             include_masks: When ``True``, fetch the per-frame RHEED segmentation
                 masks (see :meth:`get_frame_masks`) and attach them to the
                 DataFrame as ``mask_rle`` / ``mask_height`` / ``mask_width``
-                columns, joined on the ``Frame Number`` axis. Coverage is sparse
-                (featurized frames only), so rows whose frame has no mask — and all
-                rows when the video has no mask artifact — get NA in those columns.
-                Decode a row's ``mask_rle`` with
+                columns, joined on the ``Frame Number`` axis. Only masks for the
+                frames the returned series spans are fetched, so this respects any
+                ``last_n`` / ``elapsed_seconds`` window rather than pulling the whole
+                video's masks. Coverage is sparse (featurized frames only), so rows
+                whose frame has no mask — and all rows when the video has no mask
+                artifact — get NA in those columns. Decode a row's ``mask_rle`` with
                 :func:`atomscale.results.decode_mask_rle`. Defaults to ``False``.
             last_n: If set, only return the last ``N`` points.
             elapsed_seconds: If set, only return points within the last
@@ -740,11 +742,22 @@ class Client(BaseClient):
             elapsed_seconds=elapsed_seconds,
         )
         ts_df = provider.to_dataframe(raw)
-        # Skip the mask fetch when the series is empty — there are no frames to key
-        # masks onto, so the extra request would be wasted.
-        if include_masks and not ts_df.empty:
-            mask_rows = self.get_frame_masks(data_id, decode=False)
-            ts_df = provider.attach_frame_masks(ts_df, mask_rows)  # type: ignore[arg-type]
+        if include_masks:
+            # Scope the mask fetch to the frame-number range the returned series
+            # actually spans, so a windowed query (``last_n`` / ``elapsed_seconds``)
+            # doesn't pull the whole video's masks only to discard most in the join.
+            # ``None`` bounds mean an empty series or no frame axis to key on, so
+            # there is nothing to fetch or attach.
+            bounds = provider.frame_number_bounds(ts_df)
+            if bounds is not None:
+                first_frame, last_frame = bounds
+                mask_rows = self.get_frame_masks(
+                    data_id,
+                    from_frame=first_frame,
+                    to_frame=last_frame,
+                    decode=False,
+                )
+                ts_df = provider.attach_frame_masks(ts_df, mask_rows)  # type: ignore[arg-type]
         return ts_df
 
     def get_frame(
