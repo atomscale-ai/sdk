@@ -260,6 +260,13 @@ def test_attach_frame_masks_reattach_no_duplicate_columns(provider):
     assert twice["mask_rle"].groupby("Frame Number").first()[1] == "rle-1"
 
 
+def test_frame_number_bounds(provider):
+    assert provider.frame_number_bounds(_ts_df(provider, [3, 7, 5])) == (3, 7)
+    # Empty / no-frame-axis DataFrames yield None so callers can fall back.
+    assert provider.frame_number_bounds(DataFrame(None)) is None
+    assert provider.frame_number_bounds(DataFrame({"a": [1, 2]})) is None
+
+
 def test_get_rheed_timeseries_include_masks(client, monkeypatch):
     """include_masks=True fetches masks and merges them into the DataFrame."""
     captured: list[str] = []
@@ -291,6 +298,39 @@ def test_get_rheed_timeseries_include_masks(client, monkeypatch):
         1: "rle-1",
         2: "rle-2",
     }
+
+
+def test_get_rheed_timeseries_include_masks_scopes_to_window(client, monkeypatch):
+    """Mask fetch is bounded by the (windowed) series' frame range, not the whole video."""
+    mask_params: dict = {}
+
+    def fake_get(sub_url, params=None, **kwargs):
+        if sub_url.endswith("/frame_masks"):
+            mask_params.update(params or {})
+            return [_mask_row(100), _mask_row(102)]
+        # A last_n-style window: only frames 100..102 come back from the series.
+        return {
+            "series_by_angle": [
+                {
+                    "angle": 0.0,
+                    "series": [
+                        {"frame_number": fn, "specular_intensity": float(fn)}
+                        for fn in (100, 101, 102)
+                    ],
+                }
+            ]
+        }
+
+    monkeypatch.setattr(client, "_get", fake_get)
+
+    df = client.get_rheed_timeseries("video-1", include_masks=True, last_n=3)
+
+    # from/to are clamped to the frames the series spans, not 0..(all frames).
+    assert mask_params == {"from": 100, "to": 102}
+    by_frame = df["mask_rle"].groupby("Frame Number").first()
+    assert by_frame[100] == "rle-100"
+    assert by_frame[102] == "rle-102"
+    assert by_frame[101] != by_frame[101]  # NaN — no mask for that frame
 
 
 def test_get_rheed_timeseries_without_masks_makes_no_mask_call(client, monkeypatch):
