@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Any, BinaryIO, Literal
 
 import pandas as pd
-from numpy.typing import NDArray
 from pandas import DataFrame
 from requests.exceptions import RequestException
 
@@ -36,7 +35,6 @@ from atomscale.results import (
     XPSResult,
     XRDResult,
     _get_rheed_image_result,
-    decode_mask_rle,
 )
 from atomscale.results.group import PhysicalSampleResult, ProjectResult
 from atomscale.timeseries.align import align_timeseries
@@ -49,12 +47,6 @@ _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 # Fixed metric identifier the matches endpoint requires. Kept internal so callers
 # don't have to choose one; this value is available for effectively all RHEED data.
 _DEFAULT_SIMILARITY_METRIC = "specular_intensity"
-
-# The frame-mask endpoint requires an inclusive upper frame bound. When a caller
-# asks for the whole video (``to_frame=None``) we send this sentinel — far larger
-# than any real frame count — and let the server clamp it to the artifact's actual
-# range, fetching every featurized frame without a preliminary frame-count lookup.
-_ALL_FRAMES_SENTINEL = 2**31 - 1
 
 
 def _retry_client_call(
@@ -487,45 +479,6 @@ class Client(BaseClient):
             window_span=window_span or 0.0,
         )
 
-    def query_rheed_embeddings(
-        self,
-        data_id: str,
-        *,
-        workflow: str = "rheed_stationary",
-        window_span: float = 60.0,
-        kind: Literal["prototype", "window"] = "prototype",
-        top_k: int = 10,
-    ) -> DataFrame:
-        """Find RHEED data items whose embeddings are most similar to this one.
-
-        Runs k-NN over the embedding index using this item's own vectors and
-        returns the best-matching *other* data items ("find similar growths").
-
-        Args:
-            data_id: Data ID whose vectors seed the query.
-            workflow: Similarity workflow name. Defaults to "rheed_stationary".
-            window_span: Embedding window span in seconds (must match an embedded span).
-            kind: "prototype" (coarse, default) or "window" (finer, more queries).
-            top_k: Max neighbors to return. The backend caps this at 30.
-
-        Returns:
-            DataFrame with columns ``data_id``, ``similarity`` (1 = identical), and
-            locus columns (``source_index``, ``neighbor_index``, ``real_time_seconds``,
-            ``unix_time_ms``), sorted by descending similarity. Empty when this item
-            has no embeddings for the given (workflow, window_span).
-        """
-        from atomscale.similarity.embedding_provider import RHEEDEmbeddingProvider
-
-        provider = RHEEDEmbeddingProvider()
-        params: dict[str, Any] = {
-            "workflow": workflow,
-            "window_span": window_span,
-            "kind": kind,
-            "top_k": top_k,
-        }
-        raw = provider.fetch_neighbors_raw(self, data_id, **params)
-        return provider.neighbors_to_dataframe(raw)
-
     def get_embeddings(
         self,
         data_id: str,
@@ -636,7 +589,6 @@ class Client(BaseClient):
         *,
         property_names: list[str] | None = None,
         include_low_level_features: bool = False,
-        include_masks: bool = False,
         last_n: int | None = None,
         elapsed_seconds: float | None = None,
     ) -> DataFrame:
@@ -656,16 +608,6 @@ class Client(BaseClient):
             include_low_level_features: When ``True``, include the full set of
                 low-level per-point features as additional columns. Defaults to
                 ``False``.
-            include_masks: When ``True``, fetch the per-frame RHEED segmentation
-                masks (see :meth:`get_frame_masks`) and attach them to the
-                DataFrame as ``mask_rle`` / ``mask_height`` / ``mask_width``
-                columns, joined on the ``Frame Number`` axis. Only masks for the
-                frames the returned series spans are fetched, so this respects any
-                ``last_n`` / ``elapsed_seconds`` window rather than pulling the whole
-                video's masks. Coverage is sparse (featurized frames only), so rows
-                whose frame has no mask — and all rows when the video has no mask
-                artifact — get NA in those columns. Decode a row's ``mask_rle`` with
-                :func:`atomscale.results.decode_mask_rle`. Defaults to ``False``.
             last_n: If set, only return the last ``N`` points.
             elapsed_seconds: If set, only return points within the last
                 ``elapsed_seconds`` of the recording.
@@ -673,8 +615,7 @@ class Client(BaseClient):
         Returns:
             DataFrame: The RHEED timeseries, indexed by ``["Angle", "Frame Number"]``
             when available. Low-level feature columns are included when
-            ``include_low_level_features=True``; mask columns when
-            ``include_masks=True``.
+            ``include_low_level_features=True``.
         """
         provider = get_provider("rheed")
         raw = provider.fetch_raw(
@@ -685,24 +626,7 @@ class Client(BaseClient):
             last_n=last_n,
             elapsed_seconds=elapsed_seconds,
         )
-        ts_df = provider.to_dataframe(raw)
-        if include_masks:
-            # Scope the mask fetch to the frame-number range the returned series
-            # actually spans, so a windowed query (``last_n`` / ``elapsed_seconds``)
-            # doesn't pull the whole video's masks only to discard most in the join.
-            # ``None`` bounds mean an empty series or no frame axis to key on, so
-            # there is nothing to fetch or attach.
-            bounds = provider.frame_number_bounds(ts_df)
-            if bounds is not None:
-                first_frame, last_frame = bounds
-                mask_rows = self.get_frame_masks(
-                    data_id,
-                    from_frame=first_frame,
-                    to_frame=last_frame,
-                    decode=False,
-                )
-                ts_df = provider.attach_frame_masks(ts_df, mask_rows)  # type: ignore[arg-type]
-        return ts_df
+        return provider.to_dataframe(raw)
 
     def get_frame(
         self,
@@ -736,81 +660,6 @@ class Client(BaseClient):
         return provider.fetch_snapshot(
             self, {"image_uuid": frame.get("image_uuid"), "metadata": metadata}
         )
-
-    def get_frame_masks(
-        self,
-        data_id: str,
-        *,
-        from_frame: int = 0,
-        to_frame: int | None = None,
-        decode: bool = False,
-    ) -> list[dict[str, Any]] | dict[int, NDArray]:
-        """Fetch per-frame RHEED segmentation masks for a processed video.
-
-        Each *featurized* frame of a processed RHEED video carries a binary
-        segmentation mask of the diffraction pattern, encoded as a COCO
-        run-length-encoding (RLE) ``counts`` string (the same format as the
-        single-frame :meth:`get_frame` mask). ``frame_number`` is the absolute
-        frame index, keyed identically to the processed video frames and the
-        RHEED timeseries ``Frame Number`` axis, so a decoded ``masks[frame_number]``
-        overlays that frame of the video fetched via :meth:`download`.
-
-        Coverage is **sparse**: masks exist only for featurized frames. For
-        stationary videos that is every frame; for rotating / per-azimuth videos
-        it is the sampled subset, so the returned frame numbers are not
-        necessarily contiguous — frames without a mask are simply absent.
-
-        Args:
-            data_id: Data ID of the RHEED **video** (the same id used for the
-                video / timeseries).
-            from_frame: First absolute frame number to fetch, inclusive. Must be
-                ``>= 0``. Defaults to ``0``.
-            to_frame: Last absolute frame number to fetch, inclusive. ``None``
-                (default) fetches through the end of the video (every featurized
-                frame from ``from_frame`` onward).
-            decode: When ``True``, decode each RLE mask into an ``(H, W)`` uint8
-                (0/1) NumPy array and return a dict keyed by frame number. When
-                ``False`` (default), return the raw rows with the RLE string intact.
-
-        Returns:
-            list[dict] | dict[int, NDArray]: When ``decode=False``, a list of row
-            dicts each with ``data_id``, ``processed_data_id``, ``frame_number``,
-            ``mask_rle``, ``mask_height`` and ``mask_width``. When ``decode=True``,
-            a dict ``{frame_number: np.ndarray}`` of decoded ``(H, W)`` uint8 masks.
-            Returns an empty list / dict when the video has no per-frame mask
-            artifact (e.g. a non-RHEED item, or a video processed before per-frame
-            masks were persisted).
-        """
-        if from_frame < 0:
-            raise ValueError(f"from_frame must be >= 0, got {from_frame}")
-        if to_frame is not None and to_frame < 0:
-            raise ValueError(f"to_frame must be >= 0, got {to_frame}")
-        if to_frame is not None and to_frame < from_frame:
-            raise ValueError(
-                f"to_frame ({to_frame}) must be >= from_frame ({from_frame})"
-            )
-
-        resolved_to = _ALL_FRAMES_SENTINEL if to_frame is None else to_frame
-
-        rows: list[dict] | None = self._get(  # type: ignore[assignment]
-            sub_url=f"rheed/images/{data_id}/frame_masks",
-            params={"from": from_frame, "to": resolved_to},
-        )
-
-        # `_get` returns None for a 404 ("No frame-mask artifact for this video")
-        # and for an empty body; both mean "no masks available" here.
-        if not rows:
-            return {} if decode else []
-
-        if not decode:
-            return rows
-
-        return {
-            row["frame_number"]: decode_mask_rle(
-                row["mask_rle"], row["mask_height"], row["mask_width"]
-            )
-            for row in rows
-        }
 
     def iter_poll_similarity_trajectory(
         self,

@@ -22,29 +22,6 @@ from atomscale.core import BaseClient, boxes_overlap, generate_graph_from_nodes
 tp.quiet()
 
 
-def decode_mask_rle(
-    mask_rle: str | bytes, mask_height: int, mask_width: int
-) -> NDArray:
-    """Decode a COCO RLE ``counts`` string into a binary segmentation mask.
-
-    Shared by every RHEED mask endpoint the SDK consumes (single-frame
-    ``rheed/images/{id}/mask`` and per-frame ``rheed/images/{id}/frame_masks``),
-    which all return the same pycocotools ``frString`` format.
-
-    Args:
-        mask_rle (str | bytes): COCO run-length-encoding ``counts`` string
-            (pycocotools ``frString``, column-major / Fortran order).
-        mask_height (int): Mask height ``H`` in pixels.
-        mask_width (int): Mask width ``W`` in pixels.
-
-    Returns:
-        (NDArray): An ``(H, W)`` ``uint8`` array with values 0 or 1.
-    """
-    return mask_util.decode(
-        {"counts": mask_rle, "size": (mask_height, mask_width)}  # type: ignore  # noqa: PGH003
-    )
-
-
 class RHEEDImageResult(MSONable):
     def __init__(
         self,
@@ -774,9 +751,14 @@ def _get_rheed_image_result(
     mask_array = None
 
     if mask_data is not None and mask_rle is not None:
-        mask_array = decode_mask_rle(
-            mask_rle, mask_data["mask_height"], mask_data["mask_width"]
-        )
+        mask_height = mask_data["mask_height"]
+        mask_width = mask_data["mask_width"]
+
+        mask_dict = {
+            "counts": mask_rle,
+            "size": (mask_height, mask_width),
+        }
+        mask_array = mask_util.decode(mask_dict)  # type: ignore  # noqa: PGH003
 
     # Get raw and processed image data
     image_download: dict[str, str] | None = client._get(  # type: ignore  # noqa: PGH003
