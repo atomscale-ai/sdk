@@ -35,12 +35,6 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Install SSL
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update || true
-          sudo apt-get install -y libcurl4-openssl-dev libssl-dev --fix-missing
-
       # Install Rust toolchain on host (macOS/Windows builds run on host)
       - name: Install Rust toolchain (host)
         if: runner.os != 'Linux'
@@ -61,15 +55,17 @@ jobs:
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_MACOS: "arm64"
           CIBW_ARCHS_WINDOWS: "AMD64"
-          # Ensure Rust is present inside manylinux Docker images
+          # Ensure Rust + C build tools are present inside manylinux Docker images.
+          # gcc/make/pkgconfig are needed to compile zstd-sys' bundled C; no OpenSSL
+          # is required now that the Rust extension uses rustls (no native-tls).
           CIBW_BEFORE_ALL_LINUX: |
             set -euo pipefail
             if command -v dnf >/dev/null 2>&1; then
               dnf -y update || true
-              dnf -y install openssl-devel pkgconfig perl make gcc
+              dnf -y install pkgconfig make gcc
             else
               yum -y update || true
-              yum -y install openssl-devel pkgconfig perl make gcc
+              yum -y install pkgconfig make gcc
             fi
 
             # Install Rust inside the manylinux container

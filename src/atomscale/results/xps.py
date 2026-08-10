@@ -17,7 +17,7 @@ class XPSResult(MSONable):
         binding_energies: list[float],
         intensities: list[float],
         predicted_composition: dict[str, float],
-        detected_peaks: dict[str, float | str],
+        detected_peaks: list[dict],
         elements_manually_set: bool,
         collected_datetime: str | None = None,
     ):
@@ -30,7 +30,8 @@ class XPSResult(MSONable):
             intensities (list[float]): List of intensity values.
             predicted_composition (dict[str, float]): Mapping between element symbols and
                 predicted fractional composition values.
-            detected_peaks (dict[str, float | str]): Mapping with peak transition labels.
+            detected_peaks (list[dict]): List of detected peaks, each a dict describing one peak's
+                binding energy, element, and orbital type (plus derived quantities such as peak area).
             elements_manually_set (bool): Whether the elements represented in the predicted composition
                 were manually specified by the user.
             collected_datetime (str | None): Datetime when the data was collected.

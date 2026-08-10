@@ -53,6 +53,31 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
     def fetch_raw(self, client: BaseClient, data_id: str, **kwargs) -> Any:
         return client._get(sub_url=f"rheed/timeseries/{data_id}/", params=kwargs)
 
+    @staticmethod
+    def _flatten_low_level_features(df: DataFrame) -> DataFrame:
+        """Expand a ``low_level_features`` column of per-point dicts into columns.
+
+        Each point in the raw series may carry a ``low_level_features`` mapping
+        (present only when the timeseries was fetched with
+        ``include_low_level_features=True`` via
+        :meth:`atomscale.Client.get_rheed_timeseries`). This lifts those keys to
+        top-level columns — nested keys flattened with a dotted path — and drops
+        the original nested column. Points missing the mapping contribute NA for
+        those columns. Existing top-level columns win on name collision so known
+        metrics are never clobbered by a low-level feature of the same name.
+        """
+        normalized = df["low_level_features"].apply(
+            lambda v: v if isinstance(v, dict) else {}
+        )
+        expanded = json_normalize(normalized.tolist())
+        expanded.index = df.index
+
+        collisions = [c for c in expanded.columns if c in df.columns]
+        if collisions:
+            expanded = expanded.drop(columns=collisions)
+
+        return df.drop(columns=["low_level_features"]).join(expanded)
+
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:
             return DataFrame(None)
@@ -63,10 +88,11 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             series = angle_block.get("series") or []
             if not series:
                 continue
-            # Flatten the nested low_level_features dict (present only when the
-            # request set include_low_level_features) into one column per feature
-            # BEFORE the all-NA drop, so empty low-level columns get pruned too.
-            angle_df = self._expand_low_level_features(DataFrame(series))
+            angle_df = DataFrame(series)
+            # Flatten per-point low-level feature dicts into their own columns
+            # before the all-NA prune below so the pruning applies to them too.
+            if "low_level_features" in angle_df.columns:
+                angle_df = self._flatten_low_level_features(angle_df)
             # Drop columns that are all-NA within this angle block before concat;
             # otherwise pandas issues a FutureWarning about empty/all-NA entries
             # widening the result dtype.
@@ -92,31 +118,6 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             df_all = df_all.set_index(idx_cols)
 
         return df_all
-
-    @staticmethod
-    def _expand_low_level_features(angle_df: DataFrame) -> DataFrame:
-        """Flatten the nested ``low_level_features`` column into one column per
-        feature.
-
-        The backend attaches a ``low_level_features`` dict (e.g.
-        ``{"area_0": ..., "eccentricity_0": ...}``) to each point only when the
-        request set ``include_low_level_features``. Expand it so each feature
-        becomes its own column; missing keys/points become NaN. These columns
-        are not in ``RENAME_MAP``, so they keep their raw backend names.
-        """
-        if "low_level_features" not in angle_df.columns:
-            return angle_df
-        nested = angle_df["low_level_features"]
-        expanded = json_normalize(
-            [v if isinstance(v, dict) else {} for v in nested], max_level=1
-        )
-        expanded.index = angle_df.index
-        angle_df = angle_df.drop(columns=["low_level_features"])
-        # Defensive: never clobber an existing top-level column.
-        new_cols = [c for c in expanded.columns if c not in angle_df.columns]
-        if new_cols:
-            angle_df = concat([angle_df, expanded[new_cols]], axis=1)
-        return angle_df
 
     def snapshot_url(self, data_id: str) -> str:
         return f"data_entries/video_single_frames/{data_id}"

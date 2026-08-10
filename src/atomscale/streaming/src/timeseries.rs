@@ -336,7 +336,7 @@ impl TimeseriesStreamer {
                 PyRuntimeError::new_err(format!("channel name must be a string: {}", e))
             })?;
 
-            let channel_dict = value.downcast::<PyDict>().map_err(|_| {
+            let channel_dict = value.cast::<PyDict>().map_err(|_| {
                 PyRuntimeError::new_err(format!(
                     "channel '{}': expected a dict with 'timestamps', 'values', and optional 'units'",
                     channel_name

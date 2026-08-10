@@ -20,7 +20,6 @@ from pycocotools import mask as mask_util
 from atomscale.core import BaseClient, boxes_overlap, generate_graph_from_nodes
 
 tp.quiet()
-# test comment
 
 
 class RHEEDImageResult(MSONable):
@@ -68,6 +67,8 @@ class RHEEDImageResult(MSONable):
         Args:
             show_mask (bool): Whether to show mask overlay of identified pattern. Defaults to True.
             show_spot_nodes (bool): Whether to show identified diffraction node overlays. Defaults to True.
+            symmetrize (bool): Whether to mirror the pattern across the vertical axis before drawing overlays. Defaults to False.
+            alpha (float): Opacity of the mask overlay, from 0 (transparent) to 1 (opaque). Defaults to 0.2.
 
         Returns:
             (Image): PIL Image object with optional overlays
@@ -196,16 +197,17 @@ class RHEEDImageResult(MSONable):
         symmetrize: bool = False,
         return_as_features: bool = False,
     ) -> pd.DataFrame:
-        """Featurize the RHEED image collection into a dataframe of node features and edge features.
+        """Featurize this RHEED image into a DataFrame of per-node features.
 
         Args:
             extra_data (dict | None): Dictionary containing field names and values of extra data to be included in the DataFrame object.
                 Defaults to None.
             symmetrize (bool): Whether to symmetrize the data across the vertical axis. Defaults to False.
-            return_as_features (bool): Whether to return a feature-foward version of the DataFrame. Defaults to False.
+            return_as_features (bool): When True, return a wide feature table with one row per image and
+                one column per (feature, node) pair; when False, return the raw per-node rows. Defaults to False.
 
         Returns:
-            (DataFrame): Pandas DataFrame object of RHEED node and edge features.
+            (DataFrame): Pandas DataFrame of per-node features.
         """
 
         extra_data = extra_data or {}
@@ -555,7 +557,8 @@ class RHEEDImageCollection(MSONable):
         features across RHEED patterns, based on relative position to the center feature.
 
         Returns:
-            (tuple[DataFrame, list[RHEEDImageResult]): Pandas DataFrame object with aligned RHEED fingerprint data
+            (RHEEDImageCollection): A new collection whose RHEED fingerprints have had their nodes
+                relabeled so that matching scattering features share the same node ID across images.
         """
 
         image_scales = [
@@ -617,17 +620,18 @@ class RHEEDImageCollection(MSONable):
         symmetrize: bool = False,
         return_as_features: bool = True,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
-        """Featurize the RHEED image collection into a dataframe of node features and edge features.
+        """Featurize the RHEED image collection into a DataFrame of per-node features across all images.
 
         Args:
             streamline (bool): Whether to streamline the DataFrame object and remove null values. Defaults to True.
             normalize (bool): Whether to min/max normalize the feature data across all images. Defaults to True.
-            symmetrize (bool): Whether to symmetrize the RHEEED images and segmented patterns about the vertical axis before
+            symmetrize (bool): Whether to symmetrize the RHEED images and segmented patterns about the vertical axis before
                 obtaining the DataFrame representation. Defaults to False.
-            return_as_features (bool): Whether to return the final feature-forward DataFrame. Defaults to True.
+            return_as_features (bool): When True, return a wide feature table (one column per feature/node);
+                when False, return the raw per-node rows. Defaults to True.
 
         Returns:
-            (DataFrame): Pandas DataFrame object of RHEED node and edge features.
+            (DataFrame): Pandas DataFrame of per-node features across all images.
         """
 
         node_feature_cols = [
@@ -740,8 +744,10 @@ def _get_rheed_image_result(
     )
 
     # Get mask data
-    mask_data: dict = client._get(sub_url=f"rheed/images/{data_id}/mask")  # type: ignore  #noqa: PGH003
-    mask_rle = mask_data.get("mask_rle")
+    mask_data: dict | None = client._get(sub_url=f"rheed/images/{data_id}/mask")  # type: ignore  #noqa: PGH003
+    # The mask endpoint 404s (→ None) for frames without a segmentation mask,
+    # so guard the .get() rather than dereferencing a possibly-None payload.
+    mask_rle = mask_data.get("mask_rle") if mask_data is not None else None
     mask_array = None
 
     if mask_data is not None and mask_rle is not None:

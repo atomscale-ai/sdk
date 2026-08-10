@@ -369,7 +369,13 @@ def test_start_polling_thread_stops_with_event(
         if len(seen) == 1:
             first_seen.set()
 
-    stop = start_polling_thread(client, data_id, interval=0.01, on_result=on_result)
+    # Bound the poll count: once SeqProvider is exhausted every poll raises and
+    # is swallowed, so nothing yields and the stop check in the runner is never
+    # reached — an unbounded thread outlives the test and picks up the next
+    # test's monkeypatched provider.
+    stop = start_polling_thread(
+        client, data_id, interval=0.01, on_result=on_result, max_polls=10
+    )
     assert first_seen.wait(timeout=1.0), "did not receive first result in time"
     stop.set()
     time.sleep(0.05)  # allow thread to exit
