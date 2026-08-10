@@ -11,6 +11,7 @@ Reference documentation for modules pulled directly from the source code.
    atomscale.core.client
    atomscale.core.utils
    atomscale.results.embeddings
+   atomscale.results.rheed_embedding
    atomscale.results.rheed_image
    atomscale.results.rheed_video
    atomscale.results.xps
@@ -29,6 +30,7 @@ Reference documentation for modules pulled directly from the source code.
    _autosummary/atomscale.core.client
    _autosummary/atomscale.core.utils
    _autosummary/atomscale.results.embeddings
+   _autosummary/atomscale.results.rheed_embedding
    _autosummary/atomscale.results.rheed_image
    _autosummary/atomscale.results.rheed_video
    _autosummary/atomscale.results.xps
