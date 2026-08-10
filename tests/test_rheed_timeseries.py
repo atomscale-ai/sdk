@@ -1,7 +1,7 @@
 """Unit tests for Client.get_rheed_timeseries and low-level feature flattening."""
 
 import pytest
-from pandas import DataFrame
+from pandas import DataFrame, isna
 
 from atomscale import Client
 from atomscale.timeseries.rheed import RHEEDProvider
@@ -93,7 +93,7 @@ def test_to_dataframe_low_level_features_missing_points(provider):
     assert "feat_a" in df.columns
     values = df["feat_a"].tolist()
     assert values[0] == 1.0
-    assert values[1] != values[1]  # NaN
+    assert isna(values[1])  # NA — no feature for that frame
 
 
 def test_to_dataframe_without_low_level_features_unchanged(provider):
@@ -226,8 +226,8 @@ def test_attach_frame_masks_sparse_coverage(provider):
     by_frame = out["mask_rle"].groupby("Frame Number").first()
     assert by_frame[0] == "rle-0"
     assert by_frame[2] == "rle-2"
-    assert by_frame[1] != by_frame[1]  # NaN
-    assert by_frame[3] != by_frame[3]  # NaN
+    assert isna(by_frame[1])  # NA — no mask for that frame
+    assert isna(by_frame[3])  # NA — no mask for that frame
     # Height/width carried through for the populated frames.
     assert out.xs(0, level="Frame Number")["mask_width"].iloc[0] == 5
 
@@ -330,7 +330,7 @@ def test_get_rheed_timeseries_include_masks_scopes_to_window(client, monkeypatch
     by_frame = df["mask_rle"].groupby("Frame Number").first()
     assert by_frame[100] == "rle-100"
     assert by_frame[102] == "rle-102"
-    assert by_frame[101] != by_frame[101]  # NaN — no mask for that frame
+    assert isna(by_frame[101])  # NA — no mask for that frame
 
 
 def test_get_rheed_timeseries_without_masks_makes_no_mask_call(client, monkeypatch):
