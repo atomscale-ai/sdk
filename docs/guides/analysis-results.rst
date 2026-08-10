@@ -51,6 +51,73 @@ Common columns:
    * - ``cluster_id``
      - Pattern cluster assignment
 
+Low-Level Features
+------------------
+
+RHEED videos expose a larger set of low-level, per-region features (e.g.
+``area_0``, ``eccentricity_0``, ``fwhm_0_3``) beyond the standard columns above.
+Request them with :meth:`~atomscale.client.Client.get_rheed_timeseries`, which
+returns a DataFrame indexed by ``["Angle", "Frame Number"]``:
+
+.. code-block:: python
+
+   df = client.get_rheed_timeseries(data_id, include_low_level_features=True)
+   print(df.filter(like="area").columns)
+
+The low-level columns keep their raw backend names (they are not renamed).
+
+Segmentation Masks
+------------------
+
+Each *featurized* frame of a processed RHEED video carries a binary segmentation
+mask of the diffraction pattern. Attach the masks to the timeseries — aligned on
+the ``Frame Number`` axis, alongside any low-level features — with
+``include_masks``:
+
+.. code-block:: python
+
+   from atomscale.results import decode_mask_rle
+
+   df = client.get_rheed_timeseries(
+       data_id,
+       include_low_level_features=True,
+       include_masks=True,
+   )
+
+   # Mask columns: mask_rle (COCO RLE string), mask_height, mask_width. Coverage
+   # is sparse -- frames without a mask are NA -- so drop those rows first.
+   row = df.dropna(subset=["mask_rle"]).iloc[0]
+   mask = decode_mask_rle(row["mask_rle"], row["mask_height"], row["mask_width"])
+   print(mask.shape)  # (H, W) uint8, values 0/1
+
+Fetch masks on their own — optionally decoded and keyed by absolute frame
+number — with :meth:`~atomscale.client.Client.get_frame_masks`:
+
+.. code-block:: python
+
+   masks = client.get_frame_masks(data_id, decode=True)  # {frame_number: (H, W) array}
+
+Embedding Vectors
+-----------------
+
+The similarity pipeline persists Chronos embedding vectors for RHEED data — the
+*inputs* to similarity matching, as opposed to the derived similarity-vs-time
+trajectory. Fetch them with :meth:`~atomscale.client.Client.get_embeddings`:
+
+.. code-block:: python
+
+   emb = client.get_embeddings(data_id, window_span=60.0, kind="window")
+   print(emb.vectors.shape)  # (n_windows, dimension)
+
+To find the RHEED data items most similar to a given one, run a
+k-nearest-neighbour query over the embedding index with
+:meth:`~atomscale.client.Client.query_rheed_embeddings`:
+
+.. code-block:: python
+
+   neighbours = client.query_rheed_embeddings(data_id, top_k=10)
+   print(neighbours[["data_id", "similarity"]])
+
 Extracted Frames
 ----------------
 
