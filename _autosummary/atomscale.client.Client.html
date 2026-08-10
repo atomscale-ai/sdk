@@ -211,32 +211,38 @@ defaulting to ‘<a class="reference external" href="https://api.atomscale.ai/">
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_frame</span></code>(data_id, *[, frame_index])</p></td>
 <td><p>Fetch a single extracted RHEED frame as a <code class="xref py py-class docutils literal notranslate"><span class="pre">RHEEDImageResult</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_physical_sample</span></code>(physical_sample_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_frame_masks</span></code>(data_id, *[, from_frame, ...])</p></td>
+<td><p>Fetch per-frame RHEED segmentation masks for a processed video.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_physical_sample</span></code>(physical_sample_id, *[, ...])</p></td>
 <td><p>Get all data for a physical sample.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_project</span></code>(project_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_project</span></code>(project_id, *[, ...])</p></td>
 <td><p>Get all data grouped by physical sample for a project.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_rheed_timeseries</span></code>(data_id, *[, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_rheed_timeseries</span></code>(data_id, *[, ...])</p></td>
 <td><p>Fetch the RHEED feature timeseries for a data entry.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_matches</span></code>(source_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_matches</span></code>(source_id, *[, ...])</p></td>
 <td><p>Fetch the top similarity matches for a source data entry.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_trajectory</span></code>(source_id, *[, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_trajectory</span></code>(source_id, *[, ...])</p></td>
 <td><p>Fetch a one-shot similarity trajectory for a source data_id or physical_sample_id.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">iter_poll_similarity_trajectory</span></code>(source_id, *)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">iter_poll_similarity_trajectory</span></code>(source_id, *)</p></td>
 <td><p>Synchronously poll similarity trajectory data, yielding DataFrames.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_growth_instruments</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_growth_instruments</span></code>()</p></td>
 <td><p>List all growth instruments accessible by the user.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_physical_samples</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_physical_samples</span></code>()</p></td>
 <td><p>List physical samples available to the user.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_projects</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_projects</span></code>()</p></td>
 <td><p>List projects available to the user.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">query_rheed_embeddings</span></code>(data_id, *[, ...])</p></td>
+<td><p>Find RHEED data items whose embeddings are most similar to this one.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">search</span></code>([keywords, ...])</p></td>
 <td><p>Search and obtain data catalogue entries</p></td>
@@ -365,6 +371,33 @@ return a list of ChangepointResult objects.</p></li>
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">query_rheed_embeddings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">workflow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'rheed_stationary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_span</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'prototype'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'window'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'prototype'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_k</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.query_rheed_embeddings"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Find RHEED data items whose embeddings are most similar to this one.</p>
+<p>Runs k-NN over the embedding index using this item’s own vectors and
+returns the best-matching <em>other</em> data items (“find similar growths”).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Data ID whose vectors seed the query.</p></li>
+<li><p><strong>workflow</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Similarity workflow name. Defaults to “rheed_stationary”.</p></li>
+<li><p><strong>window_span</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></span>) – Embedding window span in seconds (must match an embedded span).</p></li>
+<li><p><strong>kind</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'prototype'</span></code>, <code class="docutils literal notranslate"><span class="pre">'window'</span></code>]</span>) – “prototype” (coarse, default) or “window” (finer, more queries).</p></li>
+<li><p><strong>top_k</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Max neighbors to return. The backend caps this at 30.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span></p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame with columns <code class="docutils literal notranslate"><span class="pre">data_id</span></code>, <code class="docutils literal notranslate"><span class="pre">similarity</span></code> (1 = identical), and
+locus columns (<code class="docutils literal notranslate"><span class="pre">source_index</span></code>, <code class="docutils literal notranslate"><span class="pre">neighbor_index</span></code>, <code class="docutils literal notranslate"><span class="pre">real_time_seconds</span></code>,
+<code class="docutils literal notranslate"><span class="pre">unix_time_ms</span></code>), sorted by descending similarity. Empty when this item
+has no embeddings for the given (workflow, window_span).</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">get_embeddings</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">workflow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'rheed_stationary'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_span</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kind</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'window'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'prototype'</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'window'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">EmbeddingsResult</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_embeddings"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Fetch embedding vectors for a data entry.</p>
 <dl class="field-list simple">
@@ -423,7 +456,7 @@ source is not found.</p>
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">get_rheed_timeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">property_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_low_level_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elapsed_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_rheed_timeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<span class="sig-name descname"><span class="pre">get_rheed_timeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">property_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_low_level_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_masks</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">elapsed_seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_rheed_timeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Fetch the RHEED feature timeseries for a data entry.</p>
 <p>Unlike <code class="xref py py-meth docutils literal notranslate"><span class="pre">get()</span></code>, which returns only the standard feature set, this
 method can also return the full set of low-level features and filter which
@@ -440,6 +473,16 @@ standard set.</p></li>
 <li><p><strong>include_low_level_features</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – When <code class="docutils literal notranslate"><span class="pre">True</span></code>, include the full set of
 low-level per-point features as additional columns. Defaults to
 <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>include_masks</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – When <code class="docutils literal notranslate"><span class="pre">True</span></code>, fetch the per-frame RHEED segmentation
+masks (see <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_frame_masks()</span></code>) and attach them to the
+DataFrame as <code class="docutils literal notranslate"><span class="pre">mask_rle</span></code> / <code class="docutils literal notranslate"><span class="pre">mask_height</span></code> / <code class="docutils literal notranslate"><span class="pre">mask_width</span></code>
+columns, joined on the <code class="docutils literal notranslate"><span class="pre">Frame</span> <span class="pre">Number</span></code> axis. Only masks for the
+frames the returned series spans are fetched, so this respects any
+<code class="docutils literal notranslate"><span class="pre">last_n</span></code> / <code class="docutils literal notranslate"><span class="pre">elapsed_seconds</span></code> window rather than pulling the whole
+video’s masks. Coverage is sparse (featurized frames only), so rows
+whose frame has no mask — and all rows when the video has no mask
+artifact — get NA in those columns. Decode a row’s <code class="docutils literal notranslate"><span class="pre">mask_rle</span></code> with
+<code class="xref py py-func docutils literal notranslate"><span class="pre">atomscale.results.decode_mask_rle()</span></code>. Defaults to <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
 <li><p><strong>last_n</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – If set, only return the last <code class="docutils literal notranslate"><span class="pre">N</span></code> points.</p></li>
 <li><p><strong>elapsed_seconds</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – If set, only return points within the last
 <code class="docutils literal notranslate"><span class="pre">elapsed_seconds</span></code> of the recording.</p></li>
@@ -448,7 +491,8 @@ low-level per-point features as additional columns. Defaults to
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The RHEED timeseries, indexed by <code class="docutils literal notranslate"><span class="pre">["Angle",</span> <span class="pre">"Frame</span> <span class="pre">Number"]</span></code>
 when available. Low-level feature columns are included when
-<code class="docutils literal notranslate"><span class="pre">include_low_level_features=True</span></code>.</p>
+<code class="docutils literal notranslate"><span class="pre">include_low_level_features=True</span></code>; mask columns when
+<code class="docutils literal notranslate"><span class="pre">include_masks=True</span></code>.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>DataFrame</p>
@@ -474,6 +518,50 @@ selected frame has no image.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>RHEEDImageResult | None</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_frame_masks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">from_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">to_frame</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_frame_masks"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Fetch per-frame RHEED segmentation masks for a processed video.</p>
+<p>Each <em>featurized</em> frame of a processed RHEED video carries a binary
+segmentation mask of the diffraction pattern, encoded as a COCO
+run-length-encoding (RLE) <code class="docutils literal notranslate"><span class="pre">counts</span></code> string (the same format as the
+single-frame <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_frame()</span></code> mask). <code class="docutils literal notranslate"><span class="pre">frame_number</span></code> is the absolute
+frame index, keyed identically to the processed video frames and the
+RHEED timeseries <code class="docutils literal notranslate"><span class="pre">Frame</span> <span class="pre">Number</span></code> axis, so a decoded <code class="docutils literal notranslate"><span class="pre">masks[frame_number]</span></code>
+overlays that frame of the video fetched via <code class="xref py py-meth docutils literal notranslate"><span class="pre">download()</span></code>.</p>
+<p>Coverage is <strong>sparse</strong>: masks exist only for featurized frames. For
+stationary videos that is every frame; for rotating / per-azimuth videos
+it is the sampled subset, so the returned frame numbers are not
+necessarily contiguous — frames without a mask are simply absent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Data ID of the RHEED <strong>video</strong> (the same id used for the
+video / timeseries).</p></li>
+<li><p><strong>from_frame</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – First absolute frame number to fetch, inclusive. Must be
+<code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">0</span></code>. Defaults to <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p></li>
+<li><p><strong>to_frame</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Last absolute frame number to fetch, inclusive. <code class="docutils literal notranslate"><span class="pre">None</span></code>
+(default) fetches through the end of the video (every featurized
+frame from <code class="docutils literal notranslate"><span class="pre">from_frame</span></code> onward).</p></li>
+<li><p><strong>decode</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – When <code class="docutils literal notranslate"><span class="pre">True</span></code>, decode each RLE mask into an <code class="docutils literal notranslate"><span class="pre">(H,</span> <span class="pre">W)</span></code> uint8
+(0/1) NumPy array and return a dict keyed by frame number. When
+<code class="docutils literal notranslate"><span class="pre">False</span></code> (default), return the raw rows with the RLE string intact.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>When <code class="docutils literal notranslate"><span class="pre">decode=False</span></code>, a list of row
+dicts each with <code class="docutils literal notranslate"><span class="pre">data_id</span></code>, <code class="docutils literal notranslate"><span class="pre">processed_data_id</span></code>, <code class="docutils literal notranslate"><span class="pre">frame_number</span></code>,
+<code class="docutils literal notranslate"><span class="pre">mask_rle</span></code>, <code class="docutils literal notranslate"><span class="pre">mask_height</span></code> and <code class="docutils literal notranslate"><span class="pre">mask_width</span></code>. When <code class="docutils literal notranslate"><span class="pre">decode=True</span></code>,
+a dict <code class="docutils literal notranslate"><span class="pre">{frame_number:</span> <span class="pre">np.ndarray}</span></code> of decoded <code class="docutils literal notranslate"><span class="pre">(H,</span> <span class="pre">W)</span></code> uint8 masks.
+Returns an empty list / dict when the video has no per-frame mask
+artifact (e.g. a non-RHEED item, or a video processed before per-frame
+masks were persisted).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[dict] | dict[int, NDArray]</p>
 </dd>
 </dl>
 </dd></dl>

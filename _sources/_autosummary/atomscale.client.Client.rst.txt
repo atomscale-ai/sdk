@@ -26,6 +26,7 @@ atomscale.client.Client
       ~Client.get_changepoints
       ~Client.get_embeddings
       ~Client.get_frame
+      ~Client.get_frame_masks
       ~Client.get_physical_sample
       ~Client.get_project
       ~Client.get_rheed_timeseries
@@ -35,6 +36,7 @@ atomscale.client.Client
       ~Client.list_growth_instruments
       ~Client.list_physical_samples
       ~Client.list_projects
+      ~Client.query_rheed_embeddings
       ~Client.search
       ~Client.start_polling_similarity_trajectory_task
       ~Client.start_polling_similarity_trajectory_thread

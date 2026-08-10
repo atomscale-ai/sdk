@@ -1,0 +1,6 @@
+atomscale.results.rheed\_image.decode\_mask\_rle
+================================================
+
+.. currentmodule:: atomscale.results.rheed_image
+
+.. autofunction:: decode_mask_rle

@@ -29,7 +29,7 @@
 <link href="../_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="atomscale.results.rheed_image.RHEEDImageCollection.html" rel="next" title="atomscale.results.rheed_image.RHEEDImageCollection"/>
+<link href="atomscale.results.rheed_image.decode_mask_rle.html" rel="next" title="atomscale.results.rheed_image.decode_mask_rle"/>
 <link href="atomscale.results.embeddings.EmbeddingsResult.html" rel="prev" title="atomscale.results.embeddings.EmbeddingsResult"/>
 </head>
 <body :class="{ 'overflow-hidden': showSidebar }" class="min-h-screen font-sans antialiased bg-background text-foreground" x-data="{ showSidebar: false, showScrollTop: false }">
@@ -146,6 +146,14 @@
 <section id="atomscale-results-rheed-image">
 <h1>atomscale.results.rheed_image<a class="headerlink" href="#atomscale-results-rheed-image" title="Link to this heading"><span>#</span></a></h1>
 <p>Result objects for RHEED image analysis.</p>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">decode_mask_rle</span></code>(mask_rle, mask_height, ...)</p></td>
+<td><p>Decode a COCO RLE <code class="docutils literal notranslate"><span class="pre">counts</span></code> string into a binary segmentation mask.</p></td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Classes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
@@ -157,6 +165,30 @@
 </tr>
 </tbody>
 </table>
+<dl class="py function">
+<dt class="sig sig-object py">
+<span class="sig-prename descclassname"><span class="pre">atomscale.results.rheed_image.</span></span><span class="sig-name descname"><span class="pre">decode_mask_rle</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask_rle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bytes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_height</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_width</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/atomscale/results/rheed_image.html#decode_mask_rle"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Decode a COCO RLE <code class="docutils literal notranslate"><span class="pre">counts</span></code> string into a binary segmentation mask.</p>
+<p>Shared by every RHEED mask endpoint the SDK consumes (single-frame
+<code class="docutils literal notranslate"><span class="pre">rheed/images/{id}/mask</span></code> and per-frame <code class="docutils literal notranslate"><span class="pre">rheed/images/{id}/frame_masks</span></code>),
+which all return the same pycocotools <code class="docutils literal notranslate"><span class="pre">frString</span></code> format.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mask_rle</strong> (<em>str</em><em> | </em><em>bytes</em>) – COCO run-length-encoding <code class="docutils literal notranslate"><span class="pre">counts</span></code> string
+(pycocotools <code class="docutils literal notranslate"><span class="pre">frString</span></code>, column-major / Fortran order).</p></li>
+<li><p><strong>mask_height</strong> (<em>int</em>) – Mask height <code class="docutils literal notranslate"><span class="pre">H</span></code> in pixels.</p></li>
+<li><p><strong>mask_width</strong> (<em>int</em>) – Mask width <code class="docutils literal notranslate"><span class="pre">W</span></code> in pixels.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>An <code class="docutils literal notranslate"><span class="pre">(H,</span> <span class="pre">W)</span></code> <code class="docutils literal notranslate"><span class="pre">uint8</span></code> array with values 0 or 1.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(NDArray)</p>
+</dd>
+</dl>
+</dd></dl>
 <dl class="py class">
 <dt class="sig sig-object py">
 <span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">atomscale.results.rheed_image.</span></span><span class="sig-name descname"><span class="pre">RHEEDImageResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">UUID</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">processed_data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">UUID</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">processed_image</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Image</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">_ScalarT</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pattern_graph</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Graph</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collected_datetime</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/atomscale/results/rheed_image.html#RHEEDImageResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
@@ -307,8 +339,8 @@ when False, return the raw per-node rows. Defaults to True.</p></li>
       </a>
 </div>
 <div class="ml-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.results.rheed_image.RHEEDImageCollection.html">
-        atomscale.results.rheed_image.RHEEDImageCollection
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.results.rheed_image.decode_mask_rle.html">
+        atomscale.results.rheed_image.decode_mask_rle
         <svg class="ml-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="9 18 15 12 9 6"></polyline>
 </svg>
