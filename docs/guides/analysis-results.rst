@@ -64,13 +64,7 @@ returns a DataFrame indexed by ``["Angle", "Frame Number"]``:
    df = client.get_rheed_timeseries(data_id, include_low_level_features=True)
    print(df.filter(like="area").columns)
 
-The low-level columns keep their raw backend names (they are not renamed). The
-same features can be attached to the full result bundle returned by ``get``:
-
-.. code-block:: python
-
-   analysed = client.get([data_id], include_low_level_features=True)
-   df = analysed[0].timeseries_data
+The low-level columns keep their raw backend names (they are not renamed).
 
 Segmentation Masks
 ------------------

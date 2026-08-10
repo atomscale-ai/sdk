@@ -1,11 +1,9 @@
 import os
 
-import numpy as np
 import pytest
 from pandas import DataFrame
 
 from atomscale import Client
-from atomscale.results import RHEEDEmbeddingResult
 from atomscale.similarity.embedding_provider import RHEEDEmbeddingProvider
 
 from .conftest import ResultIDs
@@ -15,102 +13,6 @@ from .conftest import ResultIDs
 
 def test_type_constant():
     assert RHEEDEmbeddingProvider.TYPE == "rheed_embeddings"
-
-
-def test_to_result_window():
-    raw = {
-        "data_id": "abc",
-        "workflow": "rheed_stationary",
-        "window_span": 30.0,
-        "kind": "window",
-        "dimension": 3,
-        "count": 2,
-        "offset": 0,
-        "truncated": False,
-        "points": [
-            {"index": 0, "vector": [0.1, 0.2, 0.3], "real_time_seconds": 1.0, "unix_time_ms": 1000.0},
-            {"index": 1, "vector": [0.4, 0.5, 0.6], "real_time_seconds": 2.0, "unix_time_ms": 2000.0},
-        ],
-    }
-    r = RHEEDEmbeddingProvider().to_result(raw)
-    assert isinstance(r, RHEEDEmbeddingResult)
-    assert r.kind == "window"
-    assert r.vectors.shape == (2, 3)
-    assert r.dimension == 3
-    assert len(r) == 2
-    assert r.indices == [0, 1]
-    assert list(r.real_time_seconds) == [1.0, 2.0]
-    assert list(r.unix_time_ms) == [1000.0, 2000.0]
-    assert r.cluster_sizes is None
-
-
-def test_to_result_window_dataframe():
-    raw = {
-        "kind": "window",
-        "data_id": "abc",
-        "workflow": "w",
-        "window_span": 30.0,
-        "count": 2,
-        "points": [
-            {"index": 0, "vector": [0.1, 0.2], "real_time_seconds": 1.0, "unix_time_ms": 1000.0},
-            {"index": 1, "vector": [0.3, 0.4], "real_time_seconds": 2.0, "unix_time_ms": 2000.0},
-        ],
-    }
-    df = RHEEDEmbeddingProvider().to_result(raw).to_dataframe()
-    assert df.index.name == "index"
-    assert "real_time_seconds" in df.columns
-    assert "unix_time_ms" in df.columns
-    assert {"v0", "v1"} <= set(df.columns)
-
-
-def test_to_result_prototype():
-    raw = {
-        "kind": "prototype",
-        "data_id": "abc",
-        "workflow": "w",
-        "window_span": 30.0,
-        "count": 1,
-        "points": [{"index": 0, "vector": [1.0, 2.0], "cluster_size": 7}],
-    }
-    r = RHEEDEmbeddingProvider().to_result(raw)
-    assert r.kind == "prototype"
-    assert list(r.cluster_sizes) == [7]
-    assert r.real_time_seconds is None
-    assert "cluster_size" in r.to_dataframe().columns
-
-
-def test_to_result_prototype_partial_cluster_size():
-    """cluster_size present on some points but missing on others must coerce the
-    gaps to NaN (float64) instead of crashing at array construction."""
-    raw = {
-        "kind": "prototype",
-        "data_id": "abc",
-        "workflow": "w",
-        "window_span": 30.0,
-        "count": 3,
-        "points": [
-            {"index": 0, "vector": [1.0, 2.0], "cluster_size": 7},
-            {"index": 1, "vector": [3.0, 4.0]},  # missing cluster_size
-            {"index": 2, "vector": [5.0, 6.0], "cluster_size": 5},
-        ],
-    }
-    r = RHEEDEmbeddingProvider().to_result(raw)
-    assert r.cluster_sizes[0] == 7
-    assert np.isnan(r.cluster_sizes[1])
-    assert r.cluster_sizes[2] == 5
-
-
-def test_to_result_empty():
-    r = RHEEDEmbeddingProvider().to_result({"kind": "window", "points": []})
-    assert len(r) == 0
-    assert r.dimension is None
-    assert r.to_dataframe().shape[0] == 0
-
-
-def test_to_result_none_payload():
-    r = RHEEDEmbeddingProvider().to_result(None)
-    assert len(r) == 0
-    assert r.dimension is None
 
 
 def test_neighbors_to_dataframe():
@@ -138,15 +40,6 @@ def test_neighbors_to_dataframe_empty():
     assert df.empty
 
 
-def test_result_dimension_and_len_when_empty():
-    r = RHEEDEmbeddingResult(
-        data_id="a", workflow="w", window_span=30.0, kind="window",
-        vectors=np.zeros((0, 0), np.float32), indices=[],
-    )
-    assert r.dimension is None
-    assert len(r) == 0
-
-
 # --------------------------- live-API tests (gated on creds) ---------------------------
 
 
@@ -157,27 +50,12 @@ def _skip_without_api():
         pytest.skip("No similarity source configured")
 
 
-def test_get_rheed_embeddings_live():
-    _skip_without_api()
-    result = Client().get_rheed_embeddings(
-        ResultIDs.similarity_source_id,
-        workflow=ResultIDs.similarity_workflow,
-        window_span=30.0,
-        kind="prototype",
-    )
-    assert isinstance(result, RHEEDEmbeddingResult)
-    if len(result) == 0:
-        pytest.skip("No embeddings stored for this source/window_span")
-    assert result.vectors.shape[0] == len(result.indices)
-    assert result.dimension == result.vectors.shape[1]
-
-
 def test_query_rheed_embeddings_live():
     _skip_without_api()
     df = Client().query_rheed_embeddings(
         ResultIDs.similarity_source_id,
         workflow=ResultIDs.similarity_workflow,
-        window_span=30.0,
+        window_span=60.0,
         kind="prototype",
         top_k=5,
     )

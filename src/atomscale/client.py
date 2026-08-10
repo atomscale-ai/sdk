@@ -29,7 +29,6 @@ from atomscale.results import (
     OpticalResult,
     PhotoluminescenceResult,
     RamanResult,
-    RHEEDEmbeddingResult,
     RHEEDImageResult,
     RHEEDVideoResult,
     SimilarityTrajectoryResult,
@@ -294,7 +293,7 @@ class Client(BaseClient):
         return catalogue[ordered_cols]
 
     def get(
-        self, data_ids: str | list[str], *, include_low_level_features: bool = False
+        self, data_ids: str | list[str]
     ) -> list[
         RHEEDVideoResult
         | RHEEDImageResult
@@ -311,10 +310,6 @@ class Client(BaseClient):
 
         Args:
             data_ids (str | list[str]): Data ID or list of data IDs from the data catalogue to obtain analyzed results for.
-            include_low_level_features (bool): For RHEED video results only, attach the
-                pipeline's low-level region features (e.g. ``area_0``, ``eccentricity_0``,
-                ``fwhm_0_3``) as extra columns on ``timeseries_data``. Off by default; the
-                payload is larger when enabled. Ignored for non-RHEED data types.
 
         Returns:
             list[atomscale.results.RHEEDVideoResult | atomscale.results.RHEEDImageResult | atomscale.results.XPSResult | atomscale.results.XRDResult]:
@@ -354,7 +349,6 @@ class Client(BaseClient):
                     "data_id": data_id,
                     "data_type": data_type,
                     "catalogue_entry": entry,
-                    "include_low_level_features": include_low_level_features,
                 }
             )
 
@@ -493,62 +487,12 @@ class Client(BaseClient):
             window_span=window_span or 0.0,
         )
 
-    def get_rheed_embeddings(
-        self,
-        data_id: str,
-        *,
-        workflow: str = "rheed_stationary",
-        window_span: float = 30.0,
-        kind: Literal["window", "prototype"] = "window",
-        offset: int = 0,
-        limit: int | None = None,
-    ) -> RHEEDEmbeddingResult:
-        """Fetch the stored Chronos embedding vectors for a RHEED data item.
-
-        These are the raw timeseries embeddings the similarity pipeline persisted
-        to the S3 Vectors index — the *inputs* to similarity matching, as opposed
-        to the similarity-vs-time curve returned by
-        :meth:`get_similarity_trajectory`.
-
-        Args:
-            data_id: Data ID to fetch embeddings for.
-            workflow: Similarity workflow name. Defaults to "rheed_stationary".
-            window_span: Embedding window span in seconds. Must match a span the
-                embedding step actually ran for, or the result is empty.
-            kind: "window" for one vector per sliding window (time-resolved), or
-                "prototype" for the clustered prototype vectors.
-            offset: Window kind only — skip this many leading windows.
-            limit: Window kind only — cap the number of windows returned.
-
-        Returns:
-            RHEEDEmbeddingResult with an ``(N, D)`` ``vectors`` array. Empty (no
-            vectors) when nothing has been embedded for this (data_id, window_span).
-        """
-        # Local import mirrors the similarity-polling methods below: importing
-        # the similarity package at module top triggers a timeseries<->similarity
-        # registry import cycle.
-        from atomscale.similarity.embedding_provider import RHEEDEmbeddingProvider
-
-        provider = RHEEDEmbeddingProvider()
-        params: dict[str, Any] = {
-            "workflow": workflow,
-            "window_span": window_span,
-            "kind": kind,
-        }
-        if offset:
-            params["offset"] = offset
-        if limit is not None:
-            params["limit"] = limit
-
-        raw = provider.fetch_raw(self, data_id, **params)
-        return provider.to_result(raw)
-
     def query_rheed_embeddings(
         self,
         data_id: str,
         *,
         workflow: str = "rheed_stationary",
-        window_span: float = 30.0,
+        window_span: float = 60.0,
         kind: Literal["prototype", "window"] = "prototype",
         top_k: int = 10,
     ) -> DataFrame:
@@ -1235,7 +1179,6 @@ class Client(BaseClient):
             "ellipsometry",
         ],
         catalogue_entry: dict[str, Any] | None = None,
-        include_low_level_features: bool = False,
     ) -> (
         RHEEDVideoResult
         | RHEEDImageResult
@@ -1338,12 +1281,8 @@ class Client(BaseClient):
             )
             provider = get_provider(timeseries_type)
 
-            # Get timeseries data. Only the RHEED provider/endpoint understands
-            # include_low_level_features; other timeseries types ignore the flag.
-            fetch_kwargs: dict[str, Any] = {}
-            if include_low_level_features and "rheed" in data_type:
-                fetch_kwargs["include_low_level_features"] = True
-            raw = provider.fetch_raw(self, data_id, **fetch_kwargs)
+            # Get timeseries data
+            raw = provider.fetch_raw(self, data_id)
             ts_df = provider.to_dataframe(raw)
 
             result_obj = provider.build_result(self, data_id, data_type, ts_df)
