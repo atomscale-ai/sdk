@@ -131,6 +131,23 @@ def test_last_accessed_datetime_alias_forwards_to_last_updated(monkeypatch):
     assert "last_accessed_datetime_max" not in captured["params"]
 
 
+def test_metrology_search_alias_uses_tool_state_enum(monkeypatch):
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    captured: dict = {}
+
+    def fake_get(sub_url, params=None):
+        captured["sub_url"] = sub_url
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(client, "_get", fake_get)
+
+    client.search(data_type="metrology")
+
+    assert captured["sub_url"] == "data_entries/"
+    assert captured["params"]["data_type"] == "tool_state"
+
+
 @pytest.mark.order(1)
 def test_get(client: Client):
     data_type_aliases = {
@@ -139,7 +156,7 @@ def test_get(client: Client):
         "rheed_rotating": ["rheed_rotating"],
         "xps": ["xps"],
         "optical": ["optical"],
-        "metrology": ["metrology", "recipe"],
+        "tool_state": ["tool_state", "metrology"],
         "photoluminescence": ["photoluminescence", "pl"],
         "raman": ["raman"],
     }
@@ -399,7 +416,9 @@ def test_upload_retries_url_fetch_502(tmp_path, monkeypatch):
     assert call_log[-1] == "POST data_entries/raw_data/staged/upload_urls/complete/"
 
 
-def test_upload_surfaces_url_fetch_failure_after_retry_exhaustion(tmp_path, monkeypatch):
+def test_upload_surfaces_url_fetch_failure_after_retry_exhaustion(
+    tmp_path, monkeypatch
+):
     """upload() should give up after retries are exhausted on the upload_urls/ POST."""
     monkeypatch.setattr("atomscale.client.time.sleep", lambda *_: None)
 

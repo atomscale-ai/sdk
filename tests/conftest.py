@@ -29,7 +29,7 @@ class ResultIDs:
     rheed_rotating = ""
     xps = ""
     optical = ""
-    metrology = ""
+    tool_state = ""
     recipe = ""
     photoluminescence = ""
     raman = ""

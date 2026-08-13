@@ -5,19 +5,18 @@ from __future__ import annotations
 from atomscale.similarity.provider import SimilarityTrajectoryProvider
 
 from .ellipsometry import EllipsometryProvider
-from .metrology import MetrologyProvider
 from .optical import OpticalProvider
 from .provider import TimeseriesProvider
 from .recipe import RecipeProvider
 from .rheed import RHEEDProvider
+from .tool_state import ToolStateProvider
 
 _PROVIDER_CLASSES: dict[str, type[TimeseriesProvider]] = {
     RHEEDProvider.TYPE: RHEEDProvider,
     OpticalProvider.TYPE: OpticalProvider,
-    MetrologyProvider.TYPE: MetrologyProvider,
-    # The backend renamed the "metrology" char-source/data-stream to "tool_state".
-    # Accept both so dispatch works whether the API returns the legacy or new value.
-    "tool_state": MetrologyProvider,
+    ToolStateProvider.TYPE: ToolStateProvider,
+    # Accept data catalogue entries created before the backend enum migration.
+    "metrology": ToolStateProvider,
     # Recipe (process plan) is a distinct first-class type, served from its own
     # /recipe endpoint — not folded into tool-state.
     RecipeProvider.TYPE: RecipeProvider,

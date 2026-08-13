@@ -1,7 +1,7 @@
 """Provider classes for similarity trajectory data.
 
 Note on unix-time units: the similarity API emits ``unix_times`` in
-**seconds** (raw DB values), unlike the metrology / optical /
+**seconds** (raw DB values), unlike the tool-state / optical /
 ellipsometry endpoints which ship ``unix_timestamp_ms`` in milliseconds.
 The column is renamed to ``UNIX Timestamp`` (unit-less display name);
 the magnitude-based fallback in :func:`align._infer_absolute_time`
