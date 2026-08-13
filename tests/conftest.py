@@ -1,5 +1,10 @@
 pytest_plugins = ["pytest_order"]
 
+# Force the headless backend so plot tests never touch Tk/Cocoa on CI runners
+import matplotlib
+
+matplotlib.use("Agg", force=True)
+
 # Minimal async test support without external plugins
 # If pytest-asyncio is not installed, this hook will execute async tests
 # by running the coroutine with asyncio.run(). This allows @pytest.mark.asyncio

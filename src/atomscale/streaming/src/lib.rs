@@ -364,7 +364,7 @@ impl RHEEDStreamer {
             // The latter form lets the caller stamp each chunk with its actual
             // capture time (e.g. from a hardware clock).
             let (frames_obj, caller_start_ms): (Bound<PyAny>, Option<i64>) =
-                if let Ok(t) = obj.downcast::<PyTuple>() {
+                if let Ok(t) = obj.cast::<PyTuple>() {
                     if t.len() == 2 {
                         let frames = t.get_item(0)?;
                         let ts = t.get_item(1)?.extract::<i64>().map_err(|e| {

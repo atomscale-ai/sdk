@@ -36,13 +36,44 @@ jobs:
       - name: Run pre-commit
         run: pre-commit run --all-files --show-diff-on-failure
 
-  test:
+  preflight:
     needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install package
+        run: uv pip install --system -e .
+
+      - name: Set SSL_CERT_FILE
+        run: echo "SSL_CERT_FILE=$(python -m certifi)" >> $GITHUB_ENV
+
+      # Fail fast (once, before the matrix) with an actionable message when the
+      # key is expired/invalid or scoped to the wrong org, rather than surfacing
+      # as a misleading failure deep inside the live tests.
+      - name: Verify API key and organization
+        env:
+          AS_API_KEY: ${{ secrets.AS_API_KEY }}
+          AS_API_ENDPOINT: "https://api.atomscale.ai"
+        run: python scripts/ci_auth_preflight.py
+
+  test:
+    needs: preflight
     strategy:
       max-parallel: 3
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     runs-on: ${{ matrix.os }}
 

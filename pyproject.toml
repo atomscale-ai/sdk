@@ -139,6 +139,8 @@ lint.unfixable = [
 ]
 exclude = []
 lint.flake8-unused-arguments.ignore-variadic-names = true
+# CLI helper scripts print status to stdout by design.
+lint.per-file-ignores = { "scripts/*" = ["T201"] }
 extend-exclude = ["tests", "examples", "*.ipynb"]
 lint.pydocstyle.convention = "google"
 lint.isort.known-first-party = ["atomscale"]

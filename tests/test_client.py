@@ -164,7 +164,18 @@ def test_get(client: Client):
                         status="success",
                     )
 
-                except ClientError:
+                except ClientError as exc:
+                    # An auth failure means the key is expired/invalid or scoped to
+                    # the wrong org. Fail loudly instead of swallowing it as a
+                    # misleading "No data_id found" below. Other errors (e.g. an
+                    # alias unsupported for this org) stay benign — try the next.
+                    if exc.status_code in (401, 403):
+                        pytest.fail(
+                            f"Authentication failed (HTTP {exc.status_code}) on "
+                            f"search(data_type={alias!r}). AS_API_KEY is expired, "
+                            "invalid, or scoped to the wrong organization — refresh "
+                            "the AS_API_KEY repository secret."
+                        )
                     continue
 
                 data_id_values = data["Data ID"].dropna().values if len(data) else []

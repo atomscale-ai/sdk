@@ -23,11 +23,13 @@ class RHEEDVideoResult(MSONable):
 
         Args:
             data_id (UUID | str): Data ID for the entry in the data catalogue.
-            timeseries_data (DataFrame): Pandas DataFrame with timeseries data associated with the video.
-                Includes cluster assignments, specular intensity, strain, etc...
-            snapshot_image_data (list[atomscale.results.rheed_image.RHEEDImageResult]): List of
-                :class:`atomscale.results.rheed_image.RHEEDImageResult` objects containing data for images associated
-                with each user extracted snapshot in the video.
+            timeseries_data (DataFrame): Pandas DataFrame with per-frame RHEED features, indexed
+                against a "Time" column. Columns are capitalized labels such as "Cluster ID",
+                "Specular Intensity", "Strain", "Cumulative Strain", "Oscillation Period",
+                "Diffraction Spot Count", and "Lattice Spacing".
+            snapshot_image_data (list[atomscale.results.rheed_image.RHEEDImageResult] | None): One
+                :class:`atomscale.results.rheed_image.RHEEDImageResult` per snapshot extracted from the
+                video, or None if no snapshots were extracted.
             rotating (bool): Whether the video was taken of a rotating stage.
             collected_datetime (str | None): Datetime when the data was collected.
         """

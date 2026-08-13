@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, json_normalize
 
 from atomscale.core import BaseClient
 from atomscale.results import (
@@ -49,9 +49,36 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         "composition_metric",
     ]
     INDEX_COLS: Sequence[str] = ["Angle", "Frame Number"]
+    # Columns added to the timeseries DataFrame when per-frame masks are attached.
+    MASK_COLS: Sequence[str] = ["mask_rle", "mask_height", "mask_width"]
 
     def fetch_raw(self, client: BaseClient, data_id: str, **kwargs) -> Any:
         return client._get(sub_url=f"rheed/timeseries/{data_id}/", params=kwargs)
+
+    @staticmethod
+    def _flatten_low_level_features(df: DataFrame) -> DataFrame:
+        """Expand a ``low_level_features`` column of per-point dicts into columns.
+
+        Each point in the raw series may carry a ``low_level_features`` mapping
+        (present only when the timeseries was fetched with
+        ``include_low_level_features=True`` via
+        :meth:`atomscale.Client.get_rheed_timeseries`). This lifts those keys to
+        top-level columns — nested keys flattened with a dotted path — and drops
+        the original nested column. Points missing the mapping contribute NA for
+        those columns. Existing top-level columns win on name collision so known
+        metrics are never clobbered by a low-level feature of the same name.
+        """
+        normalized = df["low_level_features"].apply(
+            lambda v: v if isinstance(v, dict) else {}
+        )
+        expanded = json_normalize(normalized.tolist())
+        expanded.index = df.index
+
+        collisions = [c for c in expanded.columns if c in df.columns]
+        if collisions:
+            expanded = expanded.drop(columns=collisions)
+
+        return df.drop(columns=["low_level_features"]).join(expanded)
 
     def to_dataframe(self, raw: Any) -> DataFrame:
         if not raw:
@@ -63,10 +90,15 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             series = angle_block.get("series") or []
             if not series:
                 continue
+            angle_df = DataFrame(series)
+            # Flatten per-point low-level feature dicts into their own columns
+            # before the all-NA prune below so the pruning applies to them too.
+            if "low_level_features" in angle_df.columns:
+                angle_df = self._flatten_low_level_features(angle_df)
             # Drop columns that are all-NA within this angle block before concat;
             # otherwise pandas issues a FutureWarning about empty/all-NA entries
             # widening the result dtype.
-            angle_df = DataFrame(series).dropna(axis=1, how="all")
+            angle_df = angle_df.dropna(axis=1, how="all")
             angle_df["Angle"] = angle_block["angle"]
             frames.append(angle_df)
 
@@ -88,6 +120,69 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             df_all = df_all.set_index(idx_cols)
 
         return df_all
+
+    @classmethod
+    def attach_frame_masks(
+        cls, df: DataFrame, mask_rows: Sequence[Mapping[str, Any]]
+    ) -> DataFrame:
+        """Attach per-frame RLE segmentation masks to a RHEED timeseries DataFrame.
+
+        Joins each mask row onto the timeseries row(s) with the matching absolute
+        frame number, adding ``mask_rle`` / ``mask_height`` / ``mask_width`` columns
+        (see :data:`MASK_COLS`). ``mask_rows`` are the raw rows returned by
+        :meth:`atomscale.Client.get_frame_masks` (each with ``frame_number``,
+        ``mask_rle``, ``mask_height``, ``mask_width``).
+
+        Coverage is sparse — masks exist only for featurized frames — so timeseries
+        rows whose frame has no mask get NA in the mask columns. When ``mask_rows``
+        is empty (no mask artifact for the video), the columns are still added and
+        are all-NA, so a caller that asked for masks always gets the columns.
+
+        Returns ``df`` unchanged (no mask columns) when it has no ``Frame Number``
+        axis to key on, since masks cannot be aligned without it.
+        """
+        has_frame_axis = "Frame Number" in (df.index.names or []) or (
+            "Frame Number" in df.columns
+        )
+        if df.empty or not has_frame_axis:
+            return df
+
+        cols = ["frame_number", *cls.MASK_COLS]
+        mask_df = (
+            DataFrame(list(mask_rows), columns=cols)
+            .rename(columns={"frame_number": "Frame Number"})
+            .set_index("Frame Number")
+        )
+
+        # Drop any pre-existing mask columns so a re-attach doesn't create
+        # duplicate/suffixed columns via the join.
+        clashing = [c for c in cls.MASK_COLS if c in df.columns]
+        base = df.drop(columns=clashing) if clashing else df
+
+        return base.join(mask_df, on="Frame Number")
+
+    @staticmethod
+    def frame_number_bounds(df: DataFrame) -> tuple[int, int] | None:
+        """Inclusive ``(min, max)`` absolute frame numbers present in ``df``.
+
+        Reads the ``Frame Number`` axis (index level or column). Returns ``None``
+        when the DataFrame is empty or has no frame-number axis, so callers can fall
+        back to a whole-video fetch. Used to scope a per-frame mask request to just
+        the frames a (possibly windowed via ``last_n`` / ``elapsed_seconds``)
+        timeseries actually spans, rather than fetching the whole video's masks.
+        """
+        if df.empty:
+            return None
+        if "Frame Number" in (df.index.names or []):
+            values = df.index.get_level_values("Frame Number")
+        elif "Frame Number" in df.columns:
+            values = df["Frame Number"]
+        else:
+            return None
+        values = values.dropna()
+        if len(values) == 0:
+            return None
+        return int(values.min()), int(values.max())
 
     def snapshot_url(self, data_id: str) -> str:
         return f"data_entries/video_single_frames/{data_id}"

@@ -28,14 +28,14 @@ class ChangepointResult(MSONable):
         Args:
             id (UUID | str): Unique ID of the changepoint record.
             data_id (UUID | str): Data ID in the catalogue this changepoint was detected on.
-            data_modality (str): Source/workflow value the changepoint came from (e.g. "rheed_stationary").
+            data_modality (str): The data modality the changepoint was detected in (e.g. "rheed_stationary").
             property_name (str): Property/channel on which the changepoint was detected.
             severity (str): One of "info", "warning", "critical".
             score (float): Normalized changepoint score in [0, 1].
             window_start_elapsed (float): Start of the changepoint window, seconds from timeseries start.
             window_end_elapsed (float): End of the changepoint window, seconds from timeseries start.
             detection_method (str): One of "forecasting", "clustering", "intensity_profile".
-            detail (dict): Method-specific metadata.
+            detail (dict): Additional details about the changepoint; the available keys depend on the detection_method used.
             label (str | None): Applied category label, if any.
         """
         self.id = id
