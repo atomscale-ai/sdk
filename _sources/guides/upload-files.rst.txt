@@ -34,7 +34,7 @@ Supported Formats
      - ``.xlsx``, ``.xls``
    * - OES
      - ``.txt``, ``.csv``
-   * - Metrology/logs
+   * - Tool state/logs
      - ``.csv``, ``.txt``, ``.log``, ``.dat``, ``.xml``
    * - Archives
      - ``.zip``, ``.tar``, ``.gz``, ``.lzma``, ``.7z``, ``.rar``
