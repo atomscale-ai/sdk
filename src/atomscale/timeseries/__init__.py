@@ -22,6 +22,10 @@ from .align import align_timeseries
 from .ellipsometry import EllipsometryProvider
 from .metrology import MetrologyProvider
 from .optical import OpticalProvider
+from .physical_sample import (
+    PHYSICAL_SAMPLE_TS_COLUMNS,
+    physical_sample_timeseries_to_dataframe,
+)
 from .polling import (
     aiter_poll,
     iter_poll,
@@ -33,6 +37,7 @@ from .registry import get_provider
 from .rheed import RHEEDProvider
 
 __all__ = [
+    "PHYSICAL_SAMPLE_TS_COLUMNS",
     "EllipsometryProvider",
     "MetrologyProvider",
     "OpticalProvider",
@@ -42,6 +47,7 @@ __all__ = [
     "align_timeseries",
     "get_provider",
     "iter_poll",
+    "physical_sample_timeseries_to_dataframe",
     "properties_payload_to_dataframe",
     "start_polling_task",
     "start_polling_thread",

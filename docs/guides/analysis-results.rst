@@ -97,6 +97,40 @@ number — with :meth:`~atomscale.client.Client.get_frame_masks`:
 
    masks = client.get_frame_masks(data_id, decode=True)  # {frame_number: (H, W) array}
 
+Sample-Level Results
+--------------------
+
+Some results are computed per *physical sample* rather than per data item —
+``rheed_quality`` and ``composition_metric`` are compiled from a sample's
+constituent RHEED videos into one series each. Fetch them with
+:meth:`~atomscale.client.Client.get_physical_sample_timeseries`:
+
+.. code-block:: python
+
+   ts = client.get_physical_sample_timeseries(
+       physical_sample_id, property_names=["rheed_quality"]
+   )
+
+   # Long form: one row per (property, sample-point). Reduce to a scalar yourself.
+   q = ts.loc[ts.property_name == "rheed_quality", "value"].dropna()
+   print(q.mean())
+
+The frame is long (not wide) because distinct properties can have different
+axes, so a wide join on ``real_time_seconds`` would mis-align them. ``value`` is
+``NaN`` for gaps; provenance columns (``result_id``, ``last_updated``,
+``generating_dbos_workflow_id``) travel alongside, and per-property
+``constituent_data_ids`` are in ``ts.attrs["constituent_data_ids"]``.
+``property_names`` filters client-side; omit it for all properties.
+
+The same metrics are attached to :meth:`~atomscale.client.Client.get_physical_sample`
+results as ``sample_metrics`` (pass ``include_sample_metrics=False`` to skip the
+extra request):
+
+.. code-block:: python
+
+   sample = client.get_physical_sample(physical_sample_id)
+   print(sample.sample_metrics)  # None if the sample has no computed metrics
+
 Embedding Vectors
 -----------------
 

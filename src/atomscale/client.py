@@ -40,6 +40,9 @@ from atomscale.results import (
 )
 from atomscale.results.group import PhysicalSampleResult, ProjectResult
 from atomscale.timeseries.align import align_timeseries
+from atomscale.timeseries.physical_sample import (
+    physical_sample_timeseries_to_dataframe,
+)
 from atomscale.timeseries.registry import get_provider
 
 TimeseriesDomain = Literal["rheed", "optical", "metrology"]
@@ -1053,6 +1056,7 @@ class Client(BaseClient):
         *,
         include_organization_data: bool = True,
         align: bool | str = False,
+        include_sample_metrics: bool = True,
     ) -> PhysicalSampleResult:
         """Get all data for a physical sample.
 
@@ -1060,6 +1064,11 @@ class Client(BaseClient):
             physical_sample_id: Identifier of the physical sample.
             include_organization_data: Whether to include organization data. Defaults to True.
             align: Whether to align timeseries data. If truthy, an aligned DataFrame is returned.
+            include_sample_metrics: Whether to also fetch the sample-scoped computed
+                timeseries results (``rheed_quality``, ``composition_metric``, …) and
+                expose them on ``PhysicalSampleResult.sample_metrics``. Defaults to True.
+                This is one extra request; set ``False`` to skip it. See
+                :meth:`get_physical_sample_timeseries`.
         """
         physical_samples: list[dict] | None = self._get(  # type: ignore  # noqa: PGH003
             sub_url="physical_samples/",
@@ -1100,12 +1109,74 @@ class Client(BaseClient):
             else None
         )
         sample_id = physical_sample_id
+
+        # Sample-scoped computed metrics live in a separate table reached by a
+        # dedicated endpoint (not part of the per-data-item curated join above).
+        # Fetch resiliently: a 404 (``_get`` -> None) leaves ``sample_metrics``
+        # None rather than raising, preserving this method's lenient behavior.
+        sample_metrics: DataFrame | None = None
+        if include_sample_metrics:
+            raw_metrics = self._get(
+                sub_url=f"physical_samples/{physical_sample_id}/timeseries/"
+            )
+            if raw_metrics is not None:
+                sample_metrics = physical_sample_timeseries_to_dataframe(raw_metrics)  # type: ignore[arg-type]
+
         return PhysicalSampleResult(
             physical_sample_id=sample_id,
             physical_sample_name=sample_name,
             data_results=results,
             aligned_timeseries=ts_aligned,
             non_timeseries=non_timeseries,
+            sample_metrics=sample_metrics,
+        )
+
+    def get_physical_sample_timeseries(
+        self,
+        physical_sample_id: str,
+        *,
+        property_names: list[str] | None = None,
+    ) -> DataFrame:
+        """Current sample-scoped computed timeseries results for a physical sample.
+
+        Returns the latest row per property (``rheed_quality``,
+        ``composition_metric``, …) from the ``physical_sample_timeseries_results``
+        table — the outputs of per-sample DBOS workflows, content-addressed by
+        their constituent ``data_id`` set. These are the headline "sample result,"
+        distinct from :meth:`get_physical_sample`'s ``aligned_timeseries``, which
+        only re-joins each constituent data item's own curated RHEED series.
+
+        The series are returned faithfully (no scalar reduction): callers wanting a
+        single number reduce the returned series themselves.
+
+        Args:
+            physical_sample_id: Identifier of the physical sample.
+            property_names: Restrict the result to these properties, e.g.
+                ``["rheed_quality"]``. Filtered client-side (the endpoint has no
+                filter param yet). ``None`` (default) returns all properties.
+
+        Returns:
+            DataFrame: Long form — one row per (property, sample-point) — with
+            columns ``property_name``, ``real_time_seconds``, ``value`` (float,
+            ``NaN`` for gaps), ``result_id``, ``last_updated``, and
+            ``generating_dbos_workflow_id``. Long (not wide) because distinct
+            properties can have different axes, so a wide join on
+            ``real_time_seconds`` would mis-align them. Per-property
+            ``constituent_data_ids`` are in ``df.attrs["constituent_data_ids"]``.
+            A sample with no sample-scoped metrics yields an empty DataFrame.
+
+        Raises:
+            ClientError: If the physical sample does not exist (404).
+        """
+        raw = self._get(sub_url=f"physical_samples/{physical_sample_id}/timeseries/")
+        if raw is None:
+            raise ClientError(
+                f"No physical sample found with id '{physical_sample_id}' "
+                "(physical_samples/{id}/timeseries/ returned 404).",
+                status_code=404,
+            )
+        return physical_sample_timeseries_to_dataframe(  # type: ignore[arg-type]
+            raw, property_names=property_names
         )
 
     def get_project(
