@@ -1,25 +1,7 @@
-from __future__ import annotations
+"""Compatibility alias for the former metrology result name."""
 
-from uuid import UUID
+from atomscale.results.tool_state import ToolStateResult
 
-from monty.json import MSONable
-from pandas import DataFrame
+MetrologyResult = ToolStateResult
 
-
-class MetrologyResult(MSONable):
-    def __init__(
-        self,
-        data_id: UUID | str,
-        timeseries_data: DataFrame,
-        collected_datetime: str | None = None,
-    ):
-        """Metrology result
-
-        Args:
-            data_id (UUID | str): Data ID for the entry in the data catalogue.
-            timeseries_data (DataFrame): Pandas DataFrame with timeseries data associated with the ingested metrology data.
-            collected_datetime (str | None): Datetime when the data was collected.
-        """
-        self.data_id = data_id
-        self.timeseries_data = timeseries_data
-        self.collected_datetime = collected_datetime
+__all__ = ["MetrologyResult"]

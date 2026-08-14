@@ -1,11 +1,11 @@
 import pandas as pd
 import pytest
 
-from atomscale.results import EllipsometryResult, MetrologyResult, OpticalResult
+from atomscale.results import EllipsometryResult, OpticalResult, ToolStateResult
 from atomscale.timeseries.align import _infer_absolute_time, align_timeseries
 from atomscale.timeseries.ellipsometry import EllipsometryProvider
-from atomscale.timeseries.metrology import MetrologyProvider
 from atomscale.timeseries.optical import OpticalProvider
+from atomscale.timeseries.tool_state import ToolStateProvider
 
 
 def test_unit_name_takes_priority_over_magnitude():
@@ -18,27 +18,21 @@ def test_unit_name_takes_priority_over_magnitude():
 
 
 def test_unit_name_ms_parses_correctly():
-    df = pd.DataFrame(
-        {"unix_timestamp_ms": [1_700_000_000_000, 1_700_000_001_000]}
-    )
+    df = pd.DataFrame({"unix_timestamp_ms": [1_700_000_000_000, 1_700_000_001_000]})
     out = _infer_absolute_time(df)
     assert out is not None
     assert out.iloc[0].year == 2023
 
 
 def test_unit_name_seconds_parses_correctly():
-    df = pd.DataFrame(
-        {"unix_timestamp_seconds": [1_700_000_000.0, 1_700_000_001.0]}
-    )
+    df = pd.DataFrame({"unix_timestamp_seconds": [1_700_000_000.0, 1_700_000_001.0]})
     out = _infer_absolute_time(df)
     assert out is not None
     assert out.iloc[0].year == 2023
 
 
 def test_unitless_name_falls_through_to_magnitude_ms():
-    df = pd.DataFrame(
-        {"UNIX Timestamp": [1_700_000_000_000, 1_700_000_001_000]}
-    )
+    df = pd.DataFrame({"UNIX Timestamp": [1_700_000_000_000, 1_700_000_001_000]})
     out = _infer_absolute_time(df)
     assert out is not None
     assert out.iloc[0].year == 2023
@@ -56,7 +50,7 @@ def test_no_time_column_returns_none():
     assert _infer_absolute_time(df) is None
 
 
-def _metrology_payload():
+def _tool_state_payload():
     return {
         "properties": {
             "Sub T setpoint": {
@@ -116,21 +110,21 @@ def _ellipsometry_payload():
 def test_align_outer_produces_columns_for_all_three_domains():
     """End-to-end: property-centric DataFrames flow through align_timeseries
     and the aligned MultiIndex carries (data_id, domain, metric) entries
-    for metrology, optical, and ellipsometry."""
-    metro_df = MetrologyProvider().to_dataframe(_metrology_payload())
+    for tool-state, optical, and ellipsometry."""
+    tool_state_df = ToolStateProvider().to_dataframe(_tool_state_payload())
     optical_df = OpticalProvider().to_dataframe(_optical_payload())
     ellipso_df = EllipsometryProvider().to_dataframe(_ellipsometry_payload())
 
-    metro_result = MetrologyResult(data_id="metro-1", timeseries_data=metro_df)
+    tool_state_result = ToolStateResult(
+        data_id="tool-state-1", timeseries_data=tool_state_df
+    )
     optical_result = OpticalResult(
         data_id="optical-1", timeseries_data=optical_df, snapshot_image_data=None
     )
-    ellipso_result = EllipsometryResult(
-        data_id="ellipso-1", timeseries_data=ellipso_df
-    )
+    ellipso_result = EllipsometryResult(data_id="ellipso-1", timeseries_data=ellipso_df)
 
     aligned = align_timeseries(
-        [metro_result, optical_result, ellipso_result], how="outer"
+        [tool_state_result, optical_result, ellipso_result], how="outer"
     )
 
     assert aligned is not None
@@ -138,13 +132,13 @@ def test_align_outer_produces_columns_for_all_three_domains():
     assert isinstance(aligned.columns, pd.MultiIndex)
 
     domains = {col[1] for col in aligned.columns}
-    assert "metrology" in domains
+    assert "tool_state" in domains
     assert "optical" in domains
     assert "ellipsometry" in domains
 
-    metro_metrics = {col[2] for col in aligned.columns if col[1] == "metrology"}
+    tool_state_metrics = {col[2] for col in aligned.columns if col[1] == "tool_state"}
     optical_metrics = {col[2] for col in aligned.columns if col[1] == "optical"}
     ellipso_metrics = {col[2] for col in aligned.columns if col[1] == "ellipsometry"}
-    assert "Sub T setpoint" in metro_metrics
+    assert "Sub T setpoint" in tool_state_metrics
     assert "perimeter_px" in optical_metrics
     assert "psi" in ellipso_metrics

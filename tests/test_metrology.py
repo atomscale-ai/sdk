@@ -4,8 +4,10 @@ import pytest
 from pandas import DataFrame
 
 from atomscale import Client
-from atomscale.results import MetrologyResult
+from atomscale.results import MetrologyResult, ToolStateResult
 from atomscale.timeseries.metrology import MetrologyProvider
+from atomscale.timeseries.registry import get_provider
+from atomscale.timeseries.tool_state import ToolStateProvider
 
 from .conftest import ResultIDs
 
@@ -45,7 +47,7 @@ def client():
 
 
 def test_property_centric_parse():
-    df = MetrologyProvider().to_dataframe(PROP_PAYLOAD)
+    df = ToolStateProvider().to_dataframe(PROP_PAYLOAD)
     assert isinstance(df, DataFrame)
     # Property columns preserve their API names (case-sensitive).
     assert "Sub T setpoint" in df.columns
@@ -65,7 +67,7 @@ def test_property_centric_parse():
 
 
 def test_property_centric_columns_are_int64_ms():
-    df = MetrologyProvider().to_dataframe(PROP_PAYLOAD)
+    df = ToolStateProvider().to_dataframe(PROP_PAYLOAD)
     assert str(df["UNIX Timestamp"].dtype) == "int64"
 
 
@@ -81,13 +83,13 @@ def test_decimal_unix_ms_input_preserved_to_int64():
         },
         "series_max_time": 0.0,
     }
-    df = MetrologyProvider().to_dataframe(payload)
+    df = ToolStateProvider().to_dataframe(payload)
     assert str(df["UNIX Timestamp"].dtype) == "int64"
     assert int(df["UNIX Timestamp"].iloc[0]) == 1_700_000_000_123
 
 
 def test_legacy_series_payload_parses():
-    df = MetrologyProvider().to_dataframe(
+    df = ToolStateProvider().to_dataframe(
         {
             "series": [
                 {
@@ -107,27 +109,83 @@ def test_legacy_series_payload_parses():
     assert str(df["UNIX Timestamp"].dtype) == "int64"
 
 
+def test_duplicate_timestamps_within_property_do_not_crash():
+    # A property emitting two samples at the same unix-ms used to crash the
+    # outer-join with "cannot reindex on an axis with duplicate labels"
+    # whenever a second property was present (regression test).
+    payload = {
+        "properties": {
+            "Sub T setpoint": {
+                "relative_time_seconds": [0.0, 0.0, 1.0],
+                "unix_timestamp_ms": [
+                    1_700_000_000_000,
+                    1_700_000_000_000,  # duplicate instant
+                    1_700_000_001_000,
+                ],
+                "values": [400.0, 410.0, 450.0],
+                "units": "C",
+            },
+            "Ratio Pyrometer": {
+                "relative_time_seconds": [0.0, 1.0],
+                "unix_timestamp_ms": [
+                    1_700_000_000_000,
+                    1_700_000_001_000,
+                ],
+                "values": [395.2, 451.3],
+                "units": "C",
+            },
+        }
+    }
+    df = ToolStateProvider().to_dataframe(payload)
+    # Duplicate instant collapsed to a single row; index stays unique.
+    assert df["UNIX Timestamp"].is_unique
+    assert df["UNIX Timestamp"].is_monotonic_increasing
+    # "keep last" wins at the duplicated instant.
+    row = df.loc[df["UNIX Timestamp"] == 1_700_000_000_000].iloc[0]
+    assert row["Sub T setpoint"] == 410.0
+
+
 def test_empty_payload_returns_empty_df():
-    assert MetrologyProvider().to_dataframe({}).empty
-    assert MetrologyProvider().to_dataframe({"properties": {}}).empty
-    assert MetrologyProvider().to_dataframe(None).empty
+    assert ToolStateProvider().to_dataframe({}).empty
+    assert ToolStateProvider().to_dataframe({"properties": {}}).empty
+    assert ToolStateProvider().to_dataframe(None).empty
+
+
+def test_tool_state_provider_uses_canonical_endpoint():
+    captured: dict[str, str] = {}
+
+    class _FakeClient:
+        def _get(self, sub_url: str):
+            captured["sub_url"] = sub_url
+            return {}
+
+    ToolStateProvider().fetch_raw(_FakeClient(), "abc-123")
+
+    assert captured["sub_url"] == "tool-state/abc-123/timeseries/"
+
+
+def test_metrology_names_remain_compatibility_aliases():
+    assert MetrologyResult is ToolStateResult
+    assert MetrologyProvider is ToolStateProvider
+    assert isinstance(get_provider("metrology"), ToolStateProvider)
+    assert isinstance(get_provider("tool_state"), ToolStateProvider)
 
 
 # -----------------------------------------------------------------------------
-# Live data path (skipped unless ResultIDs.metrology is populated)
+# Live data path (skipped unless ResultIDs.tool_state is populated)
 # -----------------------------------------------------------------------------
 
 
 @pytest.fixture
 def result(client: Client):
-    if not ResultIDs.metrology:
-        pytest.skip("No metrology data available")
+    if not ResultIDs.tool_state:
+        pytest.skip("No tool-state data available")
 
-    results = client.get(data_ids=ResultIDs.metrology)
+    results = client.get(data_ids=ResultIDs.tool_state)
     return results[0]
 
 
-def test_live_get_dataframe(result: MetrologyResult):
+def test_live_get_dataframe(result: ToolStateResult):
     df = result.timeseries_data
     assert isinstance(df, DataFrame)
     if not df.empty:

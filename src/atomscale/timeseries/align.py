@@ -6,9 +6,9 @@ import pandas as pd
 
 from atomscale.results import (
     EllipsometryResult,
-    MetrologyResult,
     OpticalResult,
     RHEEDVideoResult,
+    ToolStateResult,
 )
 
 # Column names whose suffix encodes the unit. Order matters: more specific
@@ -148,8 +148,8 @@ def _extract_timeseries(result):
     elif isinstance(result, OpticalResult):
         domain = "optical"
         timeseries = result.timeseries_data
-    elif isinstance(result, MetrologyResult):
-        domain = "metrology"
+    elif isinstance(result, ToolStateResult):
+        domain = "tool_state"
         timeseries = result.timeseries_data
     elif isinstance(result, EllipsometryResult):
         domain = "ellipsometry"
@@ -236,7 +236,7 @@ def align_timeseries(
     """Align timeseries results by time index.
 
     Args:
-        results: Iterable of result objects (RHEEDVideoResult, OpticalResult, MetrologyResult).
+        results: Iterable of result objects (RHEEDVideoResult, OpticalResult, ToolStateResult).
         how: Join strategy for the outer alignment. Defaults to "outer".
 
     Returns:

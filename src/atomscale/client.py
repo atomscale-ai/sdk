@@ -25,13 +25,14 @@ from atomscale.results import (
     ChangepointResult,
     EllipsometryResult,
     EmbeddingsResult,
-    MetrologyResult,
     OpticalResult,
     PhotoluminescenceResult,
     RamanResult,
+    RecipeResult,
     RHEEDImageResult,
     RHEEDVideoResult,
     SimilarityTrajectoryResult,
+    ToolStateResult,
     UnknownResult,
     XPSResult,
     XRDResult,
@@ -42,7 +43,7 @@ from atomscale.results.group import PhysicalSampleResult, ProjectResult
 from atomscale.timeseries.align import align_timeseries
 from atomscale.timeseries.registry import get_provider
 
-TimeseriesDomain = Literal["rheed", "optical", "metrology"]
+TimeseriesDomain = Literal["rheed", "optical", "tool_state"]
 
 _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 
@@ -135,6 +136,7 @@ class Client(BaseClient):
             "recipe",
             "optical",
             "metrology",
+            "tool_state",
             "ellipsometry",
             "all",
         ] = "all",
@@ -164,7 +166,8 @@ class Client(BaseClient):
             data_ids (str | list[str] | None): Data ID or list of data IDs. Defaults to None.
             physical_sample_ids (str | list[str] | None): Physical sample ID or list of IDs. Defaults to None.
             project_ids (str | list[str] | None): Project ID or list of IDs. Defaults to None.
-            data_type (Literal["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "xrd", "photoluminescence", "raman", "recipe", "optical", "metrology", "ellipsometry", "all"]): Type of data. Defaults to "all".
+            data_type: Type of data. ``"tool_state"`` is canonical;
+                ``"metrology"`` remains accepted as a deprecated compatibility alias.
             status (Literal["success", "pending", "error", "running", "all"]): Analyzed status of the data. Defaults to "all".
             growth_length (tuple[int | None, int | None]): Minimum and maximum values of the growth length in seconds.
                 Defaults to (None, None) which will include all non-video data.
@@ -193,7 +196,16 @@ class Client(BaseClient):
             "data_ids": data_ids,
             "physical_sample_ids": physical_sample_ids,
             "project_ids": project_ids,
-            "data_type": None if data_type == "all" else data_type,
+            # Map the legacy "metrology" filter to its renamed "tool_state"
+            # char-source so it resolves against the current backend, which
+            # validates this param as an enum that no longer accepts "metrology".
+            "data_type": (
+                None
+                if data_type == "all"
+                else "tool_state"
+                if data_type == "metrology"
+                else data_type
+            ),
             "status": status,
             "growth_length_min": growth_length[0],
             "growth_length_max": growth_length[1],
@@ -302,7 +314,8 @@ class Client(BaseClient):
         | PhotoluminescenceResult
         | RamanResult
         | OpticalResult
-        | MetrologyResult
+        | ToolStateResult
+        | RecipeResult
         | EllipsometryResult
         | UnknownResult
     ]:
@@ -1174,6 +1187,7 @@ class Client(BaseClient):
             "rheed_rotating",
             "rheed_xscan",
             "metrology",
+            "tool_state",
             "recipe",
             "optical",
             "ellipsometry",
@@ -1187,7 +1201,8 @@ class Client(BaseClient):
         | RamanResult
         | XRDResult
         | OpticalResult
-        | MetrologyResult
+        | ToolStateResult
+        | RecipeResult
         | EllipsometryResult
         | UnknownResult
         | None
@@ -1267,18 +1282,15 @@ class Client(BaseClient):
             "rheed_rotating",
             "rheed_xscan",
             "metrology",
+            "tool_state",
             "recipe",
             "optical",
             "ellipsometry",
         ]:
-            # recipe timeseries are served from the metrology endpoint; reuse that provider.
-            timeseries_type = (
-                "rheed"
-                if "rheed" in data_type
-                else "metrology"
-                if data_type == "recipe"
-                else data_type
-            )
+            # Each data_type resolves to its own provider/endpoint. Legacy
+            # "metrology" catalogue entries map to the canonical tool-state
+            # provider. Recipe remains distinct on its own endpoint.
+            timeseries_type = "rheed" if "rheed" in data_type else data_type
             provider = get_provider(timeseries_type)
 
             # Get timeseries data
@@ -1610,7 +1622,7 @@ class Client(BaseClient):
         Download raw or processed files for any data type to disk.
 
         Works for every data_type the platform stores (RHEED video, XPS / XRD /
-        PL / Raman / optical / metrology / ellipsometry / etc.) — the underlying
+        PL / Raman / optical / tool-state / ellipsometry / etc.) — the underlying
         ``data_entries/{raw_data|processed_data}/{data_id}`` endpoint is
         data-type-agnostic and returns whatever file format the backend has on
         record.

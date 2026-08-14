@@ -10,7 +10,7 @@ Convention for time-valued fields:
     seconds quantity, not just a number".
   * In pandas DataFrame columns: ``int64`` for whole-millisecond
     ``UNIX Timestamp`` values (lossless and fast). Magnitude is
-    milliseconds for metrology / optical / ellipsometry, seconds for
+    milliseconds for tool-state / optical / ellipsometry, seconds for
     similarity. Column name disambiguates the unit via
     :func:`align._infer_absolute_time`.
 
@@ -29,15 +29,19 @@ from .polling import (
     start_polling_thread,
 )
 from .provider import TimeseriesProvider, properties_payload_to_dataframe
+from .recipe import RecipeProvider
 from .registry import get_provider
 from .rheed import RHEEDProvider
+from .tool_state import ToolStateProvider
 
 __all__ = [
     "EllipsometryProvider",
     "MetrologyProvider",
     "OpticalProvider",
     "RHEEDProvider",
+    "RecipeProvider",
     "TimeseriesProvider",
+    "ToolStateProvider",
     "aiter_poll",
     "align_timeseries",
     "get_provider",

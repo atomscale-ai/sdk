@@ -124,29 +124,29 @@ def properties_payload_to_dataframe(
             continue
 
         ts_ms = _to_int64_ms(kept_ts)
-        # Stable order is enforced by the merged index sort below.
-        series = pd.Series(kept_values, index=ts_ms, name=name)
-        # Real instrument logs occasionally emit a repeated timestamp for a
-        # channel. A duplicate-labeled index cannot be reindexed, which would
-        # break the axis=1 concat below, so collapse duplicates (last wins).
-        # Keep ts_ms/kept_rel aligned to the deduped series so the "longest"
-        # election below counts unique points and np.interp gets a non-repeating
-        # x-axis.
-        if series.index.has_duplicates:
-            mask = ~series.index.duplicated(keep="last")
-            series = series[mask]
-            kept_rel = [r for r, m in zip(kept_rel, mask, strict=False) if m]
-            ts_ms = np.asarray(series.index, dtype=np.int64)
-        series_by_name[name] = series
+        rel_ms = np.asarray(
+            [float(r) if r is not None else np.nan for r in kept_rel],
+            dtype=np.float64,
+        )
 
-        if len(ts_ms) > longest_len:
-            longest_len = len(ts_ms)
+        # Collapse duplicate timestamps within this property. Two samples that
+        # share a unix-ms make the per-property index non-unique, which breaks
+        # the outer-join below: pandas cannot reindex a duplicate-labelled axis
+        # onto the merged index and raises "cannot reindex on an axis with
+        # duplicate labels". Sort by time and keep the last reading at each
+        # instant (latest value wins; this also gives the np.interp time anchor
+        # a strictly-increasing x-axis).
+        prop_df = pd.DataFrame({"value": kept_values, "rel": rel_ms}, index=ts_ms)
+        prop_df = prop_df.sort_index(kind="stable")
+        prop_df = prop_df[~prop_df.index.duplicated(keep="last")]
+
+        series_by_name[name] = prop_df["value"].rename(name)
+
+        if len(prop_df) > longest_len:
+            longest_len = len(prop_df)
             longest_name = name
-            longest_ts_ms = ts_ms
-            longest_rel = np.asarray(
-                [float(r) if r is not None else np.nan for r in kept_rel],
-                dtype=np.float64,
-            )
+            longest_ts_ms = prop_df.index.to_numpy(dtype=np.int64)
+            longest_rel = prop_df["rel"].to_numpy(dtype=np.float64)
 
     if not series_by_name:
         return DataFrame()

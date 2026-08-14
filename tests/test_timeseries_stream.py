@@ -206,7 +206,7 @@ class TestTimeseriesStreamerInitialize:
             "__max_requests__": 3,
             "/tags/data-items/": '{"success": true, "associations_created": 1}',
             "/tags/": json.dumps([{"id": tag_id, "name": "growth"}]),
-            "/metrology/stream/initialize": json.dumps({
+            "/tool-state/stream/initialize": json.dumps({
                 "data_id": "ts-data-id",
                 "processed_data_id": "ts-proc-id",
             }),
@@ -227,7 +227,7 @@ class TestTimeseriesStreamerInitialize:
 
         requests = server.get_all_requests()
         # Exactly the three requests we expect, in order.
-        assert any("REQUEST:POST:/metrology/stream/initialize:" in r for r in requests)
+        assert any("REQUEST:POST:/tool-state/stream/initialize:" in r for r in requests)
         assert any("REQUEST:GET:/tags/:" in r for r in requests)
         attach = next(r for r in requests if "/tags/data-items/" in r)
         # The bulk-attach body must include the resolved tag_id and data_id.
@@ -264,11 +264,11 @@ class TestTimeseriesStreamerPush:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 2,
-            "/metrology/stream/initialize": json.dumps({
+            "/tool-state/stream/initialize": json.dumps({
                 "data_id": "test-data-id-123",
                 "processed_data_id": "test-processed-id",
             }),
-            "/metrology/stream/chunk": json.dumps({
+            "/tool-state/stream/chunk": json.dumps({
                 "data_id": "test-data-id-123",
                 "channel_name": "temperature",
                 "chunk_index": 0,
@@ -299,7 +299,7 @@ class TestTimeseriesStreamerPush:
         requests = server.get_all_requests()
         assert len(requests) == 2
         # Second request should be the chunk
-        assert "/metrology/stream/chunk" in requests[1]
+        assert "/tool-state/stream/chunk" in requests[1]
 
 
 class TestTimeseriesStreamerRun:
@@ -339,11 +339,11 @@ class TestTimeseriesStreamerRun:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 4,
-            "/metrology/stream/initialize": json.dumps({
+            "/tool-state/stream/initialize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
             }),
-            "/metrology/stream/chunk": json.dumps({
+            "/tool-state/stream/chunk": json.dumps({
                 "data_id": "test-data-id",
                 "channel_name": "temperature",
                 "chunk_index": 0,
@@ -372,9 +372,9 @@ class TestTimeseriesStreamerRun:
         # Should have 4 requests: 1 init + 3 chunks
         requests = server.get_all_requests()
         assert len(requests) == 4
-        assert "/metrology/stream/initialize" in requests[0]
+        assert "/tool-state/stream/initialize" in requests[0]
         # Remaining 3 should be chunks
-        chunk_requests = [r for r in requests if "/metrology/stream/chunk" in r]
+        chunk_requests = [r for r in requests if "/tool-state/stream/chunk" in r]
         assert len(chunk_requests) == 3
 
 
@@ -407,11 +407,11 @@ class TestTimeseriesStreamerPushMulti:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 3,
-            "/metrology/stream/initialize": json.dumps({
+            "/tool-state/stream/initialize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
             }),
-            "/metrology/stream/chunk": json.dumps({
+            "/tool-state/stream/chunk": json.dumps({
                 "data_id": "test-data-id",
                 "chunk_index": 0,
                 "total_points": 2,
@@ -451,11 +451,11 @@ class TestTimeseriesStreamerIntegration:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 4,
-            "/metrology/stream/initialize": json.dumps({
+            "/tool-state/stream/initialize": json.dumps({
                 "data_id": "workflow-data-id",
                 "processed_data_id": "workflow-processed-id",
             }),
-            "/metrology/stream/chunk": json.dumps({
+            "/tool-state/stream/chunk": json.dumps({
                 "data_id": "workflow-data-id",
                 "channel_name": "temperature",
                 "chunk_index": 0,
@@ -507,11 +507,11 @@ class TestTimeseriesStreamerFinalize:
         routes = json.dumps({
             "__routes__": True,
             "__max_requests__": 2,
-            "/metrology/stream/initialize": json.dumps({
+            "/tool-state/stream/initialize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
             }),
-            "/metrology/stream/test-data-id/finalize": json.dumps({
+            "/tool-state/stream/test-data-id/finalize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
             }),
