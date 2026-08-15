@@ -1112,15 +1112,30 @@ class Client(BaseClient):
 
         # Sample-scoped computed metrics live in a separate table reached by a
         # dedicated endpoint (not part of the per-data-item curated join above).
-        # Fetch resiliently: a 404 (``_get`` -> None) leaves ``sample_metrics``
-        # None rather than raising, preserving this method's lenient behavior.
+        # This is best-effort enrichment: it is default-enabled and must never
+        # abort an otherwise-successful sample fetch (nor a ``get_project``
+        # aggregation that loops over samples). A 404 (``_get`` -> None) simply
+        # yields no metrics; any other HTTP error or transport failure is caught
+        # and surfaced as a warning, leaving ``sample_metrics`` None. Callers who
+        # need the metrics to fail loudly use :meth:`get_physical_sample_timeseries`.
         sample_metrics: DataFrame | None = None
         if include_sample_metrics:
-            raw_metrics = self._get(
-                sub_url=f"physical_samples/{physical_sample_id}/timeseries/"
-            )
-            if raw_metrics is not None:
-                sample_metrics = physical_sample_timeseries_to_dataframe(raw_metrics)  # type: ignore[arg-type]
+            try:
+                raw_metrics = self._get(
+                    sub_url=f"physical_samples/{physical_sample_id}/timeseries/"
+                )
+                if raw_metrics is not None:
+                    sample_metrics = physical_sample_timeseries_to_dataframe(
+                        raw_metrics
+                    )  # type: ignore[arg-type]
+            except (ClientError, RequestException) as exc:
+                warnings.warn(
+                    f"Could not fetch sample metrics for physical sample "
+                    f"'{physical_sample_id}': {exc}. Returning the sample without "
+                    "them; call get_physical_sample_timeseries(...) directly to see "
+                    "the error, or pass include_sample_metrics=False to skip this.",
+                    stacklevel=2,
+                )
 
         return PhysicalSampleResult(
             physical_sample_id=sample_id,

@@ -203,6 +203,27 @@ def test_get_physical_sample_populates_sample_metrics(client, monkeypatch):
     assert "rheed_quality" in set(result.sample_metrics.property_name)
 
 
+def test_get_physical_sample_survives_metrics_error(client, monkeypatch):
+    """A non-404 error from the metrics endpoint must not abort the sample fetch."""
+
+    def fake_get(sub_url, params=None, **kwargs):
+        if sub_url == "physical_samples/":
+            return [{"id": PSID, "name": "BTO-1"}]
+        if sub_url == "data_entries/":
+            return []
+        if sub_url == f"physical_samples/{PSID}/timeseries/":
+            raise ClientError("boom", status_code=500)
+        return None
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    with pytest.warns(UserWarning, match="Could not fetch sample metrics"):
+        result = client.get_physical_sample(PSID)
+
+    # Sample still returned; metrics simply absent.
+    assert result.physical_sample_id == PSID
+    assert result.sample_metrics is None
+
+
 def test_get_physical_sample_can_skip_sample_metrics(client, monkeypatch):
     seen: list[str] = []
 
