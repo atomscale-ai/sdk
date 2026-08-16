@@ -28,6 +28,7 @@ atomscale.client.Client
       ~Client.get_frame
       ~Client.get_frame_masks
       ~Client.get_physical_sample
+      ~Client.get_physical_sample_timeseries
       ~Client.get_project
       ~Client.get_rheed_timeseries
       ~Client.get_similarity_matches

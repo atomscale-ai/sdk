@@ -217,43 +217,46 @@ defaulting to ‘<a class="reference external" href="https://api.atomscale.ai/">
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_physical_sample</span></code>(physical_sample_id, *[, ...])</p></td>
 <td><p>Get all data for a physical sample.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_project</span></code>(project_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_physical_sample_timeseries</span></code>(...[, ...])</p></td>
+<td><p>Current sample-scoped computed timeseries results for a physical sample.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_project</span></code>(project_id, *[, ...])</p></td>
 <td><p>Get all data grouped by physical sample for a project.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_rheed_timeseries</span></code>(data_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_rheed_timeseries</span></code>(data_id, *[, ...])</p></td>
 <td><p>Fetch the RHEED feature timeseries for a data entry.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_matches</span></code>(source_id, *[, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_matches</span></code>(source_id, *[, ...])</p></td>
 <td><p>Fetch the top similarity matches for a source data entry.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_trajectory</span></code>(source_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_trajectory</span></code>(source_id, *[, ...])</p></td>
 <td><p>Fetch a one-shot similarity trajectory for a source data_id or physical_sample_id.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">iter_poll_similarity_trajectory</span></code>(source_id, *)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">iter_poll_similarity_trajectory</span></code>(source_id, *)</p></td>
 <td><p>Synchronously poll similarity trajectory data, yielding DataFrames.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_growth_instruments</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_growth_instruments</span></code>()</p></td>
 <td><p>List all growth instruments accessible by the user.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_physical_samples</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_physical_samples</span></code>()</p></td>
 <td><p>List physical samples available to the user.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_projects</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_projects</span></code>()</p></td>
 <td><p>List projects available to the user.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">query_rheed_embeddings</span></code>(data_id, *[, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">query_rheed_embeddings</span></code>(data_id, *[, ...])</p></td>
 <td><p>Find RHEED data items whose embeddings are most similar to this one.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">search</span></code>([keywords, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">search</span></code>([keywords, ...])</p></td>
 <td><p>Search and obtain data catalogue entries</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_polling_similarity_trajectory_task</span></code>(...)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_polling_similarity_trajectory_task</span></code>(...)</p></td>
 <td><p>Start polling similarity trajectory data as an <code class="xref py py-class docutils literal notranslate"><span class="pre">asyncio.Task</span></code>.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_polling_similarity_trajectory_thread</span></code>(...)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">start_polling_similarity_trajectory_thread</span></code>(...)</p></td>
 <td><p>Start polling similarity trajectory data in a background daemon thread.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">upload</span></code>(files[, physical_sample, project])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">upload</span></code>(files[, physical_sample, project])</p></td>
 <td><p>Upload and process files.</p></td>
 </tr>
 </tbody>
@@ -668,7 +671,7 @@ See that function for the full set of keyword arguments
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">get_physical_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_sample_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_organization_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">align</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">PhysicalSampleResult</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_physical_sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<span class="sig-name descname"><span class="pre">get_physical_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_sample_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_organization_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">align</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_sample_metrics</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">PhysicalSampleResult</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_physical_sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Get all data for a physical sample.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -676,10 +679,54 @@ See that function for the full set of keyword arguments
 <li><p><strong>physical_sample_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifier of the physical sample.</p></li>
 <li><p><strong>include_organization_data</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Whether to include organization data. Defaults to True.</p></li>
 <li><p><strong>align</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Whether to align timeseries data. If truthy, an aligned DataFrame is returned.</p></li>
+<li><p><strong>include_sample_metrics</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – Whether to also fetch the sample-scoped computed
+timeseries results (<code class="docutils literal notranslate"><span class="pre">rheed_quality</span></code>, <code class="docutils literal notranslate"><span class="pre">composition_metric</span></code>, …) and
+expose them on <code class="docutils literal notranslate"><span class="pre">PhysicalSampleResult.sample_metrics</span></code>. Defaults to True.
+This is one extra request; set <code class="docutils literal notranslate"><span class="pre">False</span></code> to skip it. See
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">get_physical_sample_timeseries()</span></code>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PhysicalSampleResult</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_physical_sample_timeseries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_sample_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">property_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_physical_sample_timeseries"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Current sample-scoped computed timeseries results for a physical sample.</p>
+<p>Returns the latest row per property (<code class="docutils literal notranslate"><span class="pre">rheed_quality</span></code>,
+<code class="docutils literal notranslate"><span class="pre">composition_metric</span></code>, …) from the <code class="docutils literal notranslate"><span class="pre">physical_sample_timeseries_results</span></code>
+table — the outputs of per-sample DBOS workflows, content-addressed by
+their constituent <code class="docutils literal notranslate"><span class="pre">data_id</span></code> set. These are the headline “sample result,”
+distinct from <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_physical_sample()</span></code>’s <code class="docutils literal notranslate"><span class="pre">aligned_timeseries</span></code>, which
+only re-joins each constituent data item’s own curated RHEED series.</p>
+<p>The series are returned faithfully (no scalar reduction): callers wanting a
+single number reduce the returned series themselves.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>physical_sample_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifier of the physical sample.</p></li>
+<li><p><strong>property_names</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>] | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Restrict the result to these properties, e.g.
+<code class="docutils literal notranslate"><span class="pre">["rheed_quality"]</span></code>. Filtered client-side (the endpoint has no
+filter param yet). <code class="docutils literal notranslate"><span class="pre">None</span></code> (default) returns all properties.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Long form — one row per (property, sample-point) — with
+columns <code class="docutils literal notranslate"><span class="pre">property_name</span></code>, <code class="docutils literal notranslate"><span class="pre">real_time_seconds</span></code>, <code class="docutils literal notranslate"><span class="pre">value</span></code> (float,
+<code class="docutils literal notranslate"><span class="pre">NaN</span></code> for gaps), <code class="docutils literal notranslate"><span class="pre">result_id</span></code>, <code class="docutils literal notranslate"><span class="pre">last_updated</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">generating_dbos_workflow_id</span></code>. Long (not wide) because distinct
+properties can have different axes, so a wide join on
+<code class="docutils literal notranslate"><span class="pre">real_time_seconds</span></code> would mis-align them. Per-property
+<code class="docutils literal notranslate"><span class="pre">constituent_data_ids</span></code> are in <code class="docutils literal notranslate"><span class="pre">df.attrs["constituent_data_ids"]</span></code>.
+A sample with no sample-scoped metrics yields an empty DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ClientError</strong> – If the physical sample does not exist (404).</p>
 </dd>
 </dl>
 </dd></dl>

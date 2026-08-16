@@ -237,6 +237,35 @@ number — with <code class="xref py py-meth docutils literal notranslate"><span
 </span></code></pre></div>
 </div>
 </section>
+<section id="sample-level-results">
+<h2>Sample-Level Results<a class="headerlink" href="#sample-level-results" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#sample-level-results'"><span>#</span></a></h2>
+<p>Some results are computed per <em>physical sample</em> rather than per data item —
+<code class="docutils literal notranslate"><span class="pre">rheed_quality</span></code> and <code class="docutils literal notranslate"><span class="pre">composition_metric</span></code> are compiled from a sample’s
+constituent RHEED videos into one series each. Fetch them with
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">get_physical_sample_timeseries()</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">ts</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_physical_sample_timeseries</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">physical_sample_id</span><span class="p">,</span> <span class="n">property_names</span><span class="o">=</span><span class="p">[</span><span class="s2">"rheed_quality"</span><span class="p">]</span>
+</span><span id="line-3"><span class="p">)</span>
+</span><span id="line-4">
+</span><span id="line-5"><span class="c1"># Long form: one row per (property, sample-point). Reduce to a scalar yourself.</span>
+</span><span id="line-6"><span class="n">q</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ts</span><span class="o">.</span><span class="n">property_name</span> <span class="o">==</span> <span class="s2">"rheed_quality"</span><span class="p">,</span> <span class="s2">"value"</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+</span><span id="line-7"><span class="nb">print</span><span class="p">(</span><span class="n">q</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+</span></code></pre></div>
+</div>
+<p>The frame is long (not wide) because distinct properties can have different
+axes, so a wide join on <code class="docutils literal notranslate"><span class="pre">real_time_seconds</span></code> would mis-align them. <code class="docutils literal notranslate"><span class="pre">value</span></code> is
+<code class="docutils literal notranslate"><span class="pre">NaN</span></code> for gaps; provenance columns (<code class="docutils literal notranslate"><span class="pre">result_id</span></code>, <code class="docutils literal notranslate"><span class="pre">last_updated</span></code>,
+<code class="docutils literal notranslate"><span class="pre">generating_dbos_workflow_id</span></code>) travel alongside, and per-property
+<code class="docutils literal notranslate"><span class="pre">constituent_data_ids</span></code> are in <code class="docutils literal notranslate"><span class="pre">ts.attrs["constituent_data_ids"]</span></code>.
+<code class="docutils literal notranslate"><span class="pre">property_names</span></code> filters client-side; omit it for all properties.</p>
+<p>The same metrics are attached to <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_physical_sample()</span></code>
+results as <code class="docutils literal notranslate"><span class="pre">sample_metrics</span></code> (pass <code class="docutils literal notranslate"><span class="pre">include_sample_metrics=False</span></code> to skip the
+extra request):</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">sample</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_physical_sample</span><span class="p">(</span><span class="n">physical_sample_id</span><span class="p">)</span>
+</span><span id="line-2"><span class="nb">print</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">sample_metrics</span><span class="p">)</span>  <span class="c1"># None if the sample has no computed metrics</span>
+</span></code></pre></div>
+</div>
+</section>
 <section id="embedding-vectors">
 <h2>Embedding Vectors<a class="headerlink" href="#embedding-vectors" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#embedding-vectors'"><span>#</span></a></h2>
 <p>The similarity pipeline persists Chronos embedding vectors for RHEED data — the
@@ -333,6 +362,7 @@ k-nearest-neighbour query over the embedding index with
 <li><a :data-current="activeSection === '#timeseries-data'" class="reference internal" href="#timeseries-data">Timeseries Data</a></li>
 <li><a :data-current="activeSection === '#low-level-features'" class="reference internal" href="#low-level-features">Low-Level Features</a></li>
 <li><a :data-current="activeSection === '#segmentation-masks'" class="reference internal" href="#segmentation-masks">Segmentation Masks</a></li>
+<li><a :data-current="activeSection === '#sample-level-results'" class="reference internal" href="#sample-level-results">Sample-Level Results</a></li>
 <li><a :data-current="activeSection === '#embedding-vectors'" class="reference internal" href="#embedding-vectors">Embedding Vectors</a></li>
 <li><a :data-current="activeSection === '#extracted-frames'" class="reference internal" href="#extracted-frames">Extracted Frames</a></li>
 <li><a :data-current="activeSection === '#result-types'" class="reference internal" href="#result-types">Result Types</a></li>
