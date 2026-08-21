@@ -39,6 +39,13 @@ from atomscale.results import (
     decode_mask_rle,
 )
 from atomscale.results.group import PhysicalSampleResult, ProjectResult
+from atomscale.rheed_metadata import rheed_azimuths_to_dataframe
+from atomscale.samples import (
+    ai_summaries_to_dataframe,
+    ai_summary_row,
+    process_steps_to_dataframe,
+    spatial_annotations_to_dataframe,
+)
 from atomscale.timeseries.align import align_timeseries
 from atomscale.timeseries.physical_sample import (
     physical_sample_timeseries_to_dataframe,
@@ -707,6 +714,39 @@ class Client(BaseClient):
                 ts_df = provider.attach_frame_masks(ts_df, mask_rows)  # type: ignore[arg-type]
         return ts_df
 
+    def get_rheed_azimuths(self, data_ids: str | list[str]) -> DataFrame:
+        """Per-azimuth metadata for rotating RHEED recordings.
+
+        For each seed frame of a rotating video this returns both the rotation
+        angle it sits at and the crystallographic azimuth the production
+        classifier assigned it. The angle depends on where the substrate happened
+        to be parked, so the same azimuth appears at different angles in different
+        recordings of one sample; the label is the stable identity, and so the
+        right key for aligning or concatenating series across recordings.
+
+        Args:
+            data_ids: Data ID or list of data IDs of rotating RHEED videos.
+
+        Returns:
+            DataFrame: One row per (data item, seed frame) with columns
+            ``data_id``, ``seed_frame``, ``angle_degrees``, ``azimuth_label``
+            (``"100"`` / ``"110"`` / ``"210"``, or ``None`` when the classifier
+            could not call it), ``label_confidence``, ``crystal_system`` and
+            ``surface_miller``. Data items with no rotating configuration
+            contribute no rows.
+        """
+        if isinstance(data_ids, str):
+            data_ids = [data_ids]
+
+        payload = self._get(
+            sub_url="configuration/rheed/video/", params={"data_ids": data_ids}
+        )
+        if payload is None:
+            return rheed_azimuths_to_dataframe([])
+        return rheed_azimuths_to_dataframe(
+            payload if isinstance(payload, list) else [payload]
+        )
+
     def get_frame(
         self,
         data_id: str,
@@ -1192,6 +1232,139 @@ class Client(BaseClient):
             )
         return physical_sample_timeseries_to_dataframe(  # type: ignore[arg-type]
             raw, property_names=property_names
+        )
+
+    def get_process_steps(self, physical_sample_id: str) -> DataFrame:
+        """The physical sample's process steps — its temporal phases.
+
+        A step groups the data items whose acquisition windows cluster together,
+        so one sample's run splits into the phases it actually went through
+        (e.g. a substrate anneal, then a growth, then a cooldown). Steps are the
+        natural scope for a per-run report: the newest step is "this run", and
+        the earlier ones are its history.
+
+        Args:
+            physical_sample_id: Identifier of the physical sample.
+
+        Returns:
+            DataFrame: One row per step ordered by ``step_index``, with columns
+            ``step_index``, ``process_step_id``, ``name`` (the human/material
+            label, ``None`` until set), ``start_unix_ms_utc`` /
+            ``end_unix_ms_utc``, ``duration_seconds``, the tz-aware
+            ``start_datetime`` / ``end_datetime``, ``n_data_ids``, ``data_ids``
+            (tuple of the step's data items), and ``last_updated``. A sample
+            whose steps have never been computed yields an empty DataFrame.
+
+        Raises:
+            ClientError: If the physical sample does not exist (404).
+        """
+        raw = self._get(sub_url=f"physical_samples/{physical_sample_id}/process_steps")
+        if raw is None:
+            raise ClientError(
+                f"No physical sample found with id '{physical_sample_id}' "
+                "(physical_samples/{id}/process_steps returned 404).",
+                status_code=404,
+            )
+        return process_steps_to_dataframe(raw)  # type: ignore[arg-type]
+
+    def get_spatial_annotations(
+        self,
+        physical_sample_id: str,
+        *,
+        property_name: str | None = None,
+        char_source_type: str | None = None,
+        x_range: tuple[float | None, float | None] = (None, None),
+        y_range: tuple[float | None, float | None] = (None, None),
+    ) -> DataFrame:
+        """Spatially-resolved property values pinned to a sample's surface.
+
+        Each annotation is one property measured at one position on the sample —
+        an XPS composition ratio stepped across a wafer, a thickness from a
+        mapped ellipsometry scan — which is what a spatial (wafer-map) view of a
+        run is built from.
+
+        Args:
+            physical_sample_id: Identifier of the physical sample.
+            property_name: Restrict to a single property, e.g. ``"sr_ti_ratio"``.
+            char_source_type: Restrict to the technique that produced the values,
+                e.g. ``"xps"``.
+            x_range: Inclusive ``(min, max)`` bounding-box filter on ``coord_x``.
+                The endpoint applies a coordinate filter only when *both* bounds
+                are given, so a half-open range is ignored server-side.
+            y_range: Inclusive ``(min, max)`` bounding-box filter on ``coord_y``,
+                with the same both-bounds requirement as ``x_range``.
+
+        Returns:
+            DataFrame: One row per annotated point with columns
+            ``annotation_id``, ``data_id``, ``char_source_type``,
+            ``property_name``, ``property_value``, ``property_unit``,
+            ``coord_x`` / ``coord_y`` / ``coord_z``, ``coord_ref_frame``,
+            ``coord_units``, ``metadata``, and ``last_updated``. Sorted by
+            property then position. A sample with no annotations — or a filter
+            that matches none — yields an empty DataFrame.
+
+        Raises:
+            ClientError: If the physical sample does not exist (404).
+        """
+        raw = self._get(
+            sub_url=f"physical_samples/{physical_sample_id}/annotations/",
+            params={
+                "property_name": property_name,
+                "char_source_type": char_source_type,
+                "x_min": x_range[0],
+                "x_max": x_range[1],
+                "y_min": y_range[0],
+                "y_max": y_range[1],
+            },
+        )
+        # An existing sample with no annotations returns ``[]``, which ``_get``
+        # hands back as an empty list; only a missing sample 404s to ``None``.
+        if raw is None:
+            raise ClientError(
+                f"No physical sample found with id '{physical_sample_id}' "
+                "(physical_samples/{id}/annotations/ returned 404).",
+                status_code=404,
+            )
+        return spatial_annotations_to_dataframe(raw)  # type: ignore[arg-type]
+
+    def get_ai_summaries(self, data_ids: str | list[str]) -> DataFrame:
+        """Agent-written summaries for one or more data items.
+
+        The summary is generated asynchronously, so every requested data id gets
+        a row carrying its ``task_status``: ``"available"`` when a summary
+        exists, ``"pending"`` while the summarization workflow is still running,
+        and ``"not_found"`` when neither is true. That makes an un-summarized
+        item visible to a caller rendering a report rather than silently absent.
+
+        Args:
+            data_ids: Data ID or list of data IDs from the data catalogue.
+
+        Returns:
+            DataFrame: One row per requested data id, in request order, with
+            columns ``data_id``, ``task_status``, ``summary_id``, ``content``
+            (the prose summary), ``structured_content`` (the agent's full
+            structured output), ``generation_model``, ``generation_timestamp``,
+            ``user_feedback``, and ``workflow_id``. Summary-note columns are
+            ``None`` for rows whose status is not ``"available"``.
+        """
+        if isinstance(data_ids, str):
+            data_ids = [data_ids]
+
+        # The endpoint is per-data-item, so fan the requests out rather than
+        # walking them serially.
+        with _make_progress(self.mute_bars, False) as progress:
+            payloads = self._multi_thread(
+                lambda data_id: self._get(sub_url=f"summary/{data_id}"),
+                [{"data_id": data_id} for data_id in data_ids],
+                progress,
+                progress_description="Obtaining AI summaries",
+            )
+
+        return ai_summaries_to_dataframe(
+            [
+                ai_summary_row(data_id, payload)
+                for data_id, payload in zip(data_ids, payloads, strict=True)
+            ]
         )
 
     def get_project(
