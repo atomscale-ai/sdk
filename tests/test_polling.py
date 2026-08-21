@@ -36,14 +36,24 @@ def client():
 
 @pytest.fixture
 def data_id() -> str:
-    # Take the first ID from the rotating demo set
-    return ResultIDs.rheed_rotating[0]
+    # Populated by test_client.py::test_get, which runs first (order=1). It is a
+    # single id string, so indexing it would yield one *character*; and when that
+    # test found no rotating-RHEED item it is "", where [0] raised a baffling
+    # "IndexError: string index out of range" across every test using this
+    # fixture. Skip instead, so an upstream gap reads as a skip, not 12 errors.
+    if not ResultIDs.rheed_rotating:
+        pytest.skip("No rheed_rotating data available (see test_client.py::test_get)")
+    return ResultIDs.rheed_rotating
 
 
 @pytest.fixture
 def result(client: Client):
     # Example "real-ish" payload you can reuse in tests
+    if not ResultIDs.rheed_rotating:
+        pytest.skip("No rheed_rotating data available (see test_client.py::test_get)")
     results = client.get(data_ids=ResultIDs.rheed_rotating)
+    if not results:
+        pytest.skip(f"No result returned for data_id {ResultIDs.rheed_rotating}")
     return results[0]
 
 
