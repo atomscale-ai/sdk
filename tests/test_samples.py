@@ -153,7 +153,12 @@ def test_process_steps_shape_order_and_derived_columns():
     assert str(df["start_datetime"].dt.tz) == "UTC"
     assert df["start_datetime"].iloc[0].year == 2024
     assert df["start_datetime"].iloc[1].year == 2026
+    # Offset-free ``last_updated`` is normalized to UTC (not tz-naive) so it stays
+    # comparable with the UTC ``start_datetime`` / ``end_datetime`` bounds.
     assert pd.api.types.is_datetime64_any_dtype(df["last_updated"])
+    assert str(df["last_updated"].dt.tz) == "UTC"
+    # The subtraction the reviewer flagged must not raise on mixed tz-awareness.
+    assert (df["last_updated"] - df["start_datetime"]).notna().all()
 
 
 def test_process_steps_empty_keeps_columns_and_dtypes():
@@ -163,6 +168,9 @@ def test_process_steps_empty_keeps_columns_and_dtypes():
     assert list(df.columns) == list(PROCESS_STEP_COLUMNS)
     assert df["start_unix_ms_utc"].dtype == "float64"
     assert df["duration_seconds"].dtype == "float64"
+    # Empty frame shares the populated path's tz-aware datetime dtype.
+    for column in ("start_datetime", "end_datetime", "last_updated"):
+        assert str(df[column].dt.tz) == "UTC"
 
 
 def test_process_steps_step_with_no_data_items_survives():
@@ -226,6 +234,8 @@ def test_spatial_annotations_shape_and_position_sort():
     # The server-side ``id`` is renamed so it can't be mistaken for a data id.
     assert df["annotation_id"].iloc[0] == "b9fa5538-0000-0000-0000-000000000000"
     assert df["data_id"].tolist().count(DID_A) == 1
+    # Offset-free ``last_updated`` is normalized to UTC, not tz-naive.
+    assert str(df["last_updated"].dt.tz) == "UTC"
 
 
 def test_spatial_annotations_missing_coord_becomes_nan():
@@ -242,6 +252,7 @@ def test_spatial_annotations_empty_keeps_columns_and_dtypes():
     assert list(df.columns) == list(SPATIAL_ANNOTATION_COLUMNS)
     assert df["property_value"].dtype == "float64"
     assert df["coord_x"].dtype == "float64"
+    assert str(df["last_updated"].dt.tz) == "UTC"
 
 
 def test_get_spatial_annotations_forwards_filters(client, monkeypatch):
@@ -353,12 +364,15 @@ def test_ai_summaries_frame_preserves_request_order_and_parses_timestamp():
     assert df["task_status"].tolist() == ["pending", "available"]
     assert isna(df["generation_timestamp"].iloc[0])
     assert df["generation_timestamp"].iloc[1].year == 2026
+    # Offset-free ``generation_timestamp`` is normalized to UTC, not tz-naive.
+    assert str(df["generation_timestamp"].dt.tz) == "UTC"
 
 
 def test_ai_summaries_empty_keeps_columns():
     df = ai_summaries_to_dataframe([])
     assert len(df) == 0
     assert list(df.columns) == list(AI_SUMMARY_COLUMNS)
+    assert str(df["generation_timestamp"].dt.tz) == "UTC"
 
 
 def test_get_ai_summaries_one_row_per_requested_id(client, monkeypatch):

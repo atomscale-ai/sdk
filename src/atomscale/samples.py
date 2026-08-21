@@ -86,12 +86,32 @@ _FLOAT_COLUMNS: Mapping[str, tuple[str, ...]] = {
     "annotations": ("property_value", "coord_x", "coord_y", "coord_z"),
 }
 
+# Absolute-timestamp columns per payload. Parsed with ``utc=True`` so offset-free
+# values land tz-aware (UTC) rather than tz-naive, keeping them comparable with
+# each other and with the UTC ``start_datetime`` / ``end_datetime`` bounds — a
+# tz-naive column would raise on subtraction/comparison against a tz-aware one.
+_DATETIME_COLUMNS: Mapping[str, tuple[str, ...]] = {
+    "process_steps": ("start_datetime", "end_datetime", "last_updated"),
+    "annotations": ("last_updated",),
+    "summaries": ("generation_timestamp",),
+}
 
-def _empty(columns: Sequence[str], float_columns: Sequence[str] = ()) -> DataFrame:
-    """Empty frame carrying the full column set, with float columns typed."""
+
+def _empty(
+    columns: Sequence[str],
+    float_columns: Sequence[str] = (),
+    datetime_columns: Sequence[str] = (),
+) -> DataFrame:
+    """Empty frame carrying the full column set, with typed float/datetime columns.
+
+    Datetime columns are typed tz-aware (UTC) so an empty return shares the dtype
+    the populated path produces (see :data:`_DATETIME_COLUMNS`).
+    """
     frame = DataFrame({c: [] for c in columns})
     for column in float_columns:
         frame[column] = frame[column].astype("float64")
+    for column in datetime_columns:
+        frame[column] = frame[column].astype("datetime64[ns, UTC]")
     return frame
 
 
@@ -120,7 +140,11 @@ def process_steps_to_dataframe(payload: Mapping[str, Any]) -> DataFrame:
     """
     steps = list(payload.get("process_steps") or [])
     if not steps:
-        return _empty(PROCESS_STEP_COLUMNS, _FLOAT_COLUMNS["process_steps"])
+        return _empty(
+            PROCESS_STEP_COLUMNS,
+            _FLOAT_COLUMNS["process_steps"],
+            _DATETIME_COLUMNS["process_steps"],
+        )
 
     rows = []
     for step in steps:
@@ -148,7 +172,9 @@ def process_steps_to_dataframe(payload: Mapping[str, Any]) -> DataFrame:
     frame["end_datetime"] = pd.to_datetime(
         frame["end_unix_ms_utc"], unit="ms", utc=True
     )
-    frame["last_updated"] = pd.to_datetime(frame["last_updated"], errors="coerce")
+    frame["last_updated"] = pd.to_datetime(
+        frame["last_updated"], errors="coerce", utc=True
+    )
     return (
         frame[list(PROCESS_STEP_COLUMNS)]
         .sort_values("step_index", kind="stable")
@@ -174,7 +200,11 @@ def spatial_annotations_to_dataframe(payload: Sequence[Mapping[str, Any]]) -> Da
     """
     records = list(payload or [])
     if not records:
-        return _empty(SPATIAL_ANNOTATION_COLUMNS, _FLOAT_COLUMNS["annotations"])
+        return _empty(
+            SPATIAL_ANNOTATION_COLUMNS,
+            _FLOAT_COLUMNS["annotations"],
+            _DATETIME_COLUMNS["annotations"],
+        )
 
     rows = [
         {
@@ -196,7 +226,9 @@ def spatial_annotations_to_dataframe(payload: Sequence[Mapping[str, Any]]) -> Da
     ]
 
     frame = DataFrame(rows)
-    frame["last_updated"] = pd.to_datetime(frame["last_updated"], errors="coerce")
+    frame["last_updated"] = pd.to_datetime(
+        frame["last_updated"], errors="coerce", utc=True
+    )
     return (
         frame[list(SPATIAL_ANNOTATION_COLUMNS)]
         .sort_values(
@@ -249,10 +281,12 @@ def ai_summaries_to_dataframe(rows: Sequence[Mapping[str, Any]]) -> DataFrame:
         ``rows`` yields an empty frame.
     """
     if not rows:
-        return _empty(AI_SUMMARY_COLUMNS)
+        return _empty(
+            AI_SUMMARY_COLUMNS, datetime_columns=_DATETIME_COLUMNS["summaries"]
+        )
 
     frame = DataFrame(list(rows))[list(AI_SUMMARY_COLUMNS)]
     frame["generation_timestamp"] = pd.to_datetime(
-        frame["generation_timestamp"], errors="coerce"
+        frame["generation_timestamp"], errors="coerce", utc=True
     )
     return frame
