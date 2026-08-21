@@ -11,6 +11,12 @@ from atomscale.results import UnknownResult
 
 from .conftest import ResultIDs
 
+# Cap every live catalogue search in this module. Unbounded searches fall back to
+# the server default (up to 30,000 entries ordered newest-first), which on the
+# real catalogue is a slow, multi-megabyte response — and these tests only ever
+# assert that *some* rows come back, never how many exist.
+SEARCH_LIMIT = 5
+
 
 @pytest.fixture
 def client():
@@ -24,7 +30,7 @@ def test_no_api_key():
 
 
 def test_generic_search(client: Client):
-    orig_data = client.search()
+    orig_data = client.search(limit=SEARCH_LIMIT)
     assert isinstance(orig_data, DataFrame)
     column_names = set(
         [
@@ -56,17 +62,17 @@ def test_generic_search(client: Client):
 
 
 def test_keyword_search(client: Client):
-    data = client.search(keywords=".vms")
+    data = client.search(keywords=".vms", limit=SEARCH_LIMIT)
     assert len(data["Data ID"].values)
 
 
 def test_include_org_search(client: Client):
-    data = client.search(include_organization_data=False)
+    data = client.search(include_organization_data=False, limit=SEARCH_LIMIT)
     assert len(data["Data ID"].values)
 
 
 def test_data_ids_search(client: Client):
-    user_data = client.search(include_organization_data=False)
+    user_data = client.search(include_organization_data=False, limit=SEARCH_LIMIT)
     # Keep request size bounded when this test runs against live catalogue data.
     data_ids = list(user_data["Data ID"].values)[:20]
     data = client.search(data_ids=data_ids)
@@ -79,32 +85,32 @@ def test_data_ids_search(client: Client):
 def test_data_type_search(client: Client):
     data_types = ["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"]
     for data_type in data_types:
-        data = client.search(data_type=data_type)  # type: ignore
+        data = client.search(data_type=data_type, limit=SEARCH_LIMIT)  # type: ignore
         assert len(data["Type"].values)
 
 
 def test_status_search(client: Client):
     status_values = ["success", "all"]
     for status in status_values:
-        data = client.search(status=status)  # type: ignore
+        data = client.search(status=status, limit=SEARCH_LIMIT)  # type: ignore
         assert len(data["Status"].values)
 
 
 def test_growth_length_search(client: Client):
-    data = client.search(growth_length=(1, None))
+    data = client.search(growth_length=(1, None), limit=SEARCH_LIMIT)
     assert len(data["Growth Length"].values)
 
-    data = client.search(growth_length=(None, 1000))
+    data = client.search(growth_length=(None, 1000), limit=SEARCH_LIMIT)
     assert len(data["Growth Length"].values)
 
 
 def test_upload_datetime_search(client: Client):
-    data = client.search(upload_datetime=(None, datetime.utcnow()))
+    data = client.search(upload_datetime=(None, datetime.utcnow()), limit=SEARCH_LIMIT)
     assert len(data["Upload Datetime"].values)
 
 
 def test_last_updated_search(client: Client):
-    data = client.search(last_updated=(None, datetime.utcnow()))
+    data = client.search(last_updated=(None, datetime.utcnow()), limit=SEARCH_LIMIT)
     assert len(data["Last Updated"].values)
 
 
@@ -129,6 +135,24 @@ def test_last_accessed_datetime_alias_forwards_to_last_updated(monkeypatch):
     assert captured["params"]["last_updated_max"] == upper
     assert "last_accessed_datetime_min" not in captured["params"]
     assert "last_accessed_datetime_max" not in captured["params"]
+
+
+def test_search_limit_forwarded_and_omitted_when_unset(monkeypatch):
+    """``limit`` reaches the server only when set, so the default cap stays server-side."""
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    captured: dict = {}
+
+    def fake_get(sub_url, params=None):
+        captured["params"] = params
+        return []
+
+    monkeypatch.setattr(client, "_get", fake_get)
+
+    client.search(limit=5)
+    assert captured["params"]["limit"] == 5
+
+    client.search()
+    assert "limit" not in captured["params"]
 
 
 def test_metrology_search_alias_uses_tool_state_enum(monkeypatch):
@@ -179,6 +203,7 @@ def test_get(client: Client):
                         data_type=alias,
                         include_organization_data=include_org,
                         status="success",
+                        limit=SEARCH_LIMIT,
                     )
 
                 except ClientError as exc:

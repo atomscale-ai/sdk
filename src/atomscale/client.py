@@ -158,6 +158,7 @@ class Client(BaseClient):
         upload_datetime: tuple[datetime | None, datetime | None] = (None, None),
         last_updated: tuple[datetime | None, datetime | None] = (None, None),
         last_accessed_datetime: tuple[datetime | None, datetime | None] | None = None,
+        limit: int | None = None,
     ) -> DataFrame:
         """Search and obtain data catalogue entries
 
@@ -179,6 +180,11 @@ class Client(BaseClient):
             last_updated (tuple[datetime | None, datetime | None]): Minimum and maximum values of the last
                 updated datetime. Defaults to (None, None).
             last_accessed_datetime: Deprecated alias for ``last_updated``; will be removed in a future release.
+            limit (int | None): Maximum number of catalogue entries to return, newest
+                first (the server orders by descending upload datetime). ``None``
+                (default) leaves the cap to the server, which currently returns up to
+                30,000 entries — on a large catalogue that is a slow, heavy response,
+                so pass a limit when you only need a sample of recent entries.
 
         Returns:
             (DataFrame): Pandas DataFrame containing matched entries in the data catalogue.
@@ -217,6 +223,10 @@ class Client(BaseClient):
             "last_updated_min": last_updated[0],
             "last_updated_max": last_updated[1],
         }
+        # Only send the param when set, so the server default stays in force for
+        # callers that don't ask for a cap.
+        if limit is not None:
+            params["limit"] = limit
 
         data = self._get(
             sub_url="data_entries/",
