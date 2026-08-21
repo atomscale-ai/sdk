@@ -90,7 +90,7 @@ def rheed_azimuths_to_dataframe(payload: Sequence[Mapping[str, Any]]) -> DataFra
                     # scalar and groupable.
                     "surface_miller": (
                         "".join(str(_i) for _i in surface)
-                        if isinstance(surface, (list, tuple))
+                        if isinstance(surface, list | tuple)
                         else surface
                     ),
                 }
