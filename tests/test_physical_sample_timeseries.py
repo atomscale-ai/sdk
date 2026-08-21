@@ -260,18 +260,25 @@ def test_get_physical_sample_timeseries_integration(live_client):
 
     # Probe BTO-looking samples first, then fall back to any sample; stop at the
     # first one exposing rheed_quality. Bounded so the scan stays cheap.
-    ids = samples["Physical Sample ID"].dropna().astype(str)
-    name_col = samples.get("Physical Sample Name")
-    looks_bto = (
-        name_col.fillna("").str.contains("bto", case=False)
-        if name_col is not None
-        else None
-    )
-    ordered = (
-        ids[looks_bto].tolist() + ids[~looks_bto].tolist()
-        if looks_bto is not None
-        else ids.tolist()
-    )
+    #
+    # Work on one frame filtered to rows that actually have an id, so the name
+    # mask can't misalign against it. Names are coerced with astype(str) rather
+    # than fillna("") because the live catalogue carries non-string names (None,
+    # NaN, even dicts); .str.contains would yield NA on those and pandas refuses
+    # to index with a non-boolean mask.
+    have_id = samples[samples["Physical Sample ID"].notna()]
+    ids = have_id["Physical Sample ID"].astype(str)
+    if "Physical Sample Name" in have_id.columns:
+        looks_bto = (
+            have_id["Physical Sample Name"]
+            .astype(str)
+            .str.contains("bto", case=False, na=False)
+            .fillna(False)
+            .astype(bool)
+        )
+        ordered = ids[looks_bto].tolist() + ids[~looks_bto].tolist()
+    else:
+        ordered = ids.tolist()
 
     found = None
     for sid in ordered[:25]:
