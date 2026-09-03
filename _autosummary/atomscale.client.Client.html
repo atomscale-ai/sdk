@@ -202,35 +202,47 @@ defaulting to ‘<a class="reference external" href="https://api.atomscale.ai/">
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get</span></code>(data_ids)</p></td>
 <td><p>Get analyzed data results</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_changepoints</span></code>(data_ids[, latest_only, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_ai_summaries</span></code>(data_ids)</p></td>
+<td><p>Agent-written summaries for one or more data items.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_changepoints</span></code>(data_ids[, latest_only, ...])</p></td>
 <td><p>Get changepoint detection records for one or more data IDs.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_embeddings</span></code>(data_id, *[, workflow, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_embeddings</span></code>(data_id, *[, workflow, ...])</p></td>
 <td><p>Fetch embedding vectors for a data entry.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_frame</span></code>(data_id, *[, frame_index])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_frame</span></code>(data_id, *[, frame_index])</p></td>
 <td><p>Fetch a single extracted RHEED frame as a <code class="xref py py-class docutils literal notranslate"><span class="pre">RHEEDImageResult</span></code>.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_frame_masks</span></code>(data_id, *[, from_frame, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_frame_masks</span></code>(data_id, *[, from_frame, ...])</p></td>
 <td><p>Fetch per-frame RHEED segmentation masks for a processed video.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_physical_sample</span></code>(physical_sample_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_physical_sample</span></code>(physical_sample_id, *[, ...])</p></td>
 <td><p>Get all data for a physical sample.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_physical_sample_timeseries</span></code>(...[, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_physical_sample_timeseries</span></code>(...[, ...])</p></td>
 <td><p>Current sample-scoped computed timeseries results for a physical sample.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_process_steps</span></code>(physical_sample_id)</p></td>
+<td><p>The physical sample's process steps — its temporal phases.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_project</span></code>(project_id, *[, ...])</p></td>
 <td><p>Get all data grouped by physical sample for a project.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_rheed_timeseries</span></code>(data_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_rheed_azimuths</span></code>(data_ids)</p></td>
+<td><p>Per-azimuth metadata for rotating RHEED recordings.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_rheed_timeseries</span></code>(data_id, *[, ...])</p></td>
 <td><p>Fetch the RHEED feature timeseries for a data entry.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_matches</span></code>(source_id, *[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_matches</span></code>(source_id, *[, ...])</p></td>
 <td><p>Fetch the top similarity matches for a source data entry.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_trajectory</span></code>(source_id, *[, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_similarity_trajectory</span></code>(source_id, *[, ...])</p></td>
 <td><p>Fetch a one-shot similarity trajectory for a source data_id or physical_sample_id.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_spatial_annotations</span></code>(physical_sample_id, *)</p></td>
+<td><p>Spatially-resolved property values pinned to a sample's surface.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">iter_poll_similarity_trajectory</span></code>(source_id, *)</p></td>
 <td><p>Synchronously poll similarity trajectory data, yielding DataFrames.</p></td>
@@ -505,6 +517,33 @@ when available. Low-level feature columns are included when
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_rheed_azimuths</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_rheed_azimuths"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Per-azimuth metadata for rotating RHEED recordings.</p>
+<p>For each seed frame of a rotating video this returns both the rotation
+angle it sits at and the crystallographic azimuth the production
+classifier assigned it. The angle depends on where the substrate happened
+to be parked, so the same azimuth appears at different angles in different
+recordings of one sample; the label is the stable identity, and so the
+right key for aligning or concatenating series across recordings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data_ids</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Data ID or list of data IDs of rotating RHEED videos.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One row per (data item, seed frame) with columns
+<code class="docutils literal notranslate"><span class="pre">data_id</span></code>, <code class="docutils literal notranslate"><span class="pre">seed_frame</span></code>, <code class="docutils literal notranslate"><span class="pre">angle_degrees</span></code>, <code class="docutils literal notranslate"><span class="pre">azimuth_label</span></code>
+(<code class="docutils literal notranslate"><span class="pre">"100"</span></code> / <code class="docutils literal notranslate"><span class="pre">"110"</span></code> / <code class="docutils literal notranslate"><span class="pre">"210"</span></code>, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when the classifier
+could not call it), <code class="docutils literal notranslate"><span class="pre">label_confidence</span></code>, <code class="docutils literal notranslate"><span class="pre">crystal_system</span></code> and
+<code class="docutils literal notranslate"><span class="pre">surface_miller</span></code>. Data items with no rotating configuration
+contribute no rows.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">get_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">RHEEDImageResult</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_frame"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>Fetch a single extracted RHEED frame as a <code class="xref py py-class docutils literal notranslate"><span class="pre">RHEEDImageResult</span></code>.</p>
 <dl class="field-list simple">
@@ -727,6 +766,101 @@ A sample with no sample-scoped metrics yields an empty DataFrame.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>ClientError</strong> – If the physical sample does not exist (404).</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_process_steps</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_sample_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_process_steps"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>The physical sample’s process steps — its temporal phases.</p>
+<p>A step groups the data items whose acquisition windows cluster together,
+so one sample’s run splits into the phases it actually went through
+(e.g. a substrate anneal, then a growth, then a cooldown). Steps are the
+natural scope for a per-run report: the newest step is “this run”, and
+the earlier ones are its history.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>physical_sample_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifier of the physical sample.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One row per step ordered by <code class="docutils literal notranslate"><span class="pre">step_index</span></code>, with columns
+<code class="docutils literal notranslate"><span class="pre">step_index</span></code>, <code class="docutils literal notranslate"><span class="pre">process_step_id</span></code>, <code class="docutils literal notranslate"><span class="pre">name</span></code> (the human/material
+label, <code class="docutils literal notranslate"><span class="pre">None</span></code> until set), <code class="docutils literal notranslate"><span class="pre">start_unix_ms_utc</span></code> /
+<code class="docutils literal notranslate"><span class="pre">end_unix_ms_utc</span></code>, <code class="docutils literal notranslate"><span class="pre">duration_seconds</span></code>, the tz-aware
+<code class="docutils literal notranslate"><span class="pre">start_datetime</span></code> / <code class="docutils literal notranslate"><span class="pre">end_datetime</span></code>, <code class="docutils literal notranslate"><span class="pre">n_data_ids</span></code>, <code class="docutils literal notranslate"><span class="pre">data_ids</span></code>
+(tuple of the step’s data items), and <code class="docutils literal notranslate"><span class="pre">last_updated</span></code>. A sample
+whose steps have never been computed yields an empty DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ClientError</strong> – If the physical sample does not exist (404).</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_spatial_annotations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_sample_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">property_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">char_source_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_range</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(None,</span> <span class="pre">None)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_range</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">(None,</span> <span class="pre">None)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_spatial_annotations"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Spatially-resolved property values pinned to a sample’s surface.</p>
+<p>Each annotation is one property measured at one position on the sample —
+an XPS composition ratio stepped across a wafer, a thickness from a
+mapped ellipsometry scan — which is what a spatial (wafer-map) view of a
+run is built from.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>physical_sample_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Identifier of the physical sample.</p></li>
+<li><p><strong>property_name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Restrict to a single property, e.g. <code class="docutils literal notranslate"><span class="pre">"sr_ti_ratio"</span></code>.</p></li>
+<li><p><strong>char_source_type</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Restrict to the technique that produced the values,
+e.g. <code class="docutils literal notranslate"><span class="pre">"xps"</span></code>.</p></li>
+<li><p><strong>x_range</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]</span>) – Inclusive <code class="docutils literal notranslate"><span class="pre">(min,</span> <span class="pre">max)</span></code> bounding-box filter on <code class="docutils literal notranslate"><span class="pre">coord_x</span></code>.
+The endpoint applies a coordinate filter only when <em>both</em> bounds
+are given, so a half-open range is ignored server-side.</p></li>
+<li><p><strong>y_range</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">tuple</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code>]</span>) – Inclusive <code class="docutils literal notranslate"><span class="pre">(min,</span> <span class="pre">max)</span></code> bounding-box filter on <code class="docutils literal notranslate"><span class="pre">coord_y</span></code>,
+with the same both-bounds requirement as <code class="docutils literal notranslate"><span class="pre">x_range</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One row per annotated point with columns
+<code class="docutils literal notranslate"><span class="pre">annotation_id</span></code>, <code class="docutils literal notranslate"><span class="pre">data_id</span></code>, <code class="docutils literal notranslate"><span class="pre">char_source_type</span></code>,
+<code class="docutils literal notranslate"><span class="pre">property_name</span></code>, <code class="docutils literal notranslate"><span class="pre">property_value</span></code>, <code class="docutils literal notranslate"><span class="pre">property_unit</span></code>,
+<code class="docutils literal notranslate"><span class="pre">coord_x</span></code> / <code class="docutils literal notranslate"><span class="pre">coord_y</span></code> / <code class="docutils literal notranslate"><span class="pre">coord_z</span></code>, <code class="docutils literal notranslate"><span class="pre">coord_ref_frame</span></code>,
+<code class="docutils literal notranslate"><span class="pre">coord_units</span></code>, <code class="docutils literal notranslate"><span class="pre">metadata</span></code>, and <code class="docutils literal notranslate"><span class="pre">last_updated</span></code>. Sorted by
+property then position. A sample with no annotations — or a filter
+that matches none — yields an empty DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ClientError</strong> – If the physical sample does not exist (404).</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_ai_summaries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_ai_summaries"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Agent-written summaries for one or more data items.</p>
+<p>The summary is generated asynchronously, so every requested data id gets
+a row carrying its <code class="docutils literal notranslate"><span class="pre">task_status</span></code>: <code class="docutils literal notranslate"><span class="pre">"available"</span></code> when a summary
+exists, <code class="docutils literal notranslate"><span class="pre">"pending"</span></code> while the summarization workflow is still running,
+and <code class="docutils literal notranslate"><span class="pre">"not_found"</span></code> when neither is true. That makes an un-summarized
+item visible to a caller rendering a report rather than silently absent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>data_ids</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-class docutils literal notranslate"><span class="pre">list</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code>]</span>) – Data ID or list of data IDs from the data catalogue.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>One row per requested data id, in request order, with
+columns <code class="docutils literal notranslate"><span class="pre">data_id</span></code>, <code class="docutils literal notranslate"><span class="pre">task_status</span></code>, <code class="docutils literal notranslate"><span class="pre">summary_id</span></code>, <code class="docutils literal notranslate"><span class="pre">content</span></code>
+(the prose summary), <code class="docutils literal notranslate"><span class="pre">structured_content</span></code> (the agent’s full
+structured output), <code class="docutils literal notranslate"><span class="pre">generation_model</span></code>, <code class="docutils literal notranslate"><span class="pre">generation_timestamp</span></code>,
+<code class="docutils literal notranslate"><span class="pre">user_feedback</span></code>, and <code class="docutils literal notranslate"><span class="pre">workflow_id</span></code>. Summary-note columns are
+<code class="docutils literal notranslate"><span class="pre">None</span></code> for rows whose status is not <code class="docutils literal notranslate"><span class="pre">"available"</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
 </dd>
 </dl>
 </dd></dl>

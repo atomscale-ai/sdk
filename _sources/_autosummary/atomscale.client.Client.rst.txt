@@ -23,16 +23,20 @@ atomscale.client.Client
       ~Client.download
       ~Client.download_videos
       ~Client.get
+      ~Client.get_ai_summaries
       ~Client.get_changepoints
       ~Client.get_embeddings
       ~Client.get_frame
       ~Client.get_frame_masks
       ~Client.get_physical_sample
       ~Client.get_physical_sample_timeseries
+      ~Client.get_process_steps
       ~Client.get_project
+      ~Client.get_rheed_azimuths
       ~Client.get_rheed_timeseries
       ~Client.get_similarity_matches
       ~Client.get_similarity_trajectory
+      ~Client.get_spatial_annotations
       ~Client.iter_poll_similarity_trajectory
       ~Client.list_growth_instruments
       ~Client.list_physical_samples
