@@ -23,6 +23,15 @@ except PackageNotFoundError:
     __version__ = "0.0.0"
 
 
+# Default ``(connect, read)`` timeout in seconds for every HTTP call. The read
+# value bounds the gap *between* received bytes rather than the total transfer,
+# so it caps a stalled/hung connection without breaking legitimately large
+# uploads or downloads that keep streaming data. With no timeout at all (the
+# previous behavior), a server that accepts the connection but never responds
+# blocks the caller — and, in CI, the whole test job — indefinitely.
+_DEFAULT_HTTP_TIMEOUT: tuple[float, float] = (10.0, 60.0)
+
+
 class BaseClient:
     """Base API client implementation"""
 
@@ -30,14 +39,20 @@ class BaseClient:
         self,
         api_key: str,
         endpoint: str,
+        timeout: float | tuple[float, float] | None = _DEFAULT_HTTP_TIMEOUT,
     ):
         """
         Args:
             api_key (str | None): API key.
             endpoint (str): Root API endpoint.
+            timeout (float | tuple[float, float] | None): Per-request timeout in
+                seconds applied to every HTTP call, as a ``(connect, read)`` tuple
+                or a single value for both. ``None`` disables it (waits forever).
+                Defaults to :data:`_DEFAULT_HTTP_TIMEOUT`.
         """
         self.api_key = api_key
         self.endpoint = endpoint
+        self.timeout = timeout
         self._session = None
 
     @property
@@ -71,7 +86,10 @@ class BaseClient:
         """
         base_url = base_override or self.endpoint
         response = self.session.get(
-            url=urljoin(base_url, sub_url), verify=True, params=params
+            url=urljoin(base_url, sub_url),
+            verify=True,
+            params=params,
+            timeout=self.timeout,
         )
         if not response.ok:
             if response.status_code == 404:
@@ -137,6 +155,7 @@ class BaseClient:
             verify=True,
             params=params,
             headers=headers or {},
+            timeout=self.timeout,
             **data_params,  # type: ignore # noqa: PGH003
         )
         if not response.ok:
@@ -179,7 +198,10 @@ class BaseClient:
         """
         base_url = base_override or self.endpoint
         response = self.session.delete(
-            url=urljoin(base_url, sub_url), verify=True, params=params
+            url=urljoin(base_url, sub_url),
+            verify=True,
+            params=params,
+            timeout=self.timeout,
         )
         if not response.ok:
             if response.status_code == 404:

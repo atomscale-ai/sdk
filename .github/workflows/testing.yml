@@ -52,6 +52,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      # Cache the Rust build for the streaming extension so `pip install -e .`
+      # (setuptools-rust) doesn't recompile reqwest/tokio/zarrs/pyo3 from scratch
+      # on every run. The crate lives under src/atomscale/streaming.
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src/atomscale/streaming"
+
       - name: Install package
         run: uv pip install --system -e .
 
@@ -102,6 +110,16 @@ jobs:
       - name: Set SSL_CERT_FILE (Windows)
         if: matrix.os == 'windows-latest'
         run: echo "SSL_CERT_FILE=$(python -m certifi)" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+      # Cache the Rust build for the streaming extension so `pip install -e .`
+      # (setuptools-rust) doesn't recompile reqwest/tokio/zarrs/pyo3 from scratch
+      # in every one of the 12 matrix jobs. Sharded by Python version because the
+      # pyo3 cdylib links against the interpreter; OS/rustc are keyed automatically.
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src/atomscale/streaming"
+          key: py${{ matrix.python-version }}
 
       - name: Install package
         run: uv pip install --system -e .

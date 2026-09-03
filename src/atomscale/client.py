@@ -20,6 +20,7 @@ from pandas import DataFrame
 from requests.exceptions import RequestException
 
 from atomscale.core import BaseClient, ClientError, _FileSlice
+from atomscale.core.client import _DEFAULT_HTTP_TIMEOUT
 from atomscale.core.utils import _make_progress, normalize_path
 from atomscale.results import (
     ChangepointResult,
@@ -105,6 +106,7 @@ class Client(BaseClient):
         api_key: str | None = None,
         endpoint: str | None = None,
         mute_bars: bool = False,
+        timeout: float | tuple[float, float] | None = _DEFAULT_HTTP_TIMEOUT,
     ):
         """
         Args:
@@ -112,6 +114,11 @@ class Client(BaseClient):
             endpoint (str): Root API endpoint. Explicit value takes precedence; if None, falls back to AS_API_ENDPOINT environment variable,
                 defaulting to 'https://api.atomscale.ai/' if not set.
             mute_bars (bool): Whether to mute progress bars. Defaults to False.
+            timeout (float | tuple[float, float] | None): Per-request timeout in
+                seconds for every HTTP call, as ``(connect, read)`` or a single value
+                for both. ``None`` waits indefinitely. Lower it to fail fast against a
+                slow or degraded endpoint. Falls back to the ``AS_HTTP_TIMEOUT``
+                environment variable (read seconds) when not passed explicitly.
         """
 
         if api_key is None:
@@ -123,9 +130,24 @@ class Client(BaseClient):
         if api_key is None:
             raise ValueError("No valid Atomscale API key supplied")
 
+        # Env override so a test run or CI job can bound a degraded backend without
+        # touching call sites. Only honored when the caller didn't pass a timeout.
+        if timeout is _DEFAULT_HTTP_TIMEOUT:
+            env_timeout = os.environ.get("AS_HTTP_TIMEOUT")
+            if env_timeout:
+                try:
+                    connect, _read = _DEFAULT_HTTP_TIMEOUT
+                    timeout = (connect, float(env_timeout))
+                except ValueError:
+                    warnings.warn(
+                        f"Ignoring non-numeric AS_HTTP_TIMEOUT={env_timeout!r}; "
+                        f"using default {_DEFAULT_HTTP_TIMEOUT}.",
+                        stacklevel=2,
+                    )
+
         self.mute_bars = mute_bars
 
-        super().__init__(api_key=api_key, endpoint=endpoint)
+        super().__init__(api_key=api_key, endpoint=endpoint, timeout=timeout)
 
     def search(
         self,
@@ -165,6 +187,7 @@ class Client(BaseClient):
         upload_datetime: tuple[datetime | None, datetime | None] = (None, None),
         last_updated: tuple[datetime | None, datetime | None] = (None, None),
         last_accessed_datetime: tuple[datetime | None, datetime | None] | None = None,
+        limit: int | None = None,
     ) -> DataFrame:
         """Search and obtain data catalogue entries
 
@@ -186,6 +209,11 @@ class Client(BaseClient):
             last_updated (tuple[datetime | None, datetime | None]): Minimum and maximum values of the last
                 updated datetime. Defaults to (None, None).
             last_accessed_datetime: Deprecated alias for ``last_updated``; will be removed in a future release.
+            limit (int | None): Maximum number of catalogue entries to return, newest
+                first (the server orders by descending upload datetime). ``None``
+                (default) leaves the cap to the server, which currently returns up to
+                30,000 entries — on a large catalogue that is a slow, heavy response,
+                so pass a limit when you only need a sample of recent entries.
 
         Returns:
             (DataFrame): Pandas DataFrame containing matched entries in the data catalogue.
@@ -224,6 +252,10 @@ class Client(BaseClient):
             "last_updated_min": last_updated[0],
             "last_updated_max": last_updated[1],
         }
+        # Only send the param when set, so the server default stays in force for
+        # callers that don't ask for a cap.
+        if limit is not None:
+            params["limit"] = limit
 
         data = self._get(
             sub_url="data_entries/",
