@@ -1813,6 +1813,103 @@ class Client(BaseClient):
                     if master_task is not None:
                         progress.update(master_task, advance=1, refresh=True)
 
+    def export(
+        self,
+        *,
+        data_ids: str | list[str] | None = None,
+        physical_sample_ids: str | list[str] | None = None,
+        process_step_ids: str | list[str] | None = None,
+        dest_dir: str | Path | None = None,
+        poll_interval_seconds: float = 1.5,
+    ) -> Path:
+        """Export one authorized asset scope to a local file.
+
+        The Atomscale backend expands and snapshots aggregate scopes, packages
+        their raw data and results into temporary S3 archives, and returns a
+        short-lived download URL. A single ordinary data item takes the same
+        path but is usually returned immediately as its original raw file.
+
+        Exactly one of ``data_ids``, ``physical_sample_ids``, or
+        ``process_step_ids`` must be provided.
+
+        Returns:
+            Path: The completed local file.
+        """
+
+        def normalize_ids(value: str | list[str] | None) -> list[str]:
+            if value is None:
+                return []
+            return [value] if isinstance(value, str) else list(value)
+
+        payload = {
+            "data_ids": normalize_ids(data_ids),
+            "physical_sample_ids": normalize_ids(physical_sample_ids),
+            "process_step_ids": normalize_ids(process_step_ids),
+        }
+        if sum(bool(values) for values in payload.values()) != 1:
+            raise ValueError(
+                "Provide exactly one of data_ids, physical_sample_ids, "
+                "or process_step_ids"
+            )
+        if poll_interval_seconds < 0:
+            raise ValueError("poll_interval_seconds must be non-negative")
+
+        job = _retry_client_call(
+            self._post_or_put,
+            "POST",
+            "data_entries/export/jobs",
+            body=payload,
+        )
+        if not isinstance(job, dict):
+            raise ClientError("The asset export could not be created")
+
+        while job.get("status") in {"queued", "running"}:
+            job_id = job.get("id")
+            if not job_id:
+                raise ClientError("The asset export response has no job identifier")
+            time.sleep(poll_interval_seconds)
+            job = _retry_client_call(
+                self._get,
+                f"data_entries/export/jobs/{job_id}",
+            )
+            if not isinstance(job, dict):
+                raise ClientError(f"Asset export job '{job_id}' was not found")
+
+        if job.get("status") != "ready" or not job.get("download_url"):
+            message = (
+                job.get("error_message") or "The asset export could not be prepared"
+            )
+            raise ClientError(str(message))
+
+        destination = (
+            Path.cwd() if dest_dir is None else Path(dest_dir).expanduser().resolve()
+        )
+        destination.mkdir(parents=True, exist_ok=True)
+        file_name = Path(
+            str(job.get("file_name") or "atomscale_export.zip").replace("\\", "/")
+        ).name
+        target = destination / file_name
+        partial = destination / f".{file_name}.part"
+
+        try:
+            with self.session.get(
+                str(job["download_url"]),
+                stream=True,
+                allow_redirects=True,
+                timeout=(30, 300),
+            ) as response:
+                response.raise_for_status()
+                with Path.open(partial, "wb") as output:
+                    for chunk in response.iter_content(20 * 1024 * 1024):
+                        if chunk:
+                            output.write(chunk)
+            partial.replace(target)
+        except BaseException:
+            partial.unlink(missing_ok=True)
+            raise
+
+        return target
+
     def download_videos(
         self,
         data_ids: str | list[str],

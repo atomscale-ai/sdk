@@ -453,6 +453,73 @@ def test_download_videos_missing_metadata(client: Client, tmp_path):
         )
 
 
+def test_export_polls_job_and_streams_archive_to_disk(tmp_path, monkeypatch):
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    create_export = mock.Mock(
+        return_value={
+            "id": "export-123",
+            "status": "queued",
+            "file_name": "atomscale_export.zip",
+        }
+    )
+    get_export = mock.Mock(
+        return_value={
+            "id": "export-123",
+            "status": "ready",
+            "file_name": "atomscale_export.zip",
+            "download_url": "https://s3.example/export.zip",
+        }
+    )
+    response = mock.MagicMock()
+    response.__enter__.return_value = response
+    response.iter_content.return_value = [b"archive-", b"bytes"]
+    session = mock.Mock()
+    session.get.return_value = response
+
+    monkeypatch.setattr(client, "_post_or_put", create_export)
+    monkeypatch.setattr(client, "_get", get_export)
+    monkeypatch.setattr(client, "_session", session)
+    monkeypatch.setattr("atomscale.client.time.sleep", lambda *_: None)
+
+    target = client.export(
+        physical_sample_ids="sample-123",
+        dest_dir=tmp_path,
+        poll_interval_seconds=0,
+    )
+
+    assert target == tmp_path / "atomscale_export.zip"
+    assert target.read_bytes() == b"archive-bytes"
+    create_export.assert_called_once_with(
+        "POST",
+        "data_entries/export/jobs",
+        body={
+            "data_ids": [],
+            "physical_sample_ids": ["sample-123"],
+            "process_step_ids": [],
+        },
+    )
+    get_export.assert_called_once_with("data_entries/export/jobs/export-123")
+    session.get.assert_called_once_with(
+        "https://s3.example/export.zip",
+        stream=True,
+        allow_redirects=True,
+        timeout=(30, 300),
+    )
+
+
+def test_export_requires_exactly_one_scope(tmp_path):
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+
+    with pytest.raises(ValueError, match="exactly one"):
+        client.export(dest_dir=tmp_path)
+    with pytest.raises(ValueError, match="exactly one"):
+        client.export(
+            data_ids="data-123",
+            process_step_ids="step-123",
+            dest_dir=tmp_path,
+        )
+
+
 # @pytest.mark.order(2)
 # @pytest.mark.dependency(name="upload", dependds=["get"])
 # def test_upload(client: Client):
