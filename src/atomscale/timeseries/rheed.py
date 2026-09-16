@@ -48,7 +48,7 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         "tar_metric",
         "composition_metric",
     ]
-    INDEX_COLS: Sequence[str] = ["Angle", "Frame Number"]
+    INDEX_COLS: Sequence[str] = ["View ID", "Frame Number"]
     # Columns added to the timeseries DataFrame when per-frame masks are attached.
     MASK_COLS: Sequence[str] = ["mask_rle", "mask_height", "mask_width"]
 
@@ -100,6 +100,9 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             # widening the result dtype.
             angle_df = angle_df.dropna(axis=1, how="all")
             angle_df["Angle"] = angle_block["angle"]
+            angle_df["View ID"] = angle_block["view_id"]
+            angle_df["Interval ID"] = angle_block["interval_id"]
+            angle_df["Azimuth Label"] = angle_block.get("azimuth_label")
             frames.append(angle_df)
 
         if not frames:
@@ -225,5 +228,5 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             data_id=data_id,
             timeseries_data=ts_df,
             snapshot_image_data=extracted,
-            rotating=(data_type == "rheed_rotating"),
+            views=client.get_rheed_azimuths(data_id),
         )

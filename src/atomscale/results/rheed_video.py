@@ -16,7 +16,7 @@ class RHEEDVideoResult(MSONable):
         data_id: UUID | str,
         timeseries_data: DataFrame,
         snapshot_image_data: list[RHEEDImageResult] | None,
-        rotating: bool,
+        views: DataFrame,
         collected_datetime: str | None = None,
     ):
         """RHEED video result
@@ -30,13 +30,13 @@ class RHEEDVideoResult(MSONable):
             snapshot_image_data (list[atomscale.results.rheed_image.RHEEDImageResult] | None): One
                 :class:`atomscale.results.rheed_image.RHEEDImageResult` per snapshot extracted from the
                 video, or None if no snapshots were extracted.
-            rotating (bool): Whether the video was taken of a rotating stage.
+            views (DataFrame): Motion intervals and effective azimuth annotations.
             collected_datetime (str | None): Datetime when the data was collected.
         """
         self.data_id = data_id
         self.timeseries_data = timeseries_data
         self.snapshot_image_data = snapshot_image_data
-        self.rotating = rotating
+        self.views = views
         self.collected_datetime = collected_datetime
 
     # NOTE: This is temporarily deprecated

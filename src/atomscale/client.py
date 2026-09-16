@@ -136,8 +136,7 @@ class Client(BaseClient):
         project_ids: str | list[str] | None = None,
         data_type: Literal[
             "rheed_image",
-            "rheed_stationary",
-            "rheed_rotating",
+            "rheed",
             "xps",
             "xrd",
             "photoluminescence",
@@ -464,7 +463,7 @@ class Client(BaseClient):
         self,
         source_id: str,
         *,
-        workflow: str = "rheed_stationary",
+        workflow: str = "rheed",
         last_n: int | None = None,
         window_span: float | None = None,
         reference_ids: list[str] | None = None,
@@ -475,8 +474,8 @@ class Client(BaseClient):
 
         Args:
             source_id: Data ID or physical sample ID the trajectory is computed against.
-            workflow: Similarity workflow name (e.g. "rheed_stationary"). Defaults to
-                "rheed_stationary".
+            workflow: Similarity workflow name (e.g. "rheed"). Defaults to
+                "rheed".
             last_n: If set, only fetch the last N points of the trajectory.
             window_span: Optional window span parameter forwarded to the provider.
             reference_ids: Optional list of reference data IDs to compare against.
@@ -514,7 +513,7 @@ class Client(BaseClient):
         self,
         data_id: str,
         *,
-        workflow: str = "rheed_stationary",
+        workflow: str = "rheed",
         window_span: float = 60.0,
         kind: Literal["prototype", "window"] = "prototype",
         top_k: int = 10,
@@ -526,7 +525,7 @@ class Client(BaseClient):
 
         Args:
             data_id: Data ID whose vectors seed the query.
-            workflow: Similarity workflow name. Defaults to "rheed_stationary".
+            workflow: Similarity workflow name. Defaults to "rheed".
             window_span: Embedding window span in seconds (must match an embedded span).
             kind: "prototype" (coarse, default) or "window" (finer, more queries).
             top_k: Max neighbors to return. The backend caps this at 30.
@@ -553,7 +552,7 @@ class Client(BaseClient):
         self,
         data_id: str,
         *,
-        workflow: str = "rheed_stationary",
+        workflow: str = "rheed",
         window_span: float = 60.0,
         kind: Literal["window", "prototype"] = "window",
         offset: int = 0,
@@ -563,7 +562,7 @@ class Client(BaseClient):
 
         Args:
             data_id: Data ID to fetch embeddings for.
-            workflow: Similarity workflow name. Defaults to ``"rheed_stationary"``.
+            workflow: Similarity workflow name. Defaults to ``"rheed"``.
             window_span: Window span in seconds. Defaults to ``60.0``.
             kind: ``"window"`` for one time-resolved vector per window (with
                 ``real_times`` / ``unix_times_ms``), or ``"prototype"`` for a small
@@ -602,7 +601,7 @@ class Client(BaseClient):
         self,
         source_id: str,
         *,
-        workflow: str = "rheed_stationary",
+        workflow: str = "rheed",
         window_span: float = 60.0,
         live_comparison: bool = False,
         limit: int | None = None,
@@ -611,7 +610,7 @@ class Client(BaseClient):
 
         Args:
             source_id: Data ID (or physical sample ID) to find matches for.
-            workflow: Similarity workflow name. Defaults to ``"rheed_stationary"``.
+            workflow: Similarity workflow name. Defaults to ``"rheed"``.
             window_span: Window span in seconds. Defaults to ``60.0``.
             live_comparison: When ``True``, also include the source entry's most
                 recent (still-streaming) data in the comparison. Defaults to ``False``.
@@ -728,37 +727,17 @@ class Client(BaseClient):
         return ts_df
 
     def get_rheed_azimuths(self, data_ids: str | list[str]) -> DataFrame:
-        """Per-azimuth metadata for rotating RHEED recordings.
+        """Return effective labels and motion bounds, one row per stable view.
 
-        For each seed frame of a rotating video this returns both the rotation
-        angle it sits at and the crystallographic azimuth the production
-        classifier assigned it. The angle depends on where the substrate happened
-        to be parked, so the same azimuth appears at different angles in different
-        recordings of one sample; the label is the stable identity, and so the
-        right key for aligning or concatenating series across recordings.
-
-        Args:
-            data_ids: Data ID or list of data IDs of rotating RHEED videos.
-
-        Returns:
-            DataFrame: One row per (data item, seed frame) with columns
-            ``data_id``, ``seed_frame``, ``angle_degrees``, ``azimuth_label``
-            (``"100"`` / ``"110"`` / ``"210"``, or ``None`` when the classifier
-            could not call it), ``label_confidence``, ``crystal_system`` and
-            ``surface_miller``. Data items with no rotating configuration
-            contribute no rows.
+        Supports parked recordings and threads from rotating recordings. Equal
+        labels remain separate rows; view_id identifies each time series.
         """
         if isinstance(data_ids, str):
             data_ids = [data_ids]
-
-        payload = self._get(
-            sub_url="configuration/rheed/video/", params={"data_ids": data_ids}
-        )
-        if payload is None:
-            return rheed_azimuths_to_dataframe([])
-        return rheed_azimuths_to_dataframe(
-            payload if isinstance(payload, list) else [payload]
-        )
+        payload = []
+        for data_id in data_ids:
+            payload.extend(self._get(sub_url=f"rheed/{data_id}/azimuths") or [])
+        return rheed_azimuths_to_dataframe(payload)
 
     def get_frame(
         self,
@@ -1442,8 +1421,7 @@ class Client(BaseClient):
             "pl",
             "raman",
             "rheed_image",
-            "rheed_stationary",
-            "rheed_rotating",
+            "rheed",
             "rheed_xscan",
             "metrology",
             "tool_state",
@@ -1537,8 +1515,7 @@ class Client(BaseClient):
             return result_obj
 
         if data_type in [
-            "rheed_stationary",
-            "rheed_rotating",
+            "rheed",
             "rheed_xscan",
             "metrology",
             "tool_state",
