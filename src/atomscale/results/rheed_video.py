@@ -39,6 +39,25 @@ class RHEEDVideoResult(MSONable):
         self.views = views
         self.collected_datetime = collected_datetime
 
+    @property
+    def rotating(self) -> bool:
+        """Whether the stage turned during this recording.
+
+        Read from the stored per-view ``rpm`` rather than from the catalogue
+        type, so a recording answers the same before and after the RHEED types
+        were unified — ``rheed_stationary`` is simply rpm 0. Kept because
+        callers relied on this attribute before rotation became a stored rate.
+
+        A NaN rpm comes only from the legacy fallback in
+        :func:`atomscale.rheed_metadata.legacy_views_frame` — a backend that
+        recorded rotation as a type name and never a rate. That still reads as
+        rotating.
+        """
+        if self.views.empty or "rpm" not in self.views:
+            return False
+        rpm = self.views["rpm"].astype("float64")
+        return bool((rpm > 0).any() or rpm.isna().all())
+
     # NOTE: This is temporarily deprecated
     #
     # def get_plot(self) -> Figure:

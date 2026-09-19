@@ -11,6 +11,7 @@ from atomscale.results import (
     RHEEDVideoResult,
     _get_rheed_image_result,
 )
+from atomscale.rheed_metadata import legacy_views_frame
 from atomscale.timeseries.provider import TimeseriesProvider
 
 
@@ -49,6 +50,9 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         "composition_metric",
     ]
     INDEX_COLS: Sequence[str] = ["View ID", "Frame Number"]
+    # A backend older than the unified-views release sends angle blocks with no
+    # ``view_id``; there the rotation angle is the only thing separating series.
+    LEGACY_INDEX_COLS: Sequence[str] = ["Angle", "Frame Number"]
     # Columns added to the timeseries DataFrame when per-frame masks are attached.
     MASK_COLS: Sequence[str] = ["mask_rle", "mask_height", "mask_width"]
 
@@ -100,9 +104,18 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
             # widening the result dtype.
             angle_df = angle_df.dropna(axis=1, how="all")
             angle_df["Angle"] = angle_block["angle"]
-            angle_df["View ID"] = angle_block["view_id"]
-            angle_df["Interval ID"] = angle_block["interval_id"]
-            angle_df["Azimuth Label"] = angle_block.get("azimuth_label")
+            # View identity arrives only from a backend on the unified-views
+            # release. Assign what the block actually carries rather than
+            # subscripting: an older backend omits these keys entirely, and
+            # materialising them as all-None would give ``set_index`` below a
+            # dead level instead of letting it fall back to Angle.
+            for column, key in (
+                ("View ID", "view_id"),
+                ("Interval ID", "interval_id"),
+                ("Azimuth Label", "azimuth_label"),
+            ):
+                if key in angle_block:
+                    angle_df[column] = angle_block[key]
             frames.append(angle_df)
 
         if not frames:
@@ -117,8 +130,11 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
 
         df_all = df_all.rename(columns=self.RENAME_MAP)
 
-        # Ensure index exists even if Angle/Frame Number are missing
-        idx_cols = [c for c in self.INDEX_COLS if c in df_all.columns]
+        # Ensure index exists even if the identity/Frame Number columns are missing
+        index_cols = (
+            self.INDEX_COLS if "View ID" in df_all.columns else self.LEGACY_INDEX_COLS
+        )
+        idx_cols = [c for c in index_cols if c in df_all.columns]
         if idx_cols:
             df_all = df_all.set_index(idx_cols)
 
@@ -208,7 +224,11 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         )
 
     def build_result(
-        self, client: BaseClient, data_id: str, data_type: str, ts_df: DataFrame
+        self,
+        client: BaseClient,
+        data_id: str,
+        data_type: str,
+        ts_df: DataFrame,
     ) -> RHEEDVideoResult:
         extracted = None
         idx_url = self.snapshot_url(data_id)
@@ -224,9 +244,16 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
                     )
                     if res
                 ]
+        # ``get_rheed_azimuths`` comes back empty on a backend with no views
+        # endpoint (its 404 is swallowed as None). Fall back to what the legacy
+        # catalogue type states about rotation, so ``rotating`` keeps answering
+        # for callers on an older deployment.
+        views = client.get_rheed_azimuths(data_id)
+        if views.empty:
+            views = legacy_views_frame(data_type)
         return RHEEDVideoResult(
             data_id=data_id,
             timeseries_data=ts_df,
             snapshot_image_data=extracted,
-            views=client.get_rheed_azimuths(data_id),
+            views=views,
         )

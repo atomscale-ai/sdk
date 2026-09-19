@@ -105,9 +105,12 @@ def test_to_dataframe_low_level_features_missing_points(provider):
 def test_to_dataframe_without_low_level_features_unchanged(provider):
     raw = {
         "series_by_angle": [
-            {"angle": 0.0,
+            {
+                "angle": 0.0,
                 "view_id": "view-0",
-                "interval_id": "interval-0", "series": [{"frame_number": 1, "specular_intensity": 100.0}]}
+                "interval_id": "interval-0",
+                "series": [{"frame_number": 1, "specular_intensity": 100.0}],
+            }
         ]
     }
 
@@ -152,8 +155,8 @@ def test_get_rheed_timeseries_forwards_params(client, monkeypatch):
             "series_by_angle": [
                 {
                     "angle": 0.0,
-                "view_id": "view-0",
-                "interval_id": "interval-0",
+                    "view_id": "view-0",
+                    "interval_id": "interval-0",
                     "series": [
                         {"frame_number": 1, "low_level_features": {"raw_x": 5.0}}
                     ],
@@ -293,8 +296,8 @@ def test_get_rheed_timeseries_include_masks(client, monkeypatch):
             "series_by_angle": [
                 {
                     "angle": 0.0,
-                "view_id": "view-0",
-                "interval_id": "interval-0",
+                    "view_id": "view-0",
+                    "interval_id": "interval-0",
                     "series": [
                         {"frame_number": 1, "specular_intensity": 100.0},
                         {"frame_number": 2, "specular_intensity": 110.0},
@@ -329,8 +332,8 @@ def test_get_rheed_timeseries_include_masks_scopes_to_window(client, monkeypatch
             "series_by_angle": [
                 {
                     "angle": 0.0,
-                "view_id": "view-0",
-                "interval_id": "interval-0",
+                    "view_id": "view-0",
+                    "interval_id": "interval-0",
                     "series": [
                         {"frame_number": fn, "specular_intensity": float(fn)}
                         for fn in (100, 101, 102)
@@ -359,9 +362,12 @@ def test_get_rheed_timeseries_without_masks_makes_no_mask_call(client, monkeypat
         seen.append(sub_url)
         return {
             "series_by_angle": [
-                {"angle": 0.0,
-                "view_id": "view-0",
-                "interval_id": "interval-0", "series": [{"frame_number": 1, "spot_count": 3}]}
+                {
+                    "angle": 0.0,
+                    "view_id": "view-0",
+                    "interval_id": "interval-0",
+                    "series": [{"frame_number": 1, "spot_count": 3}],
+                }
             ]
         }
 

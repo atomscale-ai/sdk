@@ -48,12 +48,21 @@ def test_get_dataframe(result: RHEEDVideoResult):
             "Time",
             "TAR Metric",
             "Composition Metric",
+            # Present only from a backend serving per-view identity.
+            "Angle",
+            "Interval ID",
+            "Azimuth Label",
         ]
     )
 
     assert isinstance(result.timeseries_data, DataFrame)
     assert not len(set(result.timeseries_data.keys().values) - column_names)
-    assert result.timeseries_data.index.names == ["Angle", "Frame Number"]
+    # A unified backend indexes by view identity; one that predates it has only
+    # the rotation angle to separate series.
+    assert result.timeseries_data.index.names in (
+        ["View ID", "Frame Number"],
+        ["Angle", "Frame Number"],
+    )
 
 
 def test_to_dataframe_flattens_low_level_features():
@@ -64,6 +73,8 @@ def test_to_dataframe_flattens_low_level_features():
         "series_by_angle": [
             {
                 "angle": "0",
+                "view_id": "view-0",
+                "interval_id": "interval-0",
                 "series": [
                     {
                         "frame_number": 0,
@@ -97,6 +108,8 @@ def test_to_dataframe_without_low_level_features():
         "series_by_angle": [
             {
                 "angle": "0",
+                "view_id": "view-0",
+                "interval_id": "interval-0",
                 "series": [
                     {
                         "frame_number": 0,
@@ -111,3 +124,35 @@ def test_to_dataframe_without_low_level_features():
     df = RHEEDProvider().to_dataframe(raw)
     assert "area_0" not in df.columns
     assert "low_level_features" not in df.columns
+
+
+def test_to_dataframe_falls_back_to_angle_when_view_identity_is_absent():
+    """A backend older than the unified-views release omits view identity.
+
+    The SDK ships ahead of that backend reaching prod, so an angle block with no
+    ``view_id`` must still produce a usable frame indexed by Angle rather than
+    raising or leaving an all-None index level.
+    """
+    raw = {
+        "series_by_angle": [
+            {
+                "angle": "0",
+                "series": [
+                    {"frame_number": 0, "specular_intensity": 5.0},
+                    {"frame_number": 1, "specular_intensity": 6.0},
+                ],
+            },
+            {
+                "angle": "90",
+                "series": [{"frame_number": 0, "specular_intensity": 7.0}],
+            },
+        ]
+    }
+
+    df = RHEEDProvider().to_dataframe(raw)
+
+    assert list(df.index.names) == ["Angle", "Frame Number"]
+    # Both angle blocks survive and stay distinguishable.
+    assert df.index.get_level_values("Angle").tolist() == ["0", "0", "90"]
+    assert "View ID" not in df.columns
+    assert "Interval ID" not in df.columns

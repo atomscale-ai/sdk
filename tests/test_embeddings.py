@@ -80,7 +80,7 @@ def test_get_embeddings_window(client, monkeypatch):
 
     assert isinstance(result, EmbeddingsResult)
     assert result.kind == "window"
-    assert result.workflow == "rheed_stationary"
+    assert result.workflow == "rheed"
     assert result.vectors.shape == (2, 3)
     assert result.dimension == 3
     assert result.count == 2

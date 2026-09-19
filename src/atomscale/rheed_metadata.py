@@ -35,27 +35,59 @@ def _empty() -> DataFrame:
     return frame
 
 
+# The rotation rate each pre-unification catalogue type implies. A backend older
+# than the views endpoint serves no rpm at all, so the type name is the only
+# evidence left: "rheed_stationary" means a parked stage, 0 by definition, while
+# "rheed_rotating" means the stage turned at a rate that backend never recorded
+# — reported as unknown rather than invented.
+LEGACY_TYPE_RPM: dict[str, float] = {
+    "rheed_stationary": 0.0,
+    "rheed_rotating": float("nan"),
+}
+
+
+def legacy_views_frame(data_type: str) -> DataFrame:
+    """One placeholder view for a backend with no ``/azimuths`` endpoint.
+
+    Keeps ``RHEEDVideoResult.views`` the same shape whichever backend answered,
+    so callers read ``rpm`` without first working out which one they are on. It
+    carries no view identity: a backend that cannot serve views has none to give.
+    """
+    if data_type not in LEGACY_TYPE_RPM:
+        return _empty()
+    row: dict[str, Any] = dict.fromkeys(RHEED_AZIMUTH_COLUMNS)
+    row["rpm"] = LEGACY_TYPE_RPM[data_type]
+    return DataFrame([row])[list(RHEED_AZIMUTH_COLUMNS)]
+
+
 def rheed_azimuths_to_dataframe(payload: Sequence[Mapping[str, Any]]) -> DataFrame:
     """One row per RHEED view, retaining identity even when labels repeat."""
     rows = []
     for view in payload:
         automatic = (view.get("annotation") or {}).get("automatic") or {}
         surface = automatic.get("surface_miller")
-        rows.append({
-            **{key: view.get(key) for key in RHEED_AZIMUTH_COLUMNS},
-            "data_id": str(view["data_id"]),
-            "view_id": str(view["view_id"]),
-            "interval_id": str(view["interval_id"]),
-            "seed_frame": int(view["seed_frame"]),
-            "label_confidence": view.get("confidence"),
-            "crystal_system": automatic.get("crystal_system"),
-            "surface_miller": "".join(str(i) for i in surface) if surface else None,
-        })
+        rows.append(
+            {
+                **{key: view.get(key) for key in RHEED_AZIMUTH_COLUMNS},
+                "data_id": str(view["data_id"]),
+                "view_id": str(view["view_id"]),
+                "interval_id": str(view["interval_id"]),
+                "seed_frame": int(view["seed_frame"]),
+                "label_confidence": view.get("confidence"),
+                "crystal_system": automatic.get("crystal_system"),
+                "surface_miller": "".join(str(i) for i in surface) if surface else None,
+            }
+        )
     if not rows:
         return _empty()
-    return DataFrame(rows)[list(RHEED_AZIMUTH_COLUMNS)].sort_values(
-        ["data_id", "start_frame", "seed_frame"], kind="stable",
-    ).reset_index(drop=True)
+    return (
+        DataFrame(rows)[list(RHEED_AZIMUTH_COLUMNS)]
+        .sort_values(
+            ["data_id", "start_frame", "seed_frame"],
+            kind="stable",
+        )
+        .reset_index(drop=True)
+    )
 
 
 def azimuth_label_by_seed_frame(

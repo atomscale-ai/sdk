@@ -97,6 +97,12 @@ def _retry_client_call(
     raise RuntimeError("unreachable")  # pragma: no cover
 
 
+# The RHEED catalogue types a backend older than the unified-types release
+# understands. Callers may still pass either name; both mean "rheed", and
+# whether the stage turned is read from the stored per-view rpm instead.
+_LEGACY_RHEED_TYPES = ("rheed_stationary", "rheed_rotating")
+
+
 class Client(BaseClient):
     """Atomic Data Sciences API client"""
 
@@ -127,6 +133,32 @@ class Client(BaseClient):
 
         super().__init__(api_key=api_key, endpoint=endpoint)
 
+    def _search_entries(self, params: dict[str, Any]) -> Any:
+        """``data_entries/`` with a fallback for a pre-unification backend.
+
+        The catalogue type enum used to hold ``rheed_stationary`` and
+        ``rheed_rotating`` where it now holds a single ``rheed``. Requests carry
+        the canonical name; a backend still on the old enum rejects it as an
+        enum violation (422), so the two names it does understand are queried
+        and their rows concatenated. Only that backend pays the extra requests,
+        and callers get the same rows from either one.
+        """
+        try:
+            return self._get(sub_url="data_entries/", params=params)
+        except ClientError as error:
+            if params.get("data_type") != "rheed" or error.status_code != 422:
+                raise
+
+        rows: list[Any] = []
+        for legacy_type in _LEGACY_RHEED_TYPES:
+            rows.extend(
+                self._get(
+                    sub_url="data_entries/", params={**params, "data_type": legacy_type}
+                )
+                or []
+            )
+        return rows
+
     def search(
         self,
         keywords: str | list[str] | None = None,
@@ -137,6 +169,12 @@ class Client(BaseClient):
         data_type: Literal[
             "rheed_image",
             "rheed",
+            # Accepted for backward compatibility: a backend that predates the
+            # unified RHEED type still catalogues entries under these names, and
+            # callers written against it keep working. Both resolve to "rheed";
+            # rotation is read from the stored per-view rpm, not the name.
+            "rheed_stationary",
+            "rheed_rotating",
             "xps",
             "xrd",
             "photoluminescence",
@@ -208,11 +246,16 @@ class Client(BaseClient):
             # Map the legacy "metrology" filter to its renamed "tool_state"
             # char-source so it resolves against the current backend, which
             # validates this param as an enum that no longer accepts "metrology".
+            # "rheed_stationary" / "rheed_rotating" were unified into "rheed",
+            # so requests carry the canonical name and a backend that predates
+            # the change is handled by the fallback in ``_search_entries``.
             "data_type": (
                 None
                 if data_type == "all"
                 else "tool_state"
                 if data_type == "metrology"
+                else "rheed"
+                if data_type in _LEGACY_RHEED_TYPES
                 else data_type
             ),
             "status": status,
@@ -224,10 +267,7 @@ class Client(BaseClient):
             "last_updated_max": last_updated[1],
         }
 
-        data = self._get(
-            sub_url="data_entries/",
-            params=params,
-        )
+        data = self._search_entries(params)
         column_mapping = {
             "data_id": "Data ID",
             "upload_datetime": "Upload Datetime",
@@ -1516,6 +1556,12 @@ class Client(BaseClient):
 
         if data_type in [
             "rheed",
+            # A backend that predates the unified RHEED type still catalogues
+            # entries under these two names; both resolve to the same provider
+            # below. Whether the stage turned is read from the stored per-view
+            # rpm, not from which name the entry happens to carry.
+            "rheed_stationary",
+            "rheed_rotating",
             "rheed_xscan",
             "metrology",
             "tool_state",
