@@ -41,8 +41,9 @@ class RHEEDEmbeddingProvider:
                 ``kind`` ("prototype"|"window"), ``top_k``.
         """
         workflow = kwargs.pop("workflow")
-        return client._get(
-            sub_url=f"similarity/{workflow}/{data_id}/embeddings/neighbors/",
+        return client._get_by_workflow(
+            "similarity/{workflow}/" + f"{data_id}/embeddings/neighbors/",
+            workflow,
             params=kwargs,
         )
 

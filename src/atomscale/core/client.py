@@ -23,6 +23,17 @@ except PackageNotFoundError:
     __version__ = "0.0.0"
 
 
+# The RHEED workflow names a backend older than the unified-types release
+# understands. Both mean "rheed"; callers may still pass either, and whether the
+# stage turned is read from the stored per-view rpm rather than the name.
+LEGACY_RHEED_WORKFLOWS = ("rheed_stationary", "rheed_rotating")
+
+
+def canonical_workflow(workflow: str) -> str:
+    """The unified name for a workflow that may still be addressed by a legacy one."""
+    return "rheed" if workflow in LEGACY_RHEED_WORKFLOWS else workflow
+
+
 class BaseClient:
     """Base API client implementation"""
 
@@ -86,6 +97,49 @@ class BaseClient:
             return None
 
         return response.json() if deserialize else response.content
+
+    def _get_by_workflow(
+        self,
+        url_template: str,
+        workflow: str,
+        params: dict[str, Any] | None = None,
+    ) -> list[dict[Any, Any]] | dict[Any, Any] | bytes | None:
+        """``_get`` a URL whose path names a workflow, against either type enum.
+
+        ``rheed_stationary`` and ``rheed_rotating`` were unified into a single
+        ``rheed``. The request goes out under the canonical name; a backend still
+        on the old enum rejects it in the path (422), so the legacy name is tried
+        instead — both, in order, when the caller asked for the unified name,
+        since only that backend knows which one it stored the data under. Only
+        that backend pays the extra requests.
+        """
+        canonical = canonical_workflow(workflow)
+        try:
+            return self._get(
+                sub_url=url_template.format(workflow=canonical), params=params
+            )
+        except ClientError as error:
+            if canonical != "rheed" or error.status_code != 422:
+                raise
+            last_error = error
+
+        # A caller naming a legacy workflow has already said which one it is;
+        # asking for the other would answer about a different recording.
+        candidates = (
+            [workflow]
+            if workflow in LEGACY_RHEED_WORKFLOWS
+            else list(LEGACY_RHEED_WORKFLOWS)
+        )
+        for legacy in candidates:
+            try:
+                return self._get(
+                    sub_url=url_template.format(workflow=legacy), params=params
+                )
+            except ClientError as error:
+                if error.status_code != 422:
+                    raise
+                last_error = error
+        raise last_error
 
     def _post_or_put(
         self,

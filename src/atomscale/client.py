@@ -620,8 +620,9 @@ class Client(BaseClient):
             of vectors available before ``offset`` / ``limit``; the number actually
             returned is ``len(result.vectors)``.
         """
-        payload: dict | None = self._get(  # type: ignore[assignment]
-            sub_url=f"similarity/{workflow}/{data_id}/embeddings/",
+        payload: dict | None = self._get_by_workflow(  # type: ignore[assignment]
+            "similarity/{workflow}/" + f"{data_id}/embeddings/",
+            workflow,
             params={
                 "window_span": window_span,
                 "kind": kind,
@@ -662,8 +663,9 @@ class Client(BaseClient):
             per match. Empty (with those columns) when there are no matches or the
             source is not found.
         """
-        payload = self._get(
-            sub_url=f"similarity/{workflow}/{source_id}/matches/",
+        payload = self._get_by_workflow(
+            "similarity/{workflow}/" + f"{source_id}/matches/",
+            workflow,
             params={
                 "metric": _DEFAULT_SIMILARITY_METRIC,
                 "windowSpan": window_span,
@@ -1531,7 +1533,7 @@ class Client(BaseClient):
                 ),
                 energies=result.get("energies", []),
                 intensities=result.get("intensities", []),
-                detected_peaks=result.get("detected_peaks", {}),
+                detected_peaks=result.get("detected_peaks") or [],
                 last_updated=result.get("last_updated"),
                 collected_datetime=collected_dt,
             )
@@ -1543,7 +1545,7 @@ class Client(BaseClient):
                 raman_id=result.get("raman_id", result.get("id")),
                 raman_shift=result.get("energies", result.get("wavenumbers", [])),
                 intensities=result.get("intensities", []),
-                detected_peaks=result.get("detected_peaks", {}),
+                detected_peaks=result.get("detected_peaks") or [],
                 last_updated=result.get("last_updated"),
                 collected_datetime=collected_dt,
             )

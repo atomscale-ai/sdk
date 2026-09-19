@@ -16,7 +16,7 @@ class PhotoluminescenceResult(MSONable):
         photoluminescence_id: UUID | str,
         energies: list[float],
         intensities: list[float],
-        detected_peaks: dict[str, float | str] | None = None,
+        detected_peaks: list[dict] | None = None,
         last_updated: str | None = None,
         collected_datetime: str | None = None,
     ):
@@ -27,7 +27,9 @@ class PhotoluminescenceResult(MSONable):
             photoluminescence_id: Unique identifier for the photoluminescence result.
             energies: Energy axis values.
             intensities: Intensity values aligned with `energies`.
-            detected_peaks: Optional mapping of detected-peak labels to each peak's value, where a value is either a numeric position along the energy axis (float) or a descriptive string (str).
+            detected_peaks: Optional list of detected-peak dicts, one per peak,
+                each describing that peak's fit (position, fwhm, eta, assignment, ...).
+                Matches the ``list[dict]`` the API stores; empty when none were found.
             last_updated: Optional last-updated timestamp string.
             collected_datetime: Datetime when the data was collected.
         """
@@ -35,7 +37,7 @@ class PhotoluminescenceResult(MSONable):
         self.photoluminescence_id = photoluminescence_id
         self.energies = energies
         self.intensities = intensities
-        self.detected_peaks = detected_peaks or {}
+        self.detected_peaks = detected_peaks or []
         self.last_updated = last_updated
         self.collected_datetime = collected_datetime
 

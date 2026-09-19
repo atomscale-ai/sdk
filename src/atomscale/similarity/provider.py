@@ -53,8 +53,9 @@ class SimilarityTrajectoryProvider(TimeseriesProvider[SimilarityTrajectoryResult
             KeyError: If 'workflow' is not provided in kwargs.
         """
         workflow = kwargs.pop("workflow")
-        return client._get(
-            sub_url=f"similarity/{workflow}/{data_id}/trajectory/",
+        return client._get_by_workflow(
+            "similarity/{workflow}/" + f"{data_id}/trajectory/",
+            workflow,
             params=kwargs,
         )
 
