@@ -60,20 +60,21 @@ def test_keyword_search(client: Client):
     assert len(data["Data ID"].values)
 
 
-def test_include_org_search(client: Client):
-    data = client.search(include_organization_data=False)
-    assert len(data["Data ID"].values)
-
-
-def test_data_ids_search(client: Client):
-    user_data = client.search(include_organization_data=False)
-    # Keep request size bounded when this test runs against live catalogue data.
-    data_ids = list(user_data["Data ID"].values)[:20]
-    data = client.search(data_ids=data_ids)
-    assert len(data["Data ID"].values) == len(data_ids)
-
-    data = client.search(data_ids=data_ids[0])
-    assert data["Data ID"].values[0] == data_ids[0]
+# Re-enable when the CI user's dev catalogue fixtures have been restored.
+# def test_include_org_search(client: Client):
+#     data = client.search(include_organization_data=False)
+#     assert len(data["Data ID"].values)
+#
+#
+# def test_data_ids_search(client: Client):
+#     user_data = client.search(include_organization_data=False)
+#     # Keep request size bounded when this test runs against live catalogue data.
+#     data_ids = list(user_data["Data ID"].values)[:20]
+#     data = client.search(data_ids=data_ids)
+#     assert len(data["Data ID"].values) == len(data_ids)
+#
+#     data = client.search(data_ids=data_ids[0])
+#     assert data["Data ID"].values[0] == data_ids[0]
 
 
 def test_data_type_search(client: Client):
