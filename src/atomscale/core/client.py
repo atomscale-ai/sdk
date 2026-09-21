@@ -130,16 +130,31 @@ class BaseClient:
             if workflow in LEGACY_RHEED_WORKFLOWS
             else list(LEGACY_RHEED_WORKFLOWS)
         )
+        answered = False
         for legacy in candidates:
             try:
-                return self._get(
+                payload = self._get(
                     sub_url=url_template.format(workflow=legacy), params=params
                 )
             except ClientError as error:
                 if error.status_code != 422:
                     raise
                 last_error = error
-        raise last_error
+                continue
+
+            # The workflow is part of the path here, so the name this recording
+            # was *not* stored under 404s — which ``_get`` reports as None, and
+            # which says nothing about the other name. Returning it would report
+            # a rotating recording as having no matches at all. Only a payload
+            # ends the search; None is the answer once every candidate has been
+            # asked and understood.
+            answered = True
+            if payload is not None:
+                return payload
+
+        if not answered:
+            raise last_error
+        return None
 
     def _post_or_put(
         self,

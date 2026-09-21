@@ -98,3 +98,54 @@ def test_result_rotating_follows_stored_rpm_on_the_unified_backend(rpm, expected
         views=DataFrame([row]),
     )
     assert result.rotating is expected
+
+
+def test_result_still_accepts_the_deprecated_rotating_keyword():
+    """Callers written against the pre-views signature keep constructing."""
+    with pytest.warns(DeprecationWarning):
+        result = RHEEDVideoResult(
+            data_id="d",
+            timeseries_data=DataFrame(),
+            snapshot_image_data=None,
+            rotating=True,
+        )
+    assert result.rotating is True
+    assert list(result.views.columns) == list(RHEED_AZIMUTH_COLUMNS)
+
+    with pytest.warns(DeprecationWarning):
+        parked = RHEEDVideoResult(
+            data_id="d",
+            timeseries_data=DataFrame(),
+            snapshot_image_data=None,
+            rotating=False,
+        )
+    assert parked.rotating is False
+
+
+def test_result_accepts_the_rotating_flag_in_its_old_positional_slot():
+    """The flag used to sit where ``views`` now does; a bool there still works."""
+    with pytest.warns(DeprecationWarning):
+        result = RHEEDVideoResult("d", DataFrame(), None, True)
+    assert result.rotating is True
+
+
+def test_result_views_default_to_empty_when_neither_argument_is_given():
+    """An MSONable payload predating both arguments still reconstructs."""
+    result = RHEEDVideoResult(
+        data_id="d", timeseries_data=DataFrame(), snapshot_image_data=None
+    )
+    assert result.views.empty
+    assert result.rotating is False
+
+
+def test_views_win_over_the_deprecated_flag():
+    """The stored rate is the real evidence; the flag is only a fallback."""
+    views = legacy_views_frame("rheed_stationary")
+    result = RHEEDVideoResult(
+        data_id="d",
+        timeseries_data=DataFrame(),
+        snapshot_image_data=None,
+        views=views,
+        rotating=True,
+    )
+    assert result.rotating is False

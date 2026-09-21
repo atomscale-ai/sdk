@@ -223,3 +223,55 @@ def test_matches_propagates_a_422_that_is_not_the_workflow_enum(client, monkeypa
     monkeypatch.setattr(client, "_get", fake_get)
     with pytest.raises(ClientError):
         client.get_similarity_matches("source-1", workflow="xps")
+
+
+def test_matches_keeps_looking_when_a_legacy_workflow_404s(client, monkeypatch):
+    """A 404 under one legacy name says nothing about the other.
+
+    Under the split enum the workflow is part of the path, so the name a
+    recording was *not* stored under 404s — which ``_get`` reports as None.
+    Returning that would describe a rotating recording as having no matches.
+    """
+    requested: list[str] = []
+
+    def fake_get(**kwargs):
+        sub_url = kwargs["sub_url"]
+        requested.append(sub_url)
+        if "/rheed/" in sub_url:
+            raise ClientError("enum", status_code=422, response_text="enum")
+        if "rheed_stationary" in sub_url:
+            return None  # what _get returns for a 404
+        return [{"data_id": "a", "item_name": "n", "similarity": 0.5}]
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    df = client.get_similarity_matches("source-1", workflow="rheed")
+
+    assert requested == [
+        "similarity/rheed/source-1/matches/",
+        "similarity/rheed_stationary/source-1/matches/",
+        "similarity/rheed_rotating/source-1/matches/",
+    ]
+    assert df["data_id"].tolist() == ["a"]
+
+
+def test_matches_reports_empty_once_every_legacy_workflow_404s(client, monkeypatch):
+    """Both candidates answered; None is then the honest result, not an error."""
+
+    def fake_get(**kwargs):
+        if "/rheed/" in kwargs["sub_url"]:
+            raise ClientError("enum", status_code=422, response_text="enum")
+        return None
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    assert client.get_similarity_matches("source-1", workflow="rheed").empty
+
+
+def test_matches_raises_when_no_workflow_name_is_understood(client, monkeypatch):
+    """Every candidate 422s, so there is no answer to report as empty."""
+
+    def fake_get(**_kwargs):
+        raise ClientError("enum", status_code=422, response_text="enum")
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    with pytest.raises(ClientError):
+        client.get_similarity_matches("source-1", workflow="rheed")
