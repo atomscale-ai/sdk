@@ -21,16 +21,16 @@
 <meta content="#ffffff" media="(prefers-color-scheme: light)" name="theme-color"/>
 <meta content="#030711" media="(prefers-color-scheme: dark)" name="theme-color"/>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<title>atomscale.results.rheed_video | Python SDK</title>
-<meta content="atomscale.results.rheed_video | Python SDK" property="og:title"/>
-<meta content="atomscale.results.rheed_video | Python SDK" name="twitter:title"/>
+<title>atomscale.core.client.canonical_workflow | Python SDK</title>
+<meta content="atomscale.core.client.canonical_workflow | Python SDK" property="og:title"/>
+<meta content="atomscale.core.client.canonical_workflow | Python SDK" name="twitter:title"/>
 <link href="../_static/pygments.css?v=03e43079" rel="stylesheet" type="text/css"/>
 <link href="../_static/theme.css?v=d6d7c91b" rel="stylesheet" type="text/css"/>
 <link href="../_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
-<link href="atomscale.results.rheed_video.RHEEDVideoResult.html" rel="next" title="atomscale.results.rheed_video.RHEEDVideoResult"/>
-<link href="atomscale.results.rheed_image.RHEEDImageResult.html" rel="prev" title="atomscale.results.rheed_image.RHEEDImageResult"/>
+<link href="atomscale.core.client.BaseClient.html" rel="next" title="atomscale.core.client.BaseClient"/>
+<link href="atomscale.core.client.html" rel="prev" title="atomscale.core.client"/>
 </head>
 <body :class="{ 'overflow-hidden': showSidebar }" class="min-h-screen font-sans antialiased bg-background text-foreground" x-data="{ showSidebar: false, showScrollTop: false }">
 <div @click.self="showSidebar = false" class="fixed inset-0 z-50 overflow-hidden bg-background/80 backdrop-blur-sm md:hidden" x-cloak="" x-show="showSidebar"></div><div class="relative flex flex-col min-h-screen" id="page"><a class="absolute top-0 left-0 z-[100] block bg-background p-4 text-xl transition -translate-x-full opacity-0 focus:translate-x-0 focus:opacity-100" href="#content">
@@ -93,11 +93,11 @@
 <ul class="current">
 <li class="toctree-l1 current" x-data="{ expanded: $el.classList.contains('current') ? true : false }"><a :class="{ 'expanded' : expanded }" @click="expanded = !expanded" class="reference internal expandable" href="../modules.html">Project Modules<button @click.prevent.stop="expanded = !expanded" type="button" x-cloak=""><span class="sr-only"></span><svg fill="currentColor" height="18px" stroke="none" viewbox="0 0 24 24" width="18px" xmlns="http://www.w3.org/2000/svg"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg></button></a><ul class="current" x-show="expanded">
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
-<li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
@@ -106,11 +106,11 @@
 <li class="toctree-l2"><a class="reference internal" href="atomscale.similarity.polling.html">atomscale.similarity.polling</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.similarity.provider.html">atomscale.similarity.provider</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.client.html">atomscale.client</a></li>
-<li class="toctree-l2"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="atomscale.core.client.html">atomscale.core.client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.core.utils.html">atomscale.core.utils</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.embeddings.html">atomscale.results.embeddings</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_image.html">atomscale.results.rheed_image</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">atomscale.results.rheed_video</a></li>
+<li class="toctree-l2"><a class="reference internal" href="atomscale.results.rheed_video.html">atomscale.results.rheed_video</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.results.xps.html">atomscale.results.xps</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.streaming.html">atomscale.streaming</a></li>
 <li class="toctree-l2"><a class="reference internal" href="atomscale.timeseries.provider.html">atomscale.timeseries.provider</a></li>
@@ -140,78 +140,38 @@
 </svg>
 </a>
 <div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap" href="../modules.html">Project Modules</a>
-<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">atomscale.results.rheed_video</span>
+<div class="mr-1">/</div><a class="hover:text-foreground overflow-hidden text-ellipsis whitespace-nowrap" href="atomscale.core.client.html">atomscale.core.client</a>
+<div class="mr-1">/</div><span aria-current="page" class="font-medium text-foreground overflow-hidden text-ellipsis whitespace-nowrap">atomscale.core.client.canonical_workflow</span>
 </nav>
 <div id="content" role="main">
-<section id="atomscale-results-rheed-video">
-<h1>atomscale.results.rheed_video<a class="headerlink" href="#atomscale-results-rheed-video" title="Link to this heading"><span>#</span></a></h1>
-<p>Result objects for RHEED video analysis.</p>
-<p class="rubric">Classes</p>
-<table class="autosummary longtable docutils align-default">
-<tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">RHEEDVideoResult</span></code>(data_id, timeseries_data, ...)</p></td>
-<td><p>RHEED video result</p></td>
-</tr>
-</tbody>
-</table>
-<dl class="py class">
+<section id="atomscale-core-client-canonical-workflow">
+<h1>atomscale.core.client.canonical_workflow<a class="headerlink" href="#atomscale-core-client-canonical-workflow" title="Link to this heading"><span>#</span></a></h1>
+<dl class="py function">
 <dt class="sig sig-object py">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">atomscale.results.rheed_video.</span></span><span class="sig-name descname"><span class="pre">RHEEDVideoResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">UUID</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeseries_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">snapshot_image_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">RHEEDImageResult</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">views</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collected_datetime</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotating</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/atomscale/results/rheed_video.html#RHEEDVideoResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MSONable</span></code></p>
-<p>RHEED video result</p>
+<span class="sig-prename descclassname"><span class="pre">atomscale.core.client.</span></span><span class="sig-name descname"><span class="pre">canonical_workflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">workflow</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/atomscale/core/client.html#canonical_workflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>The unified name for a workflow that may still be addressed by a legacy one.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data_id</strong> (<em>UUID</em><em> | </em><em>str</em>) – Data ID for the entry in the data catalogue.</p></li>
-<li><p><strong>timeseries_data</strong> (<em>DataFrame</em>) – Pandas DataFrame with per-frame RHEED features, indexed
-against a “Time” column. Columns are capitalized labels such as “Cluster ID”,
-“Specular Intensity”, “Strain”, “Cumulative Strain”, “Oscillation Period”,
-“Diffraction Spot Count”, and “Lattice Spacing”.</p></li>
-<li><p><strong>snapshot_image_data</strong> (<em>list</em><em>[</em><em>atomscale.results.rheed_image.RHEEDImageResult</em><em>] </em><em>| </em><em>None</em>) – One
-<code class="xref py py-class docutils literal notranslate"><span class="pre">atomscale.results.rheed_image.RHEEDImageResult</span></code> per snapshot extracted from the
-video, or None if no snapshots were extracted.</p></li>
-<li><p><strong>views</strong> (<em>DataFrame</em><em> | </em><em>None</em>) – Motion intervals and effective azimuth
-annotations. Omitted or None means no views are known, which
-reads as not rotating.</p></li>
-<li><p><strong>collected_datetime</strong> (<em>str</em><em> | </em><em>None</em>) – Datetime when the data was collected.</p></li>
-<li><p><strong>rotating</strong> (<em>bool</em><em> | </em><em>None</em>) – Deprecated. This argument held a bare
-rotating flag before rotation became a stored rate; it is
-accepted so callers written against that signature — and
-<code class="docutils literal notranslate"><span class="pre">MSONable</span></code> payloads serialized under it, which carry no
-<code class="docutils literal notranslate"><span class="pre">views</span></code> — still construct. It is translated to the placeholder
-view <code class="xref py py-func docutils literal notranslate"><span class="pre">atomscale.rheed_metadata.legacy_views_frame()</span></code> builds
-for the matching legacy type, so <code class="xref py py-attr docutils literal notranslate"><span class="pre">rotating</span></code> answers the
-same. Ignored when <code class="docutils literal notranslate"><span class="pre">views</span></code> is given.</p></li>
-</ul>
+<dd class="field-odd"><p><strong>workflow</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span></p>
 </dd>
 </dl>
-<dl class="py property">
-<dt class="sig sig-object py">
-<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">rotating</span></span></dt>
-<dd><p>Whether the stage turned during this recording.</p>
-<p>Read from the stored per-view <code class="docutils literal notranslate"><span class="pre">rpm</span></code> rather than from the catalogue
-type, so a recording answers the same before and after the RHEED types
-were unified — <code class="docutils literal notranslate"><span class="pre">rheed_stationary</span></code> is simply rpm 0. Kept because
-callers relied on this attribute before rotation became a stored rate.</p>
-<p>A NaN rpm comes only from the legacy fallback in
-<code class="xref py py-func docutils literal notranslate"><span class="pre">atomscale.rheed_metadata.legacy_views_frame()</span></code> — a backend that
-recorded rotation as a type name and never a rate. That still reads as
-rotating.</p>
-</dd></dl>
 </dd></dl>
 </section>
 </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">
 <div class="mr-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.results.rheed_image.RHEEDImageResult.html">
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.core.client.html">
 <svg class="mr-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="15 18 9 12 15 6"></polyline>
 </svg>
-        atomscale.results.rheed_image.RHEEDImageResult
+        atomscale.core.client
       </a>
 </div>
 <div class="ml-auto">
-<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.results.rheed_video.RHEEDVideoResult.html">
-        atomscale.results.rheed_video.RHEEDVideoResult
+<a class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors border border-input hover:bg-accent hover:text-accent-foreground py-2 px-4" href="atomscale.core.client.BaseClient.html">
+        atomscale.core.client.BaseClient
         <svg class="ml-2 h-4 w-4" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg">
 <polyline points="9 18 15 12 9 6"></polyline>
 </svg>

@@ -1,0 +1,6 @@
+atomscale.core.client.canonical\_workflow
+=========================================
+
+.. currentmodule:: atomscale.core.client
+
+.. autofunction:: canonical_workflow

@@ -35,5 +35,6 @@ atomscale.results.rheed\_video.RHEEDVideoResult
    .. autosummary::
    
       ~RHEEDVideoResult.REDIRECT
+      ~RHEEDVideoResult.rotating
    
    
