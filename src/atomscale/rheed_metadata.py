@@ -1,18 +1,4 @@
-"""Parse per-azimuth RHEED metadata for a rotating-substrate recording.
-
-``GET /configuration/rheed/video/`` carries, for each seed frame of a rotating
-video, both the rotation angle the frame sits at (``seed_frame_angles``) and the
-crystallographic azimuth the production classifier assigned it
-(``api_configuration.azimuth_labels`` — one of ``"100"`` / ``"110"`` / ``"210"``,
-or ``None`` when it could not be called), plus the fit detail behind that call in
-``azimuth_label_meta``.
-
-The distinction matters when comparing recordings: the rotation angle is a
-property of how the substrate happened to be parked, so the *same* azimuth turns
-up at different angles in different recordings of the same sample. The
-crystallographic label is the stable identity, and therefore the correct key for
-aligning or concatenating series across recordings.
-"""
+"""Read effective azimuth annotations for parked and rotating RHEED views."""
 
 from __future__ import annotations
 
@@ -26,7 +12,15 @@ from pandas import DataFrame
 RHEED_AZIMUTH_COLUMNS: tuple[str, ...] = (
     "data_id",
     "seed_frame",
-    "angle_degrees",
+    "view_id",
+    "interval_id",
+    "processed_data_id",
+    "start_frame",
+    "end_frame",
+    "start_unix_ms",
+    "end_unix_ms",
+    "rpm",
+    "azimuth_source",
     "azimuth_label",
     "label_confidence",
     "crystal_system",
@@ -37,71 +31,61 @@ RHEED_AZIMUTH_COLUMNS: tuple[str, ...] = (
 def _empty() -> DataFrame:
     frame = DataFrame({c: [] for c in RHEED_AZIMUTH_COLUMNS})
     frame["seed_frame"] = frame["seed_frame"].astype("int64")
-    frame["angle_degrees"] = frame["angle_degrees"].astype("float64")
     frame["label_confidence"] = frame["label_confidence"].astype("float64")
     return frame
 
 
-def rheed_azimuths_to_dataframe(payload: Sequence[Mapping[str, Any]]) -> DataFrame:
-    """Convert a ``list[RheedVideoConfigurationResponse]`` to one row per azimuth.
+# The rotation rate each pre-unification catalogue type implies. A backend older
+# than the views endpoint serves no rpm at all, so the type name is the only
+# evidence left: "rheed_stationary" means a parked stage, 0 by definition, while
+# "rheed_rotating" means the stage turned at a rate that backend never recorded
+# — reported as unknown rather than invented.
+LEGACY_TYPE_RPM: dict[str, float] = {
+    "rheed_stationary": 0.0,
+    "rheed_rotating": float("nan"),
+}
 
-    Args:
-        payload: Decoded response body — one entry per requested data id, each
-            with ``data_id``, ``seed_frame_angles`` (seed frame -> degrees) and an
-            ``api_configuration`` carrying ``azimuth_labels`` (seed frame ->
-            label) and ``azimuth_label_meta`` (seed frame -> fit detail).
 
-    Returns:
-        DataFrame: The columns in :data:`RHEED_AZIMUTH_COLUMNS`, sorted by
-        ``data_id`` then ``seed_frame``. ``azimuth_label`` is ``None`` for a seed
-        frame the classifier could not label, so callers can fall back to the
-        angle rather than inventing an identity. Non-rotating or unconfigured
-        entries contribute no rows; an empty payload yields an empty frame.
+def legacy_views_frame(data_type: str) -> DataFrame:
+    """One placeholder view for a backend with no ``/azimuths`` endpoint.
+
+    Keeps ``RHEEDVideoResult.views`` the same shape whichever backend answered,
+    so callers read ``rpm`` without first working out which one they are on. It
+    carries no view identity: a backend that cannot serve views has none to give.
     """
-    rows: list[dict[str, Any]] = []
-    for entry in payload or []:
-        data_id = entry.get("data_id")
-        angles = entry.get("seed_frame_angles") or {}
-        api_configuration = entry.get("api_configuration") or {}
-        labels = api_configuration.get("azimuth_labels") or {}
-        meta = api_configuration.get("azimuth_label_meta") or {}
+    if data_type not in LEGACY_TYPE_RPM:
+        return _empty()
+    row: dict[str, Any] = dict.fromkeys(RHEED_AZIMUTH_COLUMNS)
+    row["rpm"] = LEGACY_TYPE_RPM[data_type]
+    return DataFrame([row])[list(RHEED_AZIMUTH_COLUMNS)]
 
-        # Seed frames come from the angle map: it is the endpoint's own record of
-        # which frames this recording actually has, whereas the label map may be
-        # partial (an unlabelled azimuth is simply absent).
-        for seed_frame, angle in angles.items():
-            detail = meta.get(seed_frame) or {}
-            surface = detail.get("surface")
-            rows.append(
-                {
-                    "data_id": str(data_id),
-                    "seed_frame": int(seed_frame),
-                    "angle_degrees": float(angle)
-                    if angle is not None
-                    else float("nan"),
-                    "azimuth_label": labels.get(seed_frame),
-                    "label_confidence": (
-                        float(detail["confidence"])
-                        if detail.get("confidence") is not None
-                        else float("nan")
-                    ),
-                    "crystal_system": detail.get("system"),
-                    # A Miller index arrives as a list; join it so the column stays
-                    # scalar and groupable.
-                    "surface_miller": (
-                        "".join(str(_i) for _i in surface)
-                        if isinstance(surface, list | tuple)
-                        else surface
-                    ),
-                }
-            )
 
+def rheed_azimuths_to_dataframe(payload: Sequence[Mapping[str, Any]]) -> DataFrame:
+    """One row per RHEED view, retaining identity even when labels repeat."""
+    rows = []
+    for view in payload:
+        automatic = (view.get("annotation") or {}).get("automatic") or {}
+        surface = automatic.get("surface_miller")
+        rows.append(
+            {
+                **{key: view.get(key) for key in RHEED_AZIMUTH_COLUMNS},
+                "data_id": str(view["data_id"]),
+                "view_id": str(view["view_id"]),
+                "interval_id": str(view["interval_id"]),
+                "seed_frame": int(view["seed_frame"]),
+                "label_confidence": view.get("confidence"),
+                "crystal_system": automatic.get("crystal_system"),
+                "surface_miller": "".join(str(i) for i in surface) if surface else None,
+            }
+        )
     if not rows:
         return _empty()
-
     return (
         DataFrame(rows)[list(RHEED_AZIMUTH_COLUMNS)]
-        .sort_values(["data_id", "seed_frame"], kind="stable")
+        .sort_values(
+            ["data_id", "start_frame", "seed_frame"],
+            kind="stable",
+        )
         .reset_index(drop=True)
     )
 

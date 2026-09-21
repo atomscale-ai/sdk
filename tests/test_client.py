@@ -210,6 +210,9 @@ def test_get(client: Client):
         elif result_attr in required_types:
             pytest.fail(f"No data_id found for required data type '{result_attr}'")
 
+    # A unified backend resolves both legacy RHEED aliases to the same entry, so
+    # the same id can be collected twice; client.get returns it once.
+    data_ids = list(dict.fromkeys(data_ids))
     results = client.get(data_ids=data_ids)
     data_types = {type(result) for result in results}
     assert len(results) == len(data_ids)
@@ -484,3 +487,54 @@ def test_download_videos_missing_metadata(client: Client, tmp_path):
 #     assert (
 #         response.ok
 #     ), f"Failed to delete data entries: {response.status_code} - {response.text}"
+
+
+def test_search_falls_back_to_legacy_rheed_types_on_an_older_backend():
+    """A pre-unification backend rejects "rheed"; the SDK asks for what it knows.
+
+    The catalogue enum used to carry ``rheed_stationary`` and ``rheed_rotating``
+    separately. Requests go out under the canonical ``rheed``, and a backend
+    still on the old enum answers 422 — so both legacy names are queried and
+    their rows concatenated, giving callers the same result from either backend.
+    """
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    requested: list[str | None] = []
+
+    def fake_get(**kwargs):
+        data_type = (kwargs.get("params") or {}).get("data_type")
+        requested.append(data_type)
+        if data_type == "rheed":
+            raise ClientError("enum", status_code=422, response_text="enum")
+        return [{"data_id": f"id-{data_type}", "char_source_type": data_type}]
+
+    client._get = fake_get  # type: ignore[method-assign]
+    frame = client.search(data_type="rheed_stationary")
+
+    assert requested == ["rheed", "rheed_stationary", "rheed_rotating"]
+    assert frame["Type"].tolist() == ["rheed_stationary", "rheed_rotating"]
+
+
+def test_search_does_not_retry_when_the_backend_understands_rheed():
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    requested: list[str | None] = []
+
+    def fake_get(**kwargs):
+        requested.append((kwargs.get("params") or {}).get("data_type"))
+        return [{"data_id": "id-1", "char_source_type": "rheed"}]
+
+    client._get = fake_get  # type: ignore[method-assign]
+    frame = client.search(data_type="rheed_rotating")
+
+    assert requested == ["rheed"]
+    assert frame["Type"].tolist() == ["rheed"]
+
+
+def test_search_propagates_a_422_that_is_not_about_the_rheed_enum():
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+
+    def fake_get(**_kwargs):
+        raise ClientError("bad param", status_code=422, response_text="bad param")
+
+    client._get = fake_get  # type: ignore[method-assign]
+    with pytest.raises(ClientError):
+        client.search(data_type="xps")

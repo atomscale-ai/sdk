@@ -5,6 +5,7 @@ from pandas import DataFrame
 
 from atomscale import Client
 from atomscale.client import _DEFAULT_SIMILARITY_METRIC
+from atomscale.core import ClientError
 
 
 @pytest.fixture
@@ -31,7 +32,9 @@ def test_matches_sends_camelcase_chamfer_params(client, monkeypatch):
         limit=25,
     )
 
-    assert captured["sub_url"] == "similarity/rheed_stationary/source-1/matches/"
+    # A legacy workflow name is addressed under the unified one; a backend still
+    # on the old enum is handled by the 422 fallback in ``_get_by_workflow``.
+    assert captured["sub_url"] == "similarity/rheed/source-1/matches/"
     assert captured["params"] == {
         "metric": _DEFAULT_SIMILARITY_METRIC,
         "windowSpan": 45.0,
@@ -164,3 +167,111 @@ def test_matches_rejects_removed_kwargs(client):
     for bad_kwarg in ("metric", "use_prototypes", "refine", "return_null_if_404"):
         with pytest.raises(TypeError):
             client.get_similarity_matches("source-1", **{bad_kwarg: True})  # type: ignore[arg-type]
+
+
+def test_matches_falls_back_to_the_legacy_workflow_path(client, monkeypatch):
+    """A backend still on the split enum rejects "rheed" in the path.
+
+    The caller named ``rheed_stationary``, so that is the one retried — asking
+    for ``rheed_rotating`` would answer about a different recording.
+    """
+    requested: list[str] = []
+
+    def fake_get(**kwargs):
+        sub_url = kwargs["sub_url"]
+        requested.append(sub_url)
+        if "/rheed/" in sub_url:
+            raise ClientError("enum", status_code=422, response_text="enum")
+        return []
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    client.get_similarity_matches("source-1", workflow="rheed_stationary")
+
+    assert requested == [
+        "similarity/rheed/source-1/matches/",
+        "similarity/rheed_stationary/source-1/matches/",
+    ]
+
+
+def test_matches_tries_both_legacy_workflows_when_given_the_unified_name(
+    client, monkeypatch
+):
+    """Only the old backend knows which of the two it stored the data under."""
+    requested: list[str] = []
+
+    def fake_get(**kwargs):
+        sub_url = kwargs["sub_url"]
+        requested.append(sub_url)
+        if "rheed_rotating" not in sub_url:
+            raise ClientError("enum", status_code=422, response_text="enum")
+        return []
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    client.get_similarity_matches("source-1", workflow="rheed")
+
+    assert requested == [
+        "similarity/rheed/source-1/matches/",
+        "similarity/rheed_stationary/source-1/matches/",
+        "similarity/rheed_rotating/source-1/matches/",
+    ]
+
+
+def test_matches_propagates_a_422_that_is_not_the_workflow_enum(client, monkeypatch):
+    def fake_get(**_kwargs):
+        raise ClientError("bad param", status_code=422, response_text="bad param")
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    with pytest.raises(ClientError):
+        client.get_similarity_matches("source-1", workflow="xps")
+
+
+def test_matches_keeps_looking_when_a_legacy_workflow_404s(client, monkeypatch):
+    """A 404 under one legacy name says nothing about the other.
+
+    Under the split enum the workflow is part of the path, so the name a
+    recording was *not* stored under 404s — which ``_get`` reports as None.
+    Returning that would describe a rotating recording as having no matches.
+    """
+    requested: list[str] = []
+
+    def fake_get(**kwargs):
+        sub_url = kwargs["sub_url"]
+        requested.append(sub_url)
+        if "/rheed/" in sub_url:
+            raise ClientError("enum", status_code=422, response_text="enum")
+        if "rheed_stationary" in sub_url:
+            return None  # what _get returns for a 404
+        return [{"data_id": "a", "item_name": "n", "similarity": 0.5}]
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    df = client.get_similarity_matches("source-1", workflow="rheed")
+
+    assert requested == [
+        "similarity/rheed/source-1/matches/",
+        "similarity/rheed_stationary/source-1/matches/",
+        "similarity/rheed_rotating/source-1/matches/",
+    ]
+    assert df["data_id"].tolist() == ["a"]
+
+
+def test_matches_reports_empty_once_every_legacy_workflow_404s(client, monkeypatch):
+    """Both candidates answered; None is then the honest result, not an error."""
+
+    def fake_get(**kwargs):
+        if "/rheed/" in kwargs["sub_url"]:
+            raise ClientError("enum", status_code=422, response_text="enum")
+        return None
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    assert client.get_similarity_matches("source-1", workflow="rheed").empty
+
+
+def test_matches_raises_when_no_workflow_name_is_understood(client, monkeypatch):
+    """Every candidate 422s, so there is no answer to report as empty."""
+
+    def fake_get(**_kwargs):
+        raise ClientError("enum", status_code=422, response_text="enum")
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    with pytest.raises(ClientError):
+        client.get_similarity_matches("source-1", workflow="rheed")

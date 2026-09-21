@@ -97,6 +97,12 @@ def _retry_client_call(
     raise RuntimeError("unreachable")  # pragma: no cover
 
 
+# The RHEED catalogue types a backend older than the unified-types release
+# understands. Callers may still pass either name; both mean "rheed", and
+# whether the stage turned is read from the stored per-view rpm instead.
+_LEGACY_RHEED_TYPES = ("rheed_stationary", "rheed_rotating")
+
+
 class Client(BaseClient):
     """Atomic Data Sciences API client"""
 
@@ -127,6 +133,32 @@ class Client(BaseClient):
 
         super().__init__(api_key=api_key, endpoint=endpoint)
 
+    def _search_entries(self, params: dict[str, Any]) -> Any:
+        """``data_entries/`` with a fallback for a pre-unification backend.
+
+        The catalogue type enum used to hold ``rheed_stationary`` and
+        ``rheed_rotating`` where it now holds a single ``rheed``. Requests carry
+        the canonical name; a backend still on the old enum rejects it as an
+        enum violation (422), so the two names it does understand are queried
+        and their rows concatenated. Only that backend pays the extra requests,
+        and callers get the same rows from either one.
+        """
+        try:
+            return self._get(sub_url="data_entries/", params=params)
+        except ClientError as error:
+            if params.get("data_type") != "rheed" or error.status_code != 422:
+                raise
+
+        rows: list[Any] = []
+        for legacy_type in _LEGACY_RHEED_TYPES:
+            rows.extend(
+                self._get(
+                    sub_url="data_entries/", params={**params, "data_type": legacy_type}
+                )
+                or []
+            )
+        return rows
+
     def search(
         self,
         keywords: str | list[str] | None = None,
@@ -136,6 +168,11 @@ class Client(BaseClient):
         project_ids: str | list[str] | None = None,
         data_type: Literal[
             "rheed_image",
+            "rheed",
+            # Accepted for backward compatibility: a backend that predates the
+            # unified RHEED type still catalogues entries under these names, and
+            # callers written against it keep working. Both resolve to "rheed";
+            # rotation is read from the stored per-view rpm, not the name.
             "rheed_stationary",
             "rheed_rotating",
             "xps",
@@ -209,11 +246,16 @@ class Client(BaseClient):
             # Map the legacy "metrology" filter to its renamed "tool_state"
             # char-source so it resolves against the current backend, which
             # validates this param as an enum that no longer accepts "metrology".
+            # "rheed_stationary" / "rheed_rotating" were unified into "rheed",
+            # so requests carry the canonical name and a backend that predates
+            # the change is handled by the fallback in ``_search_entries``.
             "data_type": (
                 None
                 if data_type == "all"
                 else "tool_state"
                 if data_type == "metrology"
+                else "rheed"
+                if data_type in _LEGACY_RHEED_TYPES
                 else data_type
             ),
             "status": status,
@@ -225,10 +267,7 @@ class Client(BaseClient):
             "last_updated_max": last_updated[1],
         }
 
-        data = self._get(
-            sub_url="data_entries/",
-            params=params,
-        )
+        data = self._search_entries(params)
         column_mapping = {
             "data_id": "Data ID",
             "upload_datetime": "Upload Datetime",
@@ -464,7 +503,7 @@ class Client(BaseClient):
         self,
         source_id: str,
         *,
-        workflow: str = "rheed_stationary",
+        workflow: str = "rheed",
         last_n: int | None = None,
         window_span: float | None = None,
         reference_ids: list[str] | None = None,
@@ -475,8 +514,8 @@ class Client(BaseClient):
 
         Args:
             source_id: Data ID or physical sample ID the trajectory is computed against.
-            workflow: Similarity workflow name (e.g. "rheed_stationary"). Defaults to
-                "rheed_stationary".
+            workflow: Similarity workflow name (e.g. "rheed"). Defaults to
+                "rheed".
             last_n: If set, only fetch the last N points of the trajectory.
             window_span: Optional window span parameter forwarded to the provider.
             reference_ids: Optional list of reference data IDs to compare against.
@@ -514,7 +553,7 @@ class Client(BaseClient):
         self,
         data_id: str,
         *,
-        workflow: str = "rheed_stationary",
+        workflow: str = "rheed",
         window_span: float = 60.0,
         kind: Literal["prototype", "window"] = "prototype",
         top_k: int = 10,
@@ -526,7 +565,7 @@ class Client(BaseClient):
 
         Args:
             data_id: Data ID whose vectors seed the query.
-            workflow: Similarity workflow name. Defaults to "rheed_stationary".
+            workflow: Similarity workflow name. Defaults to "rheed".
             window_span: Embedding window span in seconds (must match an embedded span).
             kind: "prototype" (coarse, default) or "window" (finer, more queries).
             top_k: Max neighbors to return. The backend caps this at 30.
@@ -553,7 +592,7 @@ class Client(BaseClient):
         self,
         data_id: str,
         *,
-        workflow: str = "rheed_stationary",
+        workflow: str = "rheed",
         window_span: float = 60.0,
         kind: Literal["window", "prototype"] = "window",
         offset: int = 0,
@@ -563,7 +602,7 @@ class Client(BaseClient):
 
         Args:
             data_id: Data ID to fetch embeddings for.
-            workflow: Similarity workflow name. Defaults to ``"rheed_stationary"``.
+            workflow: Similarity workflow name. Defaults to ``"rheed"``.
             window_span: Window span in seconds. Defaults to ``60.0``.
             kind: ``"window"`` for one time-resolved vector per window (with
                 ``real_times`` / ``unix_times_ms``), or ``"prototype"`` for a small
@@ -581,8 +620,9 @@ class Client(BaseClient):
             of vectors available before ``offset`` / ``limit``; the number actually
             returned is ``len(result.vectors)``.
         """
-        payload: dict | None = self._get(  # type: ignore[assignment]
-            sub_url=f"similarity/{workflow}/{data_id}/embeddings/",
+        payload: dict | None = self._get_by_workflow(  # type: ignore[assignment]
+            "similarity/{workflow}/" + f"{data_id}/embeddings/",
+            workflow,
             params={
                 "window_span": window_span,
                 "kind": kind,
@@ -602,7 +642,7 @@ class Client(BaseClient):
         self,
         source_id: str,
         *,
-        workflow: str = "rheed_stationary",
+        workflow: str = "rheed",
         window_span: float = 60.0,
         live_comparison: bool = False,
         limit: int | None = None,
@@ -611,7 +651,7 @@ class Client(BaseClient):
 
         Args:
             source_id: Data ID (or physical sample ID) to find matches for.
-            workflow: Similarity workflow name. Defaults to ``"rheed_stationary"``.
+            workflow: Similarity workflow name. Defaults to ``"rheed"``.
             window_span: Window span in seconds. Defaults to ``60.0``.
             live_comparison: When ``True``, also include the source entry's most
                 recent (still-streaming) data in the comparison. Defaults to ``False``.
@@ -623,8 +663,9 @@ class Client(BaseClient):
             per match. Empty (with those columns) when there are no matches or the
             source is not found.
         """
-        payload = self._get(
-            sub_url=f"similarity/{workflow}/{source_id}/matches/",
+        payload = self._get_by_workflow(
+            "similarity/{workflow}/" + f"{source_id}/matches/",
+            workflow,
             params={
                 "metric": _DEFAULT_SIMILARITY_METRIC,
                 "windowSpan": window_span,
@@ -728,37 +769,17 @@ class Client(BaseClient):
         return ts_df
 
     def get_rheed_azimuths(self, data_ids: str | list[str]) -> DataFrame:
-        """Per-azimuth metadata for rotating RHEED recordings.
+        """Return effective labels and motion bounds, one row per stable view.
 
-        For each seed frame of a rotating video this returns both the rotation
-        angle it sits at and the crystallographic azimuth the production
-        classifier assigned it. The angle depends on where the substrate happened
-        to be parked, so the same azimuth appears at different angles in different
-        recordings of one sample; the label is the stable identity, and so the
-        right key for aligning or concatenating series across recordings.
-
-        Args:
-            data_ids: Data ID or list of data IDs of rotating RHEED videos.
-
-        Returns:
-            DataFrame: One row per (data item, seed frame) with columns
-            ``data_id``, ``seed_frame``, ``angle_degrees``, ``azimuth_label``
-            (``"100"`` / ``"110"`` / ``"210"``, or ``None`` when the classifier
-            could not call it), ``label_confidence``, ``crystal_system`` and
-            ``surface_miller``. Data items with no rotating configuration
-            contribute no rows.
+        Supports parked recordings and threads from rotating recordings. Equal
+        labels remain separate rows; view_id identifies each time series.
         """
         if isinstance(data_ids, str):
             data_ids = [data_ids]
-
-        payload = self._get(
-            sub_url="configuration/rheed/video/", params={"data_ids": data_ids}
-        )
-        if payload is None:
-            return rheed_azimuths_to_dataframe([])
-        return rheed_azimuths_to_dataframe(
-            payload if isinstance(payload, list) else [payload]
-        )
+        payload = []
+        for data_id in data_ids:
+            payload.extend(self._get(sub_url=f"rheed/{data_id}/azimuths") or [])
+        return rheed_azimuths_to_dataframe(payload)
 
     def get_frame(
         self,
@@ -1442,8 +1463,7 @@ class Client(BaseClient):
             "pl",
             "raman",
             "rheed_image",
-            "rheed_stationary",
-            "rheed_rotating",
+            "rheed",
             "rheed_xscan",
             "metrology",
             "tool_state",
@@ -1513,7 +1533,7 @@ class Client(BaseClient):
                 ),
                 energies=result.get("energies", []),
                 intensities=result.get("intensities", []),
-                detected_peaks=result.get("detected_peaks", {}),
+                detected_peaks=result.get("detected_peaks") or [],
                 last_updated=result.get("last_updated"),
                 collected_datetime=collected_dt,
             )
@@ -1525,7 +1545,7 @@ class Client(BaseClient):
                 raman_id=result.get("raman_id", result.get("id")),
                 raman_shift=result.get("energies", result.get("wavenumbers", [])),
                 intensities=result.get("intensities", []),
-                detected_peaks=result.get("detected_peaks", {}),
+                detected_peaks=result.get("detected_peaks") or [],
                 last_updated=result.get("last_updated"),
                 collected_datetime=collected_dt,
             )
@@ -1537,6 +1557,11 @@ class Client(BaseClient):
             return result_obj
 
         if data_type in [
+            "rheed",
+            # A backend that predates the unified RHEED type still catalogues
+            # entries under these two names; both resolve to the same provider
+            # below. Whether the stage turned is read from the stored per-view
+            # rpm, not from which name the entry happens to carry.
             "rheed_stationary",
             "rheed_rotating",
             "rheed_xscan",

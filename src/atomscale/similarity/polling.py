@@ -19,7 +19,7 @@ DistinctFn = Callable[[Result], Any]
 Predicate = Callable[[Result], bool]
 ErrorHandler = Callable[[BaseException], None]
 
-_DEFAULT_TRAJECTORY_WORKFLOW = "rheed_stationary"
+_DEFAULT_TRAJECTORY_WORKFLOW = "rheed"
 
 
 def _fetch_trajectory_result(client, source_id: str, last_n: int | None) -> Result:

@@ -16,7 +16,7 @@ class RamanResult(MSONable):
         raman_id: UUID | str,
         raman_shift: list[float],
         intensities: list[float],
-        detected_peaks: dict[str, float | str] | None = None,
+        detected_peaks: list[dict] | None = None,
         last_updated: str | None = None,
         collected_datetime: str | None = None,
     ):
@@ -27,7 +27,9 @@ class RamanResult(MSONable):
             raman_id: Unique identifier for the Raman result.
             raman_shift: Raman shift axis values.
             intensities: Intensity values aligned with `raman_shift`.
-            detected_peaks: Optional mapping of detected peak labels (keys) to their values, where each value is either the peak position (a Raman shift value, as a float) or a descriptive string.
+            detected_peaks: Optional list of detected-peak dicts, one per peak,
+                each describing that peak's fit (position, fwhm, eta, assignment, ...).
+                Matches the ``list[dict]`` the API stores; empty when none were found.
             last_updated: Optional last-updated timestamp string.
             collected_datetime: Datetime when the data was collected.
         """
@@ -35,7 +37,7 @@ class RamanResult(MSONable):
         self.raman_id = raman_id
         self.raman_shift = raman_shift
         self.intensities = intensities
-        self.detected_peaks = detected_peaks or {}
+        self.detected_peaks = detected_peaks or []
         self.last_updated = last_updated
         self.collected_datetime = collected_datetime
 

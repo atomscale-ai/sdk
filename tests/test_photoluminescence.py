@@ -30,4 +30,6 @@ def test_data_structure(result: PhotoluminescenceResult):
     assert isinstance(result.energies, list)
     assert isinstance(result.intensities, list)
     assert len(result.energies) == len(result.intensities)
-    assert isinstance(result.detected_peaks, dict)
+    # The API stores detected peaks as a list of per-peak dicts.
+    assert isinstance(result.detected_peaks, list)
+    assert all(isinstance(peak, dict) for peak in result.detected_peaks)
