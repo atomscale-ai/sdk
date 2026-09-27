@@ -400,13 +400,13 @@ class TestTimeseriesStreamerPushMulti:
                 },
             )
 
-    def test_push_multi_with_units(self, mock_server_factory):
-        """Verify push_multi() supports units per channel."""
+    def test_push_multi_sends_one_request_per_chunk(self, mock_server_factory):
+        """Verify push_multi() sends every channel of a chunk, with units, in one request."""
         from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         routes = json.dumps({
             "__routes__": True,
-            "__max_requests__": 3,
+            "__max_requests__": 2,
             "/tool-state/stream/initialize": json.dumps({
                 "data_id": "test-data-id",
                 "processed_data_id": "test-processed-id",
@@ -437,7 +437,16 @@ class TestTimeseriesStreamerPushMulti:
 
         time.sleep(0.5)
         requests = server.get_all_requests()
-        assert len(requests) == 3  # 1 init + 2 channels
+        assert len(requests) == 2  # 1 init + 1 chunk carrying both channels
+        method, path, body = requests[1].removeprefix("REQUEST:").split(":", 2)
+        assert (method, path) == ("POST", "/tool-state/stream/chunk/multi")
+        payload = json.loads(body)
+        assert payload["data_id"] == "test-data-id"
+        assert payload["chunk_index"] == 0
+        assert payload["channels"] == {
+            "temperature": {"timestamps": [0.0, 0.01], "values": [25.0, 25.1], "units": "C"},
+            "pressure": {"timestamps": [0.0, 0.01], "values": [1.0, 1.1]},
+        }
 
 
 class TestTimeseriesStreamerIntegration:

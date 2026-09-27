@@ -178,6 +178,9 @@ class TimeseriesStreamer:
     ) -> None:
         """Push data for multiple channels at once (fire-and-forget).
 
+        All channels of the chunk go in one request, so the server writes the shared
+        time axis once per chunk. Prefer this over one push() per channel.
+
         Args:
             data_id: Stream identifier from initialize().
             chunk_index: Zero-based chunk index for ordering.

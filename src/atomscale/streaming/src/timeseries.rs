@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyIterator};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
@@ -29,7 +30,6 @@ struct InitializeResponse {
     processed_data_id: String,
 }
 
-
 /// Payload for a single time series chunk.
 #[derive(Serialize, Debug)]
 struct ChunkPayload {
@@ -42,6 +42,22 @@ struct ChunkPayload {
     units: Option<String>,
 }
 
+/// One channel's data inside a multi-channel chunk.
+#[derive(Serialize, Debug)]
+struct ChannelPayload {
+    timestamps: Vec<f64>,
+    values: Vec<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    units: Option<String>,
+}
+
+/// Payload for every channel of one chunk, sent as a single request.
+#[derive(Serialize, Debug)]
+struct MultiChunkPayload {
+    data_id: String,
+    chunk_index: usize,
+    channels: BTreeMap<String, ChannelPayload>,
+}
 
 /// TimeseriesStreamer(api_key: str, endpoint: Optional[str] = None, points_per_chunk: int = 100)
 ///
@@ -282,7 +298,6 @@ impl TimeseriesStreamer {
         values: Vec<f64>,
         units: Option<String>,
     ) -> PyResult<()> {
-
         if timestamps.len() != values.len() {
             return Err(PyRuntimeError::new_err(
                 "timestamps and values must have the same length",
@@ -304,8 +319,8 @@ impl TimeseriesStreamer {
 
     /// push_multi(self, data_id: str, chunk_index: int, channels: dict[str, dict]) -> None
     ///
-    /// Push data for multiple channels at once. Each channel's data is uploaded as a separate
-    /// async task.
+    /// Push data for multiple channels at once. All channels of the chunk are uploaded together
+    /// in one async request, so the server writes the shared time axis once per chunk.
     ///
     /// Args:
     ///     data_id (str): The stream identifier returned by `initialize()`.
@@ -329,7 +344,13 @@ impl TimeseriesStreamer {
     ///     RuntimeError: If any channel has mismatched lengths.
     #[pyo3(signature = (data_id, chunk_index, channels))]
     #[pyo3(text_signature = "(data_id, chunk_index, channels)")]
-    fn push_multi(&self, data_id: String, chunk_index: usize, channels: Bound<PyDict>) -> PyResult<()> {
+    fn push_multi(
+        &self,
+        data_id: String,
+        chunk_index: usize,
+        channels: Bound<PyDict>,
+    ) -> PyResult<()> {
+        let mut payload_channels = BTreeMap::new();
 
         for (key, value) in channels.iter() {
             let channel_name: String = key.extract().map_err(|e| {
@@ -392,17 +413,24 @@ impl TimeseriesStreamer {
                 )));
             }
 
-            let payload = ChunkPayload {
-                data_id: data_id.clone(),
-                chunk_index,
+            payload_channels.insert(
                 channel_name,
-                timestamps,
-                values,
-                units,
-            };
-
-            self.spawn_upload(payload);
+                ChannelPayload {
+                    timestamps,
+                    values,
+                    units,
+                },
+            );
         }
+
+        if payload_channels.is_empty() {
+            return Ok(());
+        }
+        self.spawn_multi_upload(MultiChunkPayload {
+            data_id,
+            chunk_index,
+            channels: payload_channels,
+        });
         Ok(())
     }
 
@@ -482,7 +510,6 @@ impl TimeseriesStreamer {
             Err(e) => Err(PyRuntimeError::new_err(e.to_string())),
         }
     }
-
 }
 
 impl TimeseriesStreamer {
@@ -585,6 +612,37 @@ impl TimeseriesStreamer {
         let _ = self.spawn_upload_tracked(payload);
     }
 
+    /// Spawn a fire-and-forget upload of every channel of one chunk.
+    fn spawn_multi_upload(&self, payload: MultiChunkPayload) {
+        let client = self.client.clone();
+        let api_key = self.api_key.clone();
+        let url = format!("{}/tool-state/stream/chunk/multi", self.endpoint);
+
+        debug!(
+            "[timeseries_stream] spawn: chunk {} for {} channel(s)",
+            payload.chunk_index,
+            payload.channels.len()
+        );
+
+        let _ = self.rt.spawn(async move {
+            let result = post_chunk(&client, &url, &payload, &api_key).await;
+            match &result {
+                Ok(_) => debug!(
+                    "[timeseries_stream] chunk {} ({} channels) uploaded successfully",
+                    payload.chunk_index,
+                    payload.channels.len()
+                ),
+                Err(e) => debug!(
+                    "[timeseries_stream] chunk {} ({} channels) upload failed: {}",
+                    payload.chunk_index,
+                    payload.channels.len(),
+                    e
+                ),
+            }
+            result
+        });
+    }
+
     /// Spawn an async task to upload the chunk payload and return the JoinHandle.
     fn spawn_upload_tracked(&self, payload: ChunkPayload) -> JoinHandle<Result<()>> {
         let client = self.client.clone();
@@ -624,11 +682,11 @@ impl TimeseriesStreamer {
     }
 }
 
-/// POST the chunk payload to the API endpoint.
-async fn post_chunk(
+/// POST a chunk payload (single- or multi-channel) to the API endpoint.
+async fn post_chunk<T: Serialize>(
     client: &Client,
     url: &str,
-    payload: &ChunkPayload,
+    payload: &T,
     api_key: &str,
 ) -> Result<()> {
     let resp = client
