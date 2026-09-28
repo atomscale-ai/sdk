@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use bytes::Bytes;
 use numpy::PyArrayMethods;
 use pyo3::prelude::*;
@@ -17,6 +17,8 @@ use zarrs::{
 
 use numpy::{PyArrayDyn, PyReadonlyArrayDyn};
 use tracing::debug;
+
+use crate::retry::HttpStatusError;
 
 #[derive(Serialize, Debug)]
 #[serde(rename_all = "snake_case")] // Ensures JSON fields are snake_case (e.g., data_id)
@@ -176,7 +178,7 @@ pub async fn post_for_presigned(
 
     let text = resp.text().await.unwrap_or_default();
     if !status.is_success() {
-        return Err(anyhow::anyhow!("presign {}: {}", status, text));
+        return Err(HttpStatusError { status, body: text }).context("presign");
     }
 
     let v: serde_json::Value = serde_json::from_str(&text)?;
@@ -218,8 +220,7 @@ pub async fn put_bytes_presigned(client: &Client, url: &str, bytes: &[u8]) -> Re
     let text = resp.text().await.unwrap_or_default();
     if !status.is_success() {
         debug!("[put] resp headers: {:#?}", resp_headers);
-        debug!("[put] resp body: {}", text);
-        return Err(anyhow::anyhow!("put presigned {}: {}", status, text));
+        return Err(HttpStatusError { status, body: text }).context("put presigned");
     }
 
     if let Some(etag) = resp_headers.get("etag").and_then(|v| v.to_str().ok()) {

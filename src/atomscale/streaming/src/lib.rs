@@ -23,6 +23,9 @@ use initialize::{
     post_for_initialization, RHEEDStreamSettings,
 };
 
+mod retry;
+use retry::with_retries;
+
 mod upload;
 use upload::{
     numpy_frames_to_flat, package_to_zarr_bytes, post_for_presigned, put_bytes_presigned,
@@ -433,7 +436,8 @@ impl RHEEDStreamer {
         });
 
         if let Err(e) = res {
-            return Err(PyRuntimeError::new_err(e.to_string()));
+            // Alternate form carries the cause chain, e.g. the HTTP status behind a failed upload.
+            return Err(PyRuntimeError::new_err(format!("{e:#}")));
         }
 
         let total_dur = t_total0.elapsed();
@@ -567,6 +571,9 @@ impl RHEEDStreamer {
     }
 }
 
+/// Presign + PUT attempts per shard: 0.5, 1, 2 and 4 s apart, about 8 s in all.
+const SHARD_UPLOAD_ATTEMPTS: u32 = 5;
+
 // Private and rust only access
 impl RHEEDStreamer {
     /// cfg(self, data_id) -> Tuple[bool, float, int]
@@ -611,46 +618,37 @@ impl RHEEDStreamer {
         );
 
         self.rt.spawn(async move {
-            debug!("[rheed_stream] spawn#{chunk_idx}: requesting presign + packaging…");
+            let shard = tokio::task::spawn_blocking(move || package_to_zarr_bytes(&flat, n, h, w))
+                .await
+                .map_err(|e| anyhow!("shard join error: {e}"))?
+                .context("shard worker failed")?;
+            debug!(
+                "[rheed_stream] spawn#{chunk_idx}: packaging OK ({} bytes)",
+                shard.len()
+            );
 
-            let url_fut =
-                post_for_presigned(&client, &post_url, &zarr_shard_key, &metadata, &api_key);
-            let shard_handle =
-                tokio::task::spawn_blocking(move || package_to_zarr_bytes(&flat, n, h, w));
-
-            // 🔎 If either future errors, print it so you see why we never reach PUT.
-            let (url, shard): (String, Vec<u8>) = match tokio::try_join!(
-                async {
-                    let u = url_fut.await.context("presigned URL request failed")?;
-                    debug!("[rheed_stream] spawn#{chunk_idx}: presign OK");
-                    Ok::<_, anyhow::Error>(u)
-                },
-                async {
-                    let bytes = shard_handle
+            // A lost shard is a hole in the recording, so a failed presign or PUT is retried
+            // (fresh URL each attempt); the shard's key is fixed, so a repeat overwrites it.
+            with_retries(
+                &format!("[rheed_stream] shard {chunk_idx} upload"),
+                SHARD_UPLOAD_ATTEMPTS,
+                || async {
+                    let url = post_for_presigned(
+                        &client,
+                        &post_url,
+                        &zarr_shard_key,
+                        &metadata,
+                        &api_key,
+                    )
+                    .await
+                    .context("presigned URL request failed")?;
+                    put_bytes_presigned(&client, &url, &shard)
                         .await
-                        .map_err(|e| anyhow!("shard join error: {e}"))?
-                        .context("shard worker failed")?;
-                    debug!(
-                        "[rheed_stream] spawn#{chunk_idx}: packaging OK ({} bytes)",
-                        bytes.len()
-                    );
-                    Ok::<_, anyhow::Error>(bytes)
-                }
-            ) {
-                Ok(v) => v,
-                Err(e) => {
-                    debug!("[rheed_stream] spawn#{chunk_idx}: presign/packaging ERROR:\n{e:#}");
-                    return Err(e);
-                }
-            };
-
-            debug!("[rheed_stream] spawn#{chunk_idx}: PUT start…");
-            if let Err(e) = put_bytes_presigned(&client, &url, &shard).await {
-                debug!("[rheed_stream] spawn#{chunk_idx}: PUT ERROR:\n{e:#}");
-                return Err(e.context("PUT bytes failed"));
-            }
+                        .context("PUT bytes failed")
+                },
+            )
+            .await?;
             debug!("[rheed_stream] spawn#{chunk_idx}: PUT done");
-
             Ok(())
         })
     }

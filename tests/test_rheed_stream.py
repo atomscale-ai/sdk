@@ -744,3 +744,69 @@ class TestStreamingE2E:
         # Intra-chunk span = n / fps = 2 / 1 = 2000 ms — same for every chunk.
         for ts, meta in meta_by_start.items():
             assert int(meta["end_unix_ms_utc"]) - ts == 2000
+
+
+class TestShardUploadRetries:
+    """A shard whose presign or PUT fails transiently is retried, not dropped."""
+
+    def _run_one_chunk(self, status_sequence: dict, expected_requests: int):
+        import numpy as np
+
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        port = _get_free_port()
+        routes = json.dumps(
+            {
+                "__routes__": True,
+                "__max_requests__": expected_requests,
+                "__status_sequence__": status_sequence,
+                "/rheed/stream/": '"stream-data-id"',
+                "/data_entries/raw_data/staged/upload_urls/": json.dumps(
+                    [{"url": f"http://127.0.0.1:{port}/upload/put"}]
+                ),
+                "/upload/put": '"OK"',
+            }
+        )
+        server = MockServer(port, routes)
+        server.start()
+        error = None
+        try:
+            streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+            data_id = streamer.initialize(fps=1.0, rotations_per_min=0.0, chunk_size=2)
+            frames = np.full((2, 8, 8), 7, dtype=np.uint8)
+            try:
+                streamer.run(data_id, iter([(frames, 1_700_000_000_000)]))
+            except RuntimeError as e:
+                error = e
+            requests = server.get_captured_requests(
+                expected_count=expected_requests, timeout_s=15
+            )
+        finally:
+            server.stop()
+        presigns = [r for r in requests if r[1].startswith("/data_entries/raw_data/staged/")]
+        puts = [r for r in requests if r[0] == "PUT"]
+        return error, presigns, puts
+
+    def test_transient_presign_failures_are_retried(self):
+        error, presigns, puts = self._run_one_chunk(
+            {"/data_entries/raw_data/staged/upload_urls/": [503, 502]}, expected_requests=5
+        )
+        assert error is None
+        assert len(presigns) == 3
+        assert len(puts) == 1
+
+    def test_transient_put_failure_is_retried_with_a_fresh_url(self):
+        error, presigns, puts = self._run_one_chunk(
+            {"/upload/put": [500]}, expected_requests=5
+        )
+        assert error is None
+        assert len(presigns) == 2
+        assert len(puts) == 2
+
+    def test_final_presign_rejection_is_not_retried(self):
+        error, presigns, puts = self._run_one_chunk(
+            {"/data_entries/raw_data/staged/upload_urls/": [403]}, expected_requests=2
+        )
+        assert error is not None and "403" in str(error)
+        assert len(presigns) == 1
+        assert puts == []
