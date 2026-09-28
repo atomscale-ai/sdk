@@ -749,17 +749,24 @@ class TestStreamingE2E:
 class TestShardUploadRetries:
     """A shard whose presign or PUT fails transiently is retried, not dropped."""
 
-    def _run_one_chunk(self, status_sequence: dict, expected_requests: int):
+    def _run_one_chunk(
+        self,
+        status_sequence: dict,
+        expected_requests: int,
+        body_sequence: dict | None = None,
+        port: int | None = None,
+    ):
         import numpy as np
 
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
-        port = _get_free_port()
+        port = port or _get_free_port()
         routes = json.dumps(
             {
                 "__routes__": True,
                 "__max_requests__": expected_requests,
                 "__status_sequence__": status_sequence,
+                "__body_sequence__": body_sequence or {},
                 "/rheed/stream/": '"stream-data-id"',
                 "/data_entries/raw_data/staged/upload_urls/": json.dumps(
                     [{"url": f"http://127.0.0.1:{port}/upload/put"}]
@@ -796,12 +803,19 @@ class TestShardUploadRetries:
         assert len(puts) == 1
 
     def test_transient_put_failure_is_retried_with_a_fresh_url(self):
+        port = _get_free_port()
+        urls = [f"http://127.0.0.1:{port}/upload/put{i}" for i in (1, 2)]
         error, presigns, puts = self._run_one_chunk(
-            {"/upload/put": [500]}, expected_requests=5
+            {"/upload/put": [500]},
+            expected_requests=5,
+            body_sequence={
+                "/data_entries/raw_data/staged/upload_urls/": [json.dumps([{"url": u}]) for u in urls]
+            },
+            port=port,
         )
         assert error is None
         assert len(presigns) == 2
-        assert len(puts) == 2
+        assert [path for _, path, _ in puts] == ["/upload/put1", "/upload/put2"]
 
     def test_final_presign_rejection_is_not_retried(self):
         error, presigns, puts = self._run_one_chunk(

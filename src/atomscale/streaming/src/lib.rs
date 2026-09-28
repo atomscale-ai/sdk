@@ -5,9 +5,10 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyIterator, PyModule, PyTuple};
 use reqwest::Client;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tokio::runtime::Runtime;
+use tokio::sync::Semaphore;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
@@ -79,6 +80,10 @@ pub struct RHEEDStreamer {
     /// `initialize(...)`. Concurrent producers for different data_ids do not
     /// share fps/rotating/chunk_size — each stream has its own entry.
     streams: Mutex<HashMap<String, PerStreamState>>,
+
+    /// Bytes of chunk data (in MiB permits) that uploads may hold at once; see
+    /// [`UPLOAD_BUDGET_MIB`].
+    upload_budget: Arc<Semaphore>,
 }
 
 /// Per-`data_id` runtime config. One `RHEEDStreamer` instance can service
@@ -133,6 +138,7 @@ impl RHEEDStreamer {
             client,
             rt,
             streams: Mutex::new(HashMap::new()),
+            upload_budget: Arc::new(Semaphore::new(UPLOAD_BUDGET_MIB as usize)),
         })
     }
 
@@ -347,6 +353,7 @@ impl RHEEDStreamer {
 
         debug!("[rheed_stream] run: starting (concurrent: prepare→spawn package tasks)");
 
+        let py = frames_iter.py();
         let iter = PyIterator::from_object(&frames_iter)?;
         let mut handles = Vec::new();
 
@@ -408,7 +415,7 @@ impl RHEEDStreamer {
             };
 
             // Spawn via private helper
-            let handle = self.spawn_chunk_upload(idx, flat, n, h, w, metadata);
+            let handle = self.spawn_chunk_upload(py, idx, flat, n, h, w, metadata);
             handles.push(handle);
         }
 
@@ -496,6 +503,7 @@ impl RHEEDStreamer {
         let arrival_ms = Utc::now().timestamp_millis();
 
         let (rotating, fps, chunk_size) = self.cfg(&data_id)?;
+        let py = frames.py();
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
         let start_unix_ms_utc = capture_start_ms_utc.unwrap_or(arrival_ms);
@@ -515,7 +523,7 @@ impl RHEEDStreamer {
         };
 
         // Spawn via private helper; detach by dropping the handle
-        self.spawn_chunk_upload(chunk_idx, flat, n, h, w, metadata);
+        self.spawn_chunk_upload(py, chunk_idx, flat, n, h, w, metadata);
         Ok(())
     }
 
@@ -574,6 +582,12 @@ impl RHEEDStreamer {
 /// Presign + PUT attempts per shard: 0.5, 1, 2 and 4 s apart, about 8 s in all.
 const SHARD_UPLOAD_ATTEMPTS: u32 = 5;
 
+/// Chunk data uploads may hold at once, in MiB. A chunk's raw frames stay in memory until
+/// its upload finishes, retries included, so an outage would otherwise buffer without
+/// limit; past the budget, `push`/`run` wait for an upload to finish (backpressure). A
+/// chunk larger than the whole budget still goes through, alone.
+const UPLOAD_BUDGET_MIB: u32 = 1024;
+
 // Private and rust only access
 impl RHEEDStreamer {
     /// cfg(self, data_id) -> Tuple[bool, float, int]
@@ -597,6 +611,7 @@ impl RHEEDStreamer {
     /// Not exposed to Python.
     fn spawn_chunk_upload(
         &self,
+        py: Python<'_>,
         chunk_idx: usize,
         flat: Vec<u8>,
         n: usize,
@@ -612,12 +627,21 @@ impl RHEEDStreamer {
         );
         let zarr_shard_key = format!("frames.zarr/frames/c/{chunk_idx}/0/0");
 
+        // Reserve this chunk's share of the upload budget; the GIL is released while
+        // waiting so other Python threads keep running.
+        let mib = (flat.len().div_ceil(1 << 20) as u32).clamp(1, UPLOAD_BUDGET_MIB);
+        let budget = self.upload_budget.clone();
+        let permit = py
+            .detach(|| self.rt.block_on(budget.acquire_many_owned(mib)))
+            .expect("upload budget semaphore is never closed");
+
         debug!(
             "[rheed_stream] spawn#{chunk_idx}: queued (flat={} bytes, dims={n}x{h}x{w})",
             flat.len()
         );
 
         self.rt.spawn(async move {
+            let _permit = permit; // released when this upload finishes, however it ends
             let shard = tokio::task::spawn_blocking(move || package_to_zarr_bytes(&flat, n, h, w))
                 .await
                 .map_err(|e| anyhow!("shard join error: {e}"))?

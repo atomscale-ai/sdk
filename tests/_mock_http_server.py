@@ -14,7 +14,8 @@ The server:
 - For routes mode: handles multiple requests based on path matching
 - Responds with the provided JSON response
 - Routes mode accepts ``__status_sequence__``: {route: [status, ...]} returned in order
-  for that route's requests, then 200
+  for that route's requests, then 200; and ``__body_sequence__``: {route: [body, ...]}
+  likewise, then the route's own body
 """
 import json
 import sys
@@ -75,6 +76,7 @@ class CaptureHandler(BaseHTTPRequestHandler):
                         response_data, matched_key = route_response, route_key
                         break
             status = self.server.next_status(matched_key)
+            response_data = self.server.next_body(matched_key, response_data)
 
             if response_data is None:
                 # Default response for unmatched routes
@@ -143,11 +145,15 @@ class MultiRequestServer(ThreadingHTTPServer):
 
     request_queue_size = 256
 
-    def __init__(self, *args, max_requests: int = 1, status_sequences=None, **kwargs):
+    def __init__(
+        self, *args, max_requests: int = 1, status_sequences=None, body_sequences=None, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self.max_requests = max_requests
         # route key -> status codes returned in order; 200 once exhausted.
         self.status_sequences = {k: list(v) for k, v in (status_sequences or {}).items()}
+        # route key -> response bodies returned in order; the route's own once exhausted.
+        self.body_sequences = {k: list(v) for k, v in (body_sequences or {}).items()}
         self._count_lock = threading.Lock()
         self.request_count = 0
         self._done = threading.Event()
@@ -166,6 +172,11 @@ class MultiRequestServer(ThreadingHTTPServer):
         with self._count_lock:
             queue = self.status_sequences.get(route_key)
             return queue.pop(0) if queue else 200
+
+    def next_body(self, route_key, default: str) -> str:
+        with self._count_lock:
+            queue = self.body_sequences.get(route_key)
+            return queue.pop(0) if queue else default
 
     def process_request_thread(self, request, client_address):
         """Override to count handled requests and signal completion."""
@@ -188,11 +199,13 @@ def run_server(port: int, response_data: str) -> None:
             del routes["__routes__"]
             max_requests = routes.pop("__max_requests__", 10)
             status_sequences = routes.pop("__status_sequence__", None)
+            body_sequences = routes.pop("__body_sequence__", None)
             server = MultiRequestServer(
                 ("127.0.0.1", port),
                 CaptureHandler,
                 max_requests=max_requests,
                 status_sequences=status_sequences,
+                body_sequences=body_sequences,
             )
             server.routes = routes
             print(f"READY:{port}", flush=True)
