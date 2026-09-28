@@ -2,13 +2,13 @@ use anyhow::Result;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyIterator};
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
-use tracing::debug;
+use tracing::{debug, warn};
 
 use crate::initialize::{add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached};
 use crate::utils::init_tracing_once;
@@ -412,6 +412,11 @@ impl TimeseriesStreamer {
                     channel_name
                 )));
             }
+            // The server rejects an empty chunk; sent alone it failed only its own channel,
+            // so leave it out rather than fail the whole batch.
+            if timestamps.is_empty() {
+                continue;
+            }
 
             payload_channels.insert(
                 channel_name,
@@ -682,26 +687,55 @@ impl TimeseriesStreamer {
     }
 }
 
-/// POST a chunk payload (single- or multi-channel) to the API endpoint.
+/// Upload attempts per chunk. Ingest is idempotent per (data_id, channel, chunk_index), so a
+/// retry rewrites the same slice rather than duplicating data.
+const MAX_UPLOAD_ATTEMPTS: u32 = 3;
+const FIRST_RETRY_DELAY: Duration = Duration::from_millis(500);
+
+/// POST a chunk payload (single- or multi-channel) to the API endpoint, retrying transport
+/// errors, timeouts, 5xx and 429 with exponential backoff. Other 4xx responses are final.
 async fn post_chunk<T: Serialize>(
     client: &Client,
     url: &str,
     payload: &T,
     api_key: &str,
 ) -> Result<()> {
-    let resp = client
-        .post(url)
-        .header("X-API-KEY", api_key)
-        .header("Content-Type", "application/json")
-        .json(payload)
-        .send()
-        .await?;
-
-    let status = resp.status();
-    if !status.is_success() {
-        let text = resp.text().await.unwrap_or_default();
-        return Err(anyhow::anyhow!("HTTP {}: {}", status, text));
+    let mut delay = FIRST_RETRY_DELAY;
+    for attempt in 1..=MAX_UPLOAD_ATTEMPTS {
+        let error = match client
+            .post(url)
+            .header("X-API-KEY", api_key)
+            .header("Content-Type", "application/json")
+            .json(payload)
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => return Ok(()),
+            Ok(resp) => {
+                let status = resp.status();
+                let text = resp.text().await.unwrap_or_default();
+                let error = anyhow::anyhow!("HTTP {}: {}", status, text);
+                if !(status.is_server_error() || status == StatusCode::TOO_MANY_REQUESTS) {
+                    warn!("[timeseries_stream] upload to {} rejected: {}", url, error);
+                    return Err(error);
+                }
+                error
+            }
+            Err(e) => anyhow::Error::from(e),
+        };
+        if attempt == MAX_UPLOAD_ATTEMPTS {
+            warn!(
+                "[timeseries_stream] upload to {} failed after {} attempts: {}",
+                url, attempt, error
+            );
+            return Err(error);
+        }
+        debug!(
+            "[timeseries_stream] upload to {} failed (attempt {}), retrying in {:?}: {}",
+            url, attempt, delay, error
+        );
+        tokio::time::sleep(delay).await;
+        delay *= 2;
     }
-
-    Ok(())
+    unreachable!("the final attempt always returns")
 }

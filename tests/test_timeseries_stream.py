@@ -72,6 +72,17 @@ class MockServer:
                     self._all_requests.append(line.strip())
         return self._all_requests
 
+    def stop_and_get_requests(self) -> list[str]:
+        """Stop the server and return the requests it captured, however many arrived."""
+        if self._proc:
+            self._proc.terminate()
+            out, _ = self._proc.communicate(timeout=5)
+            self._all_requests = [
+                line.strip() for line in out.splitlines() if line.startswith("REQUEST:")
+            ]
+            self._proc = None
+        return self._all_requests
+
     def __enter__(self) -> "MockServer":
         self.start()
         return self
@@ -447,6 +458,65 @@ class TestTimeseriesStreamerPushMulti:
             "temperature": {"timestamps": [0.0, 0.01], "values": [25.0, 25.1], "units": "C"},
             "pressure": {"timestamps": [0.0, 0.01], "values": [1.0, 1.1]},
         }
+
+    def test_push_multi_retries_server_errors(self, mock_server_factory):
+        """A 5xx response is retried with the same body until the chunk lands."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 10,
+            "__status_sequence__": {"/tool-state/stream/chunk": [500, 503]},
+            "/tool-state/stream/initialize": json.dumps({
+                "data_id": "test-data-id",
+                "processed_data_id": "test-processed-id",
+            }),
+            "/tool-state/stream/chunk": json.dumps([]),
+        })
+        server = mock_server_factory(routes)
+
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push_multi(
+            data_id=data_id,
+            chunk_index=3,
+            channels={"temperature": {"timestamps": [0.0, 0.01], "values": [25.0, 25.1]}},
+        )
+
+        time.sleep(3.0)  # backoff: 0.5 s, then 1 s
+        chunk_requests = [r for r in server.stop_and_get_requests() if "/chunk/multi" in r]
+        assert len(chunk_requests) == 3
+        assert len(set(chunk_requests)) == 1
+
+    def test_push_multi_omits_empty_channels(self, mock_server_factory):
+        """An empty channel is left out of the batch instead of failing its siblings."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 2,
+            "/tool-state/stream/initialize": json.dumps({
+                "data_id": "test-data-id",
+                "processed_data_id": "test-processed-id",
+            }),
+            "/tool-state/stream/chunk": json.dumps([]),
+        })
+        server = mock_server_factory(routes)
+
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push_multi(
+            data_id=data_id,
+            chunk_index=0,
+            channels={
+                "temperature": {"timestamps": [0.0, 0.01], "values": [25.0, 25.1]},
+                "pressure": {"timestamps": [], "values": []},
+            },
+        )
+
+        time.sleep(0.5)
+        body = server.get_all_requests()[1].removeprefix("REQUEST:").split(":", 2)[2]
+        assert list(json.loads(body)["channels"]) == ["temperature"]
 
 
 class TestTimeseriesStreamerIntegration:
