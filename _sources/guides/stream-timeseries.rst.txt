@@ -113,7 +113,9 @@ Send data for one channel at a time:
 Push Multiple Channels
 ----------------------
 
-Send multiple channels in a single call:
+Send multiple channels in a single call. All channels of a chunk are uploaded in one
+request, which is cheaper for the server than one ``push()`` per channel, so prefer
+``push_multi()`` whenever channels share timestamps:
 
 .. code-block:: python
 

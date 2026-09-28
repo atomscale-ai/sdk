@@ -242,7 +242,9 @@ them:</p>
 </section>
 <section id="push-multiple-channels">
 <h2>Push Multiple Channels<a class="headerlink" href="#push-multiple-channels" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#push-multiple-channels'"><span>#</span></a></h2>
-<p>Send multiple channels in a single call:</p>
+<p>Send multiple channels in a single call. All channels of a chunk are uploaded in one
+request, which is cheaper for the server than one <code class="docutils literal notranslate"><span class="pre">push()</span></code> per channel, so prefer
+<code class="docutils literal notranslate"><span class="pre">push_multi()</span></code> whenever channels share timestamps:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
 </span><span id="line-2">
 </span><span id="line-3"><span class="k">for</span> <span class="n">chunk_idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
