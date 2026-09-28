@@ -13,6 +13,8 @@ The server:
 - For simple mode: handles one POST request, prints "BODY:<json>" to stdout
 - For routes mode: handles multiple requests based on path matching
 - Responds with the provided JSON response
+- Routes mode accepts ``__status_sequence__``: {route: [status, ...]} returned in order
+  for that route's requests, then 200
 """
 import json
 import sys
@@ -58,19 +60,21 @@ class CaptureHandler(BaseHTTPRequestHandler):
             # fall back to path-only routes ("/tags/"). Insertion order wins
             # within each group.
             response_data = None
+            matched_key = None
             for route_key, route_response in routes.items():
                 if " " in route_key:
                     route_method, route_path = route_key.split(" ", 1)
                     if method == route_method and path.startswith(route_path):
-                        response_data = route_response
+                        response_data, matched_key = route_response, route_key
                         break
             if response_data is None:
                 for route_key, route_response in routes.items():
                     if " " in route_key:
                         continue
                     if path.startswith(route_key):
-                        response_data = route_response
+                        response_data, matched_key = route_response, route_key
                         break
+            status = self.server.next_status(matched_key)
 
             if response_data is None:
                 # Default response for unmatched routes
@@ -97,6 +101,7 @@ class CaptureHandler(BaseHTTPRequestHandler):
         else:
             # Simple mode: single response for all requests
             response_data = self.server.response_data
+            status = 200
             print(f"BODY:{body.decode()}", flush=True)
 
         # Send response.
@@ -107,7 +112,7 @@ class CaptureHandler(BaseHTTPRequestHandler):
         # this header the next pooled request sees a half-closed socket
         # and fails ("PUT bytes failed" / "connection closed before message
         # completed"), most reproducibly on Windows.
-        self.send_response(200)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", len(response_data))
         self.send_header("Connection", "close")
@@ -138,9 +143,11 @@ class MultiRequestServer(ThreadingHTTPServer):
 
     request_queue_size = 256
 
-    def __init__(self, *args, max_requests: int = 1, **kwargs):
+    def __init__(self, *args, max_requests: int = 1, status_sequences=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.max_requests = max_requests
+        # route key -> status codes returned in order; 200 once exhausted.
+        self.status_sequences = {k: list(v) for k, v in (status_sequences or {}).items()}
         self._count_lock = threading.Lock()
         self.request_count = 0
         self._done = threading.Event()
@@ -154,6 +161,11 @@ class MultiRequestServer(ThreadingHTTPServer):
         self._done.wait()
         self.shutdown()
         thread.join(timeout=2)
+
+    def next_status(self, route_key) -> int:
+        with self._count_lock:
+            queue = self.status_sequences.get(route_key)
+            return queue.pop(0) if queue else 200
 
     def process_request_thread(self, request, client_address):
         """Override to count handled requests and signal completion."""
@@ -175,8 +187,12 @@ def run_server(port: int, response_data: str) -> None:
             # Routes mode
             del routes["__routes__"]
             max_requests = routes.pop("__max_requests__", 10)
+            status_sequences = routes.pop("__status_sequence__", None)
             server = MultiRequestServer(
-                ("127.0.0.1", port), CaptureHandler, max_requests=max_requests
+                ("127.0.0.1", port),
+                CaptureHandler,
+                max_requests=max_requests,
+                status_sequences=status_sequences,
             )
             server.routes = routes
             print(f"READY:{port}", flush=True)
