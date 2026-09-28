@@ -64,6 +64,9 @@ class XPSResult(MSONable):
         ax.grid(color="#E0E0E0", linestyle="--", linewidth=0.5)
         ax.tick_params(axis="both", which="major", labelsize=10)
 
-        ax.set_xlim(max(x), 0)
+        # XPS convention: binding energy decreases left to right. Skip for an
+        # entry with no stored spectrum, which would otherwise fail on max([]).
+        if x:
+            ax.set_xlim(max(x), 0)
         plt.close()
         return fig
