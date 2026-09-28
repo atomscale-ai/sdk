@@ -33,3 +33,18 @@ def test_data_structure(result: XPSResult):
     assert isinstance(result.predicted_composition, dict)
     assert isinstance(result.detected_peaks, list)
     assert isinstance(result.elements_manually_set, bool)
+
+
+def test_get_plot_empty_spectrum():
+    # An entry with no stored spectrum still plots (an empty axis) rather than
+    # failing on max([]).
+    result = XPSResult(
+        data_id="d",
+        xps_id=None,
+        binding_energies=[],
+        intensities=[],
+        predicted_composition={},
+        detected_peaks=[],
+        elements_manually_set=False,
+    )
+    assert isinstance(result.get_plot(), Figure)

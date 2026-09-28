@@ -5,9 +5,10 @@ use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyIterator, PyModule, PyTuple};
 use reqwest::Client;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tokio::runtime::Runtime;
+use tokio::sync::Semaphore;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
@@ -22,6 +23,9 @@ use initialize::{
     add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached,
     post_for_initialization, RHEEDStreamSettings,
 };
+
+mod retry;
+use retry::with_retries;
 
 mod upload;
 use upload::{
@@ -76,6 +80,10 @@ pub struct RHEEDStreamer {
     /// `initialize(...)`. Concurrent producers for different data_ids do not
     /// share fps/rotating/chunk_size — each stream has its own entry.
     streams: Mutex<HashMap<String, PerStreamState>>,
+
+    /// Bytes of chunk data (in MiB permits) that uploads may hold at once; see
+    /// [`UPLOAD_BUDGET_MIB`].
+    upload_budget: Arc<Semaphore>,
 }
 
 /// Per-`data_id` runtime config. One `RHEEDStreamer` instance can service
@@ -130,6 +138,7 @@ impl RHEEDStreamer {
             client,
             rt,
             streams: Mutex::new(HashMap::new()),
+            upload_budget: Arc::new(Semaphore::new(UPLOAD_BUDGET_MIB as usize)),
         })
     }
 
@@ -344,6 +353,7 @@ impl RHEEDStreamer {
 
         debug!("[rheed_stream] run: starting (concurrent: prepare→spawn package tasks)");
 
+        let py = frames_iter.py();
         let iter = PyIterator::from_object(&frames_iter)?;
         let mut handles = Vec::new();
 
@@ -405,7 +415,7 @@ impl RHEEDStreamer {
             };
 
             // Spawn via private helper
-            let handle = self.spawn_chunk_upload(idx, flat, n, h, w, metadata);
+            let handle = self.spawn_chunk_upload(py, idx, flat, n, h, w, metadata);
             handles.push(handle);
         }
 
@@ -433,7 +443,8 @@ impl RHEEDStreamer {
         });
 
         if let Err(e) = res {
-            return Err(PyRuntimeError::new_err(e.to_string()));
+            // Alternate form carries the cause chain, e.g. the HTTP status behind a failed upload.
+            return Err(PyRuntimeError::new_err(format!("{e:#}")));
         }
 
         let total_dur = t_total0.elapsed();
@@ -492,6 +503,7 @@ impl RHEEDStreamer {
         let arrival_ms = Utc::now().timestamp_millis();
 
         let (rotating, fps, chunk_size) = self.cfg(&data_id)?;
+        let py = frames.py();
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
         let start_unix_ms_utc = capture_start_ms_utc.unwrap_or(arrival_ms);
@@ -511,7 +523,7 @@ impl RHEEDStreamer {
         };
 
         // Spawn via private helper; detach by dropping the handle
-        self.spawn_chunk_upload(chunk_idx, flat, n, h, w, metadata);
+        self.spawn_chunk_upload(py, chunk_idx, flat, n, h, w, metadata);
         Ok(())
     }
 
@@ -567,6 +579,15 @@ impl RHEEDStreamer {
     }
 }
 
+/// Presign + PUT attempts per shard: 0.5, 1, 2 and 4 s apart, about 8 s in all.
+const SHARD_UPLOAD_ATTEMPTS: u32 = 5;
+
+/// Chunk data uploads may hold at once, in MiB. A chunk's raw frames stay in memory until
+/// its upload finishes, retries included, so an outage would otherwise buffer without
+/// limit; past the budget, `push`/`run` wait for an upload to finish (backpressure). A
+/// chunk larger than the whole budget still goes through, alone.
+const UPLOAD_BUDGET_MIB: u32 = 1024;
+
 // Private and rust only access
 impl RHEEDStreamer {
     /// cfg(self, data_id) -> Tuple[bool, float, int]
@@ -590,6 +611,7 @@ impl RHEEDStreamer {
     /// Not exposed to Python.
     fn spawn_chunk_upload(
         &self,
+        py: Python<'_>,
         chunk_idx: usize,
         flat: Vec<u8>,
         n: usize,
@@ -605,52 +627,52 @@ impl RHEEDStreamer {
         );
         let zarr_shard_key = format!("frames.zarr/frames/c/{chunk_idx}/0/0");
 
+        // Reserve this chunk's share of the upload budget; the GIL is released while
+        // waiting so other Python threads keep running.
+        let mib = (flat.len().div_ceil(1 << 20) as u32).clamp(1, UPLOAD_BUDGET_MIB);
+        let budget = self.upload_budget.clone();
+        let permit = py
+            .detach(|| self.rt.block_on(budget.acquire_many_owned(mib)))
+            .expect("upload budget semaphore is never closed");
+
         debug!(
             "[rheed_stream] spawn#{chunk_idx}: queued (flat={} bytes, dims={n}x{h}x{w})",
             flat.len()
         );
 
         self.rt.spawn(async move {
-            debug!("[rheed_stream] spawn#{chunk_idx}: requesting presign + packaging…");
+            let _permit = permit; // released when this upload finishes, however it ends
+            let shard = tokio::task::spawn_blocking(move || package_to_zarr_bytes(&flat, n, h, w))
+                .await
+                .map_err(|e| anyhow!("shard join error: {e}"))?
+                .context("shard worker failed")?;
+            debug!(
+                "[rheed_stream] spawn#{chunk_idx}: packaging OK ({} bytes)",
+                shard.len()
+            );
 
-            let url_fut =
-                post_for_presigned(&client, &post_url, &zarr_shard_key, &metadata, &api_key);
-            let shard_handle =
-                tokio::task::spawn_blocking(move || package_to_zarr_bytes(&flat, n, h, w));
-
-            // 🔎 If either future errors, print it so you see why we never reach PUT.
-            let (url, shard): (String, Vec<u8>) = match tokio::try_join!(
-                async {
-                    let u = url_fut.await.context("presigned URL request failed")?;
-                    debug!("[rheed_stream] spawn#{chunk_idx}: presign OK");
-                    Ok::<_, anyhow::Error>(u)
-                },
-                async {
-                    let bytes = shard_handle
+            // A lost shard is a hole in the recording, so a failed presign or PUT is retried
+            // (fresh URL each attempt); the shard's key is fixed, so a repeat overwrites it.
+            with_retries(
+                &format!("[rheed_stream] shard {chunk_idx} upload"),
+                SHARD_UPLOAD_ATTEMPTS,
+                || async {
+                    let url = post_for_presigned(
+                        &client,
+                        &post_url,
+                        &zarr_shard_key,
+                        &metadata,
+                        &api_key,
+                    )
+                    .await
+                    .context("presigned URL request failed")?;
+                    put_bytes_presigned(&client, &url, &shard)
                         .await
-                        .map_err(|e| anyhow!("shard join error: {e}"))?
-                        .context("shard worker failed")?;
-                    debug!(
-                        "[rheed_stream] spawn#{chunk_idx}: packaging OK ({} bytes)",
-                        bytes.len()
-                    );
-                    Ok::<_, anyhow::Error>(bytes)
-                }
-            ) {
-                Ok(v) => v,
-                Err(e) => {
-                    debug!("[rheed_stream] spawn#{chunk_idx}: presign/packaging ERROR:\n{e:#}");
-                    return Err(e);
-                }
-            };
-
-            debug!("[rheed_stream] spawn#{chunk_idx}: PUT start…");
-            if let Err(e) = put_bytes_presigned(&client, &url, &shard).await {
-                debug!("[rheed_stream] spawn#{chunk_idx}: PUT ERROR:\n{e:#}");
-                return Err(e.context("PUT bytes failed"));
-            }
+                        .context("PUT bytes failed")
+                },
+            )
+            .await?;
             debug!("[rheed_stream] spawn#{chunk_idx}: PUT done");
-
             Ok(())
         })
     }

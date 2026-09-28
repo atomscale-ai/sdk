@@ -1496,8 +1496,8 @@ class Client(BaseClient):
             return XPSResult(
                 data_id=data_id,
                 xps_id=result.get("xps_id"),
-                binding_energies=result.get("binding_energies", []),
-                intensities=result.get("intensities", []),
+                binding_energies=result.get("binding_energies") or [],
+                intensities=result.get("intensities") or [],
                 predicted_composition=result.get("predicted_composition") or {},
                 detected_peaks=result.get("detected_peaks") or [],
                 elements_manually_set=bool(result.get("set_elements", False)),
