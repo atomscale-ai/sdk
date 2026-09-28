@@ -5,17 +5,11 @@ from atomscale import Client
 from atomscale.results import RHEEDVideoResult
 from atomscale.timeseries.rheed import RHEEDProvider
 
-from .conftest import ResultIDs
-
 
 @pytest.fixture
-def client():
-    return Client()
-
-
-@pytest.fixture
-def result(client: Client):
-    results = client.get(data_ids=ResultIDs.rheed_rotating)
+def result(client: Client, result_ids):
+    results = client.get(data_ids=result_ids.rheed_rotating)
+    assert len(results) == 1
     return results[0]
 
 

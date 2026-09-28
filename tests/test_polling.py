@@ -24,26 +24,20 @@ from atomscale.timeseries.polling import (
     start_polling_thread,
 )
 
-from .conftest import ResultIDs
-
 # ---------- Fixtures ----------
 
 
 @pytest.fixture
-def client():
-    return Client()
+def data_id(result_ids) -> str:
+    # Use the complete synthetic ID; no earlier test needs to populate it.
+    return result_ids.rheed_rotating
 
 
 @pytest.fixture
-def data_id() -> str:
-    # Take the first ID from the rotating demo set
-    return ResultIDs.rheed_rotating[0]
-
-
-@pytest.fixture
-def result(client: Client):
+def result(client: Client, result_ids):
     # Example "real-ish" payload you can reuse in tests
-    results = client.get(data_ids=ResultIDs.rheed_rotating)
+    results = client.get(data_ids=result_ids.rheed_rotating)
+    assert len(results) == 1
     return results[0]
 
 
@@ -354,32 +348,40 @@ async def test_start_polling_task_awaits_on_result(
 def test_start_polling_thread_stops_with_event(
     monkeypatch: pytest.MonkeyPatch, client: Client, data_id: str
 ):
-    monkeypatch.setattr(time, "sleep", lambda *_: None)
-
-    provider = SeqProvider([{"n": 1}, {"n": 2}, {"n": 3}, {"n": 4}, {"n": 5}])
+    provider = SeqProvider([{"n": 1}, {"n": 2}])
     monkeypatch.setattr(
         "atomscale.timeseries.polling.get_provider", lambda name: provider
     )
-
-    seen: list[int] = []
+    seen = []
     first_seen = threading.Event()
+    release_callback = threading.Event()
+    threads = []
+    original_thread = threading.Thread
+
+    def record_thread(*args, **kwargs):
+        thread = original_thread(*args, **kwargs)
+        threads.append(thread)
+        return thread
+
+    monkeypatch.setattr("atomscale.timeseries.polling.threading.Thread", record_thread)
 
     def on_result(item):
         seen.append(item["n"])
-        if len(seen) == 1:
-            first_seen.set()
+        first_seen.set()
+        release_callback.wait(timeout=2.0)
 
-    # Bound the poll count: once SeqProvider is exhausted every poll raises and
-    # is swallowed, so nothing yields and the stop check in the runner is never
-    # reached — an unbounded thread outlives the test and picks up the next
-    # test's monkeypatched provider.
     stop = start_polling_thread(
-        client, data_id, interval=0.01, on_result=on_result, max_polls=10
+        client, data_id, interval=0.001, on_result=on_result, max_polls=10
     )
-    assert first_seen.wait(timeout=1.0), "did not receive first result in time"
-    stop.set()
-    time.sleep(0.05)  # allow thread to exit
-    assert len(seen) >= 1
+    try:
+        assert first_seen.wait(timeout=2.0), "did not receive first result in time"
+    finally:
+        stop.set()
+        release_callback.set()
+        for thread in threads:
+            thread.join(timeout=2.0)
+    assert all(not thread.is_alive() for thread in threads)
+    assert seen == [1]
 
 
 # ---------- Misc: fire_immediately behavioral smoke ----------

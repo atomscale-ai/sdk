@@ -4,20 +4,11 @@ from matplotlib.figure import Figure
 from atomscale import Client
 from atomscale.results import PhotoluminescenceResult
 
-from .conftest import ResultIDs
-
 
 @pytest.fixture
-def client():
-    return Client()
-
-
-@pytest.fixture
-def result(client: Client):
-    if not ResultIDs.photoluminescence:
-        pytest.skip("No photoluminescence data available")
-
-    results = client.get(data_ids=ResultIDs.photoluminescence)
+def result(client: Client, result_ids):
+    results = client.get(data_ids=result_ids.photoluminescence)
+    assert len(results) == 1
     return results[0]
 
 

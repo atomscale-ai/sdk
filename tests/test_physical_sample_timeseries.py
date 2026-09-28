@@ -174,9 +174,7 @@ def test_get_physical_sample_timeseries_404_raises(client, monkeypatch):
 
 
 def test_get_physical_sample_timeseries_no_metrics_returns_empty(client, monkeypatch):
-    monkeypatch.setattr(
-        client, "_get", lambda sub_url, **kwargs: {"properties": []}
-    )
+    monkeypatch.setattr(client, "_get", lambda sub_url, **kwargs: {"properties": []})
     df = client.get_physical_sample_timeseries(PSID)
     assert df.empty
 
@@ -245,46 +243,19 @@ def test_get_physical_sample_can_skip_sample_metrics(client, monkeypatch):
 # --------------------------------------------------------------------------
 
 
-@pytest.fixture
-def live_client():
-    try:
-        return Client()
-    except ValueError:
-        pytest.skip("No Atomscale API key available for integration test")
-
-
+@pytest.mark.live
 def test_get_physical_sample_timeseries_integration(live_client):
-    samples = live_client.list_physical_samples()
-    if not len(samples):
-        pytest.skip("No physical samples available")
+    import os
 
-    # Probe BTO-looking samples first, then fall back to any sample; stop at the
-    # first one exposing rheed_quality. Bounded so the scan stays cheap.
-    ids = samples["Physical Sample ID"].dropna().astype(str)
-    name_col = samples.get("Physical Sample Name")
-    looks_bto = (
-        name_col.fillna("").str.contains("bto", case=False)
-        if name_col is not None
-        else None
-    )
-    ordered = (
-        ids[looks_bto].tolist() + ids[~looks_bto].tolist()
-        if looks_bto is not None
-        else ids.tolist()
-    )
-
-    found = None
-    for sid in ordered[:25]:
-        df = live_client.get_physical_sample_timeseries(
-            sid, property_names=["rheed_quality"]
+    sample_id = os.getenv("AS_TEST_PHYSICAL_SAMPLE_ID")
+    if not sample_id:
+        pytest.fail(
+            "Set AS_TEST_PHYSICAL_SAMPLE_ID to a curated sample with rheed_quality"
         )
-        if not df.empty and df["value"].notna().any():
-            found = df
-            break
-
-    if found is None:
-        pytest.skip("No accessible sample exposes rheed_quality")
-
+    found = live_client.get_physical_sample_timeseries(
+        sample_id, property_names=["rheed_quality"]
+    )
+    assert not found.empty, "Pinned sample has no rheed_quality data"
     q = found.loc[found.property_name == "rheed_quality", "value"].dropna()
     assert len(q) > 0
     assert np.isfinite(q.to_numpy()).all()

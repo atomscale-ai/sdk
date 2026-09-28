@@ -7,8 +7,6 @@ from atomscale import Client
 from atomscale.results import RecipeResult
 from atomscale.timeseries.recipe import RecipeProvider
 
-from .conftest import ResultIDs
-
 # Recipe payloads share tool-state's property-centric shape (setpoints expanded
 # to a time series), so parsing is exercised identically.
 PROP_PAYLOAD = {
@@ -39,11 +37,6 @@ PROP_PAYLOAD = {
     },
     "series_max_time": 4.0,
 }
-
-
-@pytest.fixture
-def client():
-    return Client()
 
 
 def test_property_centric_parse():
@@ -130,22 +123,20 @@ def test_recipe_provider_fetches_recipe_endpoint():
 
 
 # -----------------------------------------------------------------------------
-# Live data path (skipped unless ResultIDs.recipe is populated)
+# Result construction through the offline client sandbox
 # -----------------------------------------------------------------------------
 
 
 @pytest.fixture
-def result(client: Client):
-    if not ResultIDs.recipe:
-        pytest.skip("No recipe data available")
-
-    results = client.get(data_ids=ResultIDs.recipe)
+def result(client: Client, result_ids):
+    results = client.get(data_ids=result_ids.recipe)
+    assert len(results) == 1
     return results[0]
 
 
-def test_live_get_dataframe(result: RecipeResult):
+def test_get_dataframe(result: RecipeResult):
     df = result.timeseries_data
     assert isinstance(df, DataFrame)
-    if not df.empty:
-        assert "UNIX Timestamp" in df.columns
-        assert "Time" in df.columns
+    assert not df.empty
+    assert "UNIX Timestamp" in df.columns
+    assert "Time" in df.columns

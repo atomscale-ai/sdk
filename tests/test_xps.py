@@ -4,20 +4,11 @@ from matplotlib.figure import Figure
 from atomscale import Client
 from atomscale.results import XPSResult
 
-from .conftest import ResultIDs
-
 
 @pytest.fixture
-def client():
-    return Client()
-
-
-@pytest.fixture
-def result(client: Client):
-    if not ResultIDs.xps:
-        pytest.skip("No XPS data available")
-
-    results = client.get(data_ids=ResultIDs.xps)
+def result(client: Client, result_ids):
+    results = client.get(data_ids=result_ids.xps)
+    assert len(results) == 1
     return results[0]
 
 

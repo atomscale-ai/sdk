@@ -1,0 +1,25 @@
+name: Live API checks
+
+on:
+  workflow_dispatch:
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    environment: sdk-test
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install package and test dependencies
+        run: uv pip install --system -e '.[dev]'
+      - name: Test curated sandbox data
+        env:
+          AS_TEST_API_KEY: ${{ secrets.AS_TEST_API_KEY }}
+          AS_TEST_API_ENDPOINT: ${{ vars.AS_TEST_API_ENDPOINT }}
+          AS_TEST_RHEED_IMAGE_ID: ${{ vars.AS_TEST_RHEED_IMAGE_ID }}
+          AS_TEST_PHYSICAL_SAMPLE_ID: ${{ vars.AS_TEST_PHYSICAL_SAMPLE_ID }}
+          AS_TEST_SIMILARITY_SOURCE_ID: ${{ vars.AS_TEST_SIMILARITY_SOURCE_ID }}
+        run: pytest --run-live -m live

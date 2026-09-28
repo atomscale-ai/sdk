@@ -6,8 +6,6 @@ from atomscale import Client
 from atomscale.results import OpticalResult
 from atomscale.timeseries.optical import OpticalProvider
 
-from .conftest import ResultIDs
-
 PROP_PAYLOAD = {
     "properties": {
         "perimeter_px": {
@@ -33,11 +31,6 @@ PROP_PAYLOAD = {
     },
     "series_max_time": 3.0,
 }
-
-
-@pytest.fixture
-def client():
-    return Client()
 
 
 def test_property_centric_parse():
@@ -78,30 +71,27 @@ def test_empty_payload_returns_empty_df():
 
 
 # -----------------------------------------------------------------------------
-# Live data path (skipped unless ResultIDs.optical is populated)
+# Result construction through the offline client sandbox
 # -----------------------------------------------------------------------------
 
 
 @pytest.fixture
-def result(client: Client):
-    if not ResultIDs.optical:
-        pytest.skip("No optical data available")
-
-    results = client.get(data_ids=ResultIDs.optical)
+def result(client: Client, result_ids):
+    results = client.get(data_ids=result_ids.optical)
+    assert len(results) == 1
     return results[0]
 
 
-def test_live_get_dataframe(result: OpticalResult):
+def test_get_dataframe(result: OpticalResult):
     df = result.timeseries_data
     assert isinstance(df, DataFrame)
-    if not df.empty:
-        assert "UNIX Timestamp" in df.columns
-        assert "Time" in df.columns
+    assert not df.empty
+    assert "UNIX Timestamp" in df.columns
+    assert "Time" in df.columns
 
 
 def test_snapshot_images(result: OpticalResult):
     snapshots = result.snapshot_image_data
-    if not snapshots:
-        pytest.skip("No optical snapshot images available")
+    assert snapshots
 
     assert isinstance(snapshots[0].processed_image, Image)

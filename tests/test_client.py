@@ -9,13 +9,6 @@ from atomscale.client import _RETRYABLE_STATUSES, _retry_client_call
 from atomscale.core import ClientError
 from atomscale.results import UnknownResult
 
-from .conftest import ResultIDs
-
-
-@pytest.fixture
-def client():
-    return Client()
-
 
 def test_no_api_key():
     with pytest.raises(ValueError, match="No valid Atomscale API key supplied"):
@@ -40,6 +33,7 @@ def test_generic_search(client: Client):
             "Growth Length",
             "Tags",
             "Owner",
+            "Workspaces",
             "Physical Sample ID",
             "Physical Sample Name",
             "Sample Name",
@@ -52,60 +46,56 @@ def test_generic_search(client: Client):
             "Has Instrument Logs",
         ]
     )
-    assert not len(set(orig_data.keys().values) - column_names)
+    assert set(orig_data.columns) == column_names
 
 
-def test_keyword_search(client: Client):
-    data = client.search(keywords=".vms")
-    assert len(data["Data ID"].values)
+@pytest.mark.parametrize(
+    "kwargs, expected",
+    [
+        ({"keywords": ".vms"}, {"keywords": ".vms"}),
+        ({"include_organization_data": False}, {"include_organization_data": False}),
+        ({"data_ids": "sandbox-xps"}, {"data_ids": "sandbox-xps"}),
+        ({"data_ids": ["sandbox-xps"]}, {"data_ids": ["sandbox-xps"]}),
+        *[
+            (
+                {"data_type": kind},
+                {"data_type": "rheed" if kind.startswith("rheed_") else kind},
+            )
+            for kind in ("rheed_image", "rheed_stationary", "rheed_rotating", "xps")
+            if kind != "rheed_image"
+        ],
+        ({"data_type": "rheed_image"}, {"data_type": "rheed_image"}),
+        ({"data_type": "all"}, {"data_type": None}),
+        ({"status": "success"}, {"status": "success"}),
+        ({"status": "all"}, {"status": "all"}),
+        (
+            {"growth_length": (1, None)},
+            {"growth_length_min": 1, "growth_length_max": None},
+        ),
+        (
+            {"growth_length": (None, 1000)},
+            {"growth_length_min": None, "growth_length_max": 1000},
+        ),
+        (
+            {"upload_datetime": (None, datetime(2024, 2, 1))},
+            {"upload_datetime_min": None, "upload_datetime_max": datetime(2024, 2, 1)},
+        ),
+        (
+            {"last_updated": (None, datetime(2024, 2, 1))},
+            {"last_updated_min": None, "last_updated_max": datetime(2024, 2, 1)},
+        ),
+    ],
+)
+def test_search_forwards_filters(client, sandbox, kwargs, expected):
+    assert isinstance(client.search(**kwargs), DataFrame)
+    path, params, _ = sandbox.calls[-1]
+    assert path == "data_entries/"
+    assert {key: params[key] for key in expected} == expected
 
 
-def test_include_org_search(client: Client):
-    data = client.search(include_organization_data=False)
-    assert len(data["Data ID"].values)
-
-
-def test_data_ids_search(client: Client):
-    user_data = client.search(include_organization_data=False)
-    # Keep request size bounded when this test runs against live catalogue data.
-    data_ids = list(user_data["Data ID"].values)[:20]
-    data = client.search(data_ids=data_ids)
-    assert len(data["Data ID"].values) == len(data_ids)
-
-    data = client.search(data_ids=data_ids[0])
-    assert data["Data ID"].values[0] == data_ids[0]
-
-
-def test_data_type_search(client: Client):
-    data_types = ["rheed_image", "rheed_stationary", "rheed_rotating", "xps", "all"]
-    for data_type in data_types:
-        data = client.search(data_type=data_type)  # type: ignore
-        assert len(data["Type"].values)
-
-
-def test_status_search(client: Client):
-    status_values = ["success", "all"]
-    for status in status_values:
-        data = client.search(status=status)  # type: ignore
-        assert len(data["Status"].values)
-
-
-def test_growth_length_search(client: Client):
-    data = client.search(growth_length=(1, None))
-    assert len(data["Growth Length"].values)
-
-    data = client.search(growth_length=(None, 1000))
-    assert len(data["Growth Length"].values)
-
-
-def test_upload_datetime_search(client: Client):
-    data = client.search(upload_datetime=(None, datetime.utcnow()))
-    assert len(data["Upload Datetime"].values)
-
-
-def test_last_updated_search(client: Client):
-    data = client.search(last_updated=(None, datetime.utcnow()))
-    assert len(data["Last Updated"].values)
+def test_search_empty_catalogue(client, sandbox):
+    sandbox.catalogue.clear()
+    assert client.search().empty
 
 
 def test_last_accessed_datetime_alias_forwards_to_last_updated(monkeypatch):
@@ -148,75 +138,35 @@ def test_metrology_search_alias_uses_tool_state_enum(monkeypatch):
     assert captured["params"]["data_type"] == "tool_state"
 
 
-@pytest.mark.order(1)
-def test_get(client: Client):
-    data_type_aliases = {
-        "rheed_image": ["rheed_image"],
-        "rheed_stationary": ["rheed_stationary"],
-        "rheed_rotating": ["rheed_rotating"],
-        "xps": ["xps"],
-        "optical": ["optical"],
-        "tool_state": ["tool_state", "metrology"],
-        "photoluminescence": ["photoluminescence", "pl"],
-        "raman": ["raman"],
-    }
-    required_types = {
-        "rheed_image",
-        "rheed_stationary",
-        "rheed_rotating",
-        "xps",
-        # "photoluminescence",
-        # "raman",
-    }
-    data_ids = []
+@pytest.mark.parametrize(
+    "kind, expected_type",
+    [
+        ("rheed", "RHEEDVideoResult"),
+        ("xps", "XPSResult"),
+        ("xrd", "XRDResult"),
+        ("raman", "RamanResult"),
+        ("photoluminescence", "PhotoluminescenceResult"),
+        ("optical", "OpticalResult"),
+        ("tool_state", "ToolStateResult"),
+        ("recipe", "RecipeResult"),
+        ("ellipsometry", "EllipsometryResult"),
+    ],
+)
+def test_get(client, result_ids, kind, expected_type):
+    data_id = getattr(result_ids, kind)
+    results = client.get(data_ids=data_id)
+    assert len(results) == 1
+    assert type(results[0]).__name__ == expected_type
+    assert results[0].data_id == data_id
 
-    for result_attr, aliases in data_type_aliases.items():
-        data_id = None
-        for alias in aliases:
-            for include_org in (False, True):
-                try:
-                    data = client.search(  # type: ignore[arg-type]
-                        data_type=alias,
-                        include_organization_data=include_org,
-                        status="success",
-                    )
 
-                except ClientError as exc:
-                    # An auth failure means the key is expired/invalid or scoped to
-                    # the wrong org. Fail loudly instead of swallowing it as a
-                    # misleading "No data_id found" below. Other errors (e.g. an
-                    # alias unsupported for this org) stay benign — try the next.
-                    if exc.status_code in (401, 403):
-                        pytest.fail(
-                            f"Authentication failed (HTTP {exc.status_code}) on "
-                            f"search(data_type={alias!r}). AS_API_KEY is expired, "
-                            "invalid, or scoped to the wrong organization — refresh "
-                            "the AS_API_KEY repository secret."
-                        )
-                    continue
+def test_get_preserves_request_order(client, result_ids):
+    ids = [result_ids.recipe, result_ids.xps, result_ids.rheed]
+    assert [result.data_id for result in client.get(ids)] == ids
 
-                data_id_values = data["Data ID"].dropna().values if len(data) else []
 
-                if len(data_id_values):
-                    data_id = data_id_values[0]
-                    break
-
-            if data_id:
-                break
-
-        setattr(ResultIDs, result_attr, data_id or "")
-        if data_id:
-            data_ids.append(data_id)
-        elif result_attr in required_types:
-            pytest.fail(f"No data_id found for required data type '{result_attr}'")
-
-    # A unified backend resolves both legacy RHEED aliases to the same entry, so
-    # the same id can be collected twice; client.get returns it once.
-    data_ids = list(dict.fromkeys(data_ids))
-    results = client.get(data_ids=data_ids)
-    data_types = {type(result) for result in results}
-    assert len(results) == len(data_ids)
-    assert len(data_types) >= 3
+def test_get_missing_id(client):
+    assert client.get("missing") == []
 
 
 def test_get_unknown_type(monkeypatch):
@@ -265,8 +215,7 @@ def test_list_projects(client: Client):
 
 def test_get_physical_sample(client: Client):
     samples = client.list_physical_samples()
-    if not len(samples):
-        pytest.skip("No physical samples available")
+    assert len(samples) == 1
 
     sample_id = samples["Physical Sample ID"].dropna().iloc[0]
     result = client.get_physical_sample(
@@ -274,13 +223,12 @@ def test_get_physical_sample(client: Client):
     )
 
     assert result.physical_sample_id == sample_id
-    assert isinstance(result.data_results, list)
+    assert len(result.data_results) == 9
 
 
 def test_get_project(client: Client):
     projects = client.list_projects()
-    if not len(projects):
-        pytest.skip("No projects available")
+    assert len(projects) == 1
 
     project_id = projects["Project ID"].dropna().iloc[0]
     project = client.get_project(
@@ -288,7 +236,8 @@ def test_get_project(client: Client):
     )
 
     assert project.project_id == project_id
-    assert hasattr(project, "samples")
+    assert len(project.samples) == 1
+    assert len(project.samples[0].data_results) == 9
 
 
 def test_upload_rejects_missing_file(tmp_path):
@@ -456,39 +405,6 @@ def test_download_videos_missing_metadata(client: Client, tmp_path):
         )
 
 
-# @pytest.mark.order(2)
-# @pytest.mark.dependency(name="upload", dependds=["get"])
-# def test_upload(client: Client):
-#     test_video = str(Path(__file__).parent.absolute()) + "/data/test_rheed.mp4"
-#     client.upload(files=[test_video])
-#
-#
-# @pytest.mark.order(3)
-# @pytest.mark.dependency(depends=["upload"])
-# def test_download(client: Client):
-#     # Get data IDs from uploaded test files
-#     data = client.search(keywords=["test_rheed"], include_organization_data=False)
-#     assert len(data["Data ID"].values)
-#
-#     data_ids = list(data["Data ID"].values)
-#     client.download_videos(data_ids=data_ids, dest_dir="./")
-#
-#     # Cleanup downloaded files
-#     for data_id in data_ids:
-#         file_path = Path("./") / f"{data_id}.mp4"
-#         if file_path.exists():
-#             file_path.unlink()
-#
-#     response = client.session.delete(
-#         url=urljoin(client.endpoint, "/data_entries"),
-#         verify=True,
-#         params={"data_ids": data_ids},
-#     )
-#     assert (
-#         response.ok
-#     ), f"Failed to delete data entries: {response.status_code} - {response.text}"
-
-
 def test_search_falls_back_to_legacy_rheed_types_on_an_older_backend():
     """A pre-unification backend rejects "rheed"; the SDK asks for what it knows.
 
@@ -538,3 +454,47 @@ def test_search_propagates_a_422_that_is_not_about_the_rheed_enum():
     client._get = fake_get  # type: ignore[method-assign]
     with pytest.raises(ClientError):
         client.search(data_type="xps")
+
+
+def test_get_through_http_transport(httpserver, sandbox):
+    """Exercise serialization and hydration together against loopback HTTP."""
+    entry = next(row for row in sandbox.catalogue if row["char_source_type"] == "xps")
+    data_id = entry["data_id"]
+    httpserver.expect_request(
+        "/data_entries/",
+        query_string={"data_ids": data_id, "include_organization_data": "True"},
+        headers={"X-API-KEY": "key_test"},
+    ).respond_with_json([entry])
+    httpserver.expect_request(f"/xps/{data_id}").respond_with_json(
+        sandbox.responses[f"xps/{data_id}"]
+    )
+    client = Client(
+        api_key="key_test", endpoint=httpserver.url_for("/"), mute_bars=True
+    )
+    try:
+        results = client.get(data_id)
+        assert len(results) == 1
+        assert results[0].binding_energies == [1.0, 2.0, 3.0]
+        assert results[0].collected_datetime == entry["collected_datetime"]
+        httpserver.check_assertions()
+    finally:
+        client.session.close()
+
+
+def test_get_chunks_large_requests(client, sandbox):
+    template = next(
+        row for row in sandbox.catalogue if row["char_source_type"] == "xps"
+    )
+    payload = sandbox.responses[f"xps/{template['data_id']}"]
+    sandbox.catalogue = [{**template, "data_id": f"entry-{i}"} for i in range(205)]
+    ids = [row["data_id"] for row in reversed(sandbox.catalogue)]
+    for data_id in ids:
+        sandbox.responses[f"xps/{data_id}"] = payload
+    assert [result.data_id for result in client.get(ids)] == ids
+    requests = [
+        params["data_ids"]
+        for path, params, _ in sandbox.calls
+        if path == "data_entries/"
+    ]
+    assert [len(chunk) for chunk in requests] == [100, 100, 5]
+    assert [data_id for chunk in requests for data_id in chunk] == ids

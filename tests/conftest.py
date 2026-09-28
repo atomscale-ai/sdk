@@ -1,38 +1,94 @@
-pytest_plugins = ["pytest_order"]
+"""Offline by default; remote service checks require --run-live explicitly."""
 
-# Force the headless backend so plot tests never touch Tk/Cocoa on CI runners
+import os
+from urllib.parse import urlsplit
+
 import matplotlib
+import pytest
+import requests
 
 matplotlib.use("Agg", force=True)
 
-# Minimal async test support without external plugins
-# If pytest-asyncio is not installed, this hook will execute async tests
-# by running the coroutine with asyncio.run(). This allows @pytest.mark.asyncio
-# tests (and any async def test) to work in environments without extra deps.
-import asyncio
-import inspect
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--run-live",
+        action="store_true",
+        help="Enable explicitly marked live API checks",
+    )
 
 
-def pytest_pyfunc_call(pyfuncitem):
-    test_func = pyfuncitem.obj
-    # Only handle ourselves if no async plugin is available
-    has_asyncio_plugin = pyfuncitem.config.pluginmanager.hasplugin("pytest_asyncio")
-    if inspect.iscoroutinefunction(test_func) and not has_asyncio_plugin:
-        asyncio.run(test_func(**pyfuncitem.funcargs))
-        return True
-    # return None to let pytest handle non-async tests as usual
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption("--run-live"):
+        for item in items:
+            if item.get_closest_marker("live"):
+                item.add_marker(
+                    pytest.mark.skip(reason="Live API check; opt in with --run-live")
+                )
 
 
-class ResultIDs:
-    rheed_image = ""
-    rheed_stationary = ""
-    rheed_rotating = ""
-    xps = ""
-    optical = ""
-    tool_state = ""
-    recipe = ""
-    photoluminescence = ""
-    raman = ""
-    changepoint = ""
-    similarity_workflow = "rheed_stationary"
-    similarity_source_id = "bb3494b1-b5fb-4f3e-ac50-e4024f8aacf5"
+@pytest.fixture(autouse=True)
+def network_sandbox(request, monkeypatch):
+    """Block external requests even when a developer has production credentials.
+
+    Loopback remains available for the existing HTTP transport/streaming tests.
+    """
+    if request.node.get_closest_marker("live") and request.config.getoption(
+        "--run-live"
+    ):
+        return
+    for key in ("AS_API_KEY", "ATOMSCALE_API_KEY", "AS_API_ENDPOINT"):
+        monkeypatch.delenv(key, raising=False)
+    send = requests.sessions.Session.send
+
+    def guarded_send(session, prepared, **kwargs):
+        host = urlsplit(prepared.url).hostname
+        assert host in {"localhost", "127.0.0.1", "::1"}, (
+            f"External HTTP blocked in offline test: {host}"
+        )
+        return send(session, prepared, **kwargs)
+
+    monkeypatch.setattr(requests.sessions.Session, "send", guarded_send)
+
+
+@pytest.fixture
+def sandbox():
+    from .sandbox import Sandbox
+
+    return Sandbox()
+
+
+@pytest.fixture
+def result_ids(sandbox):
+    return sandbox.ids
+
+
+@pytest.fixture
+def client(sandbox, monkeypatch):
+    from atomscale import Client
+
+    client = Client(
+        api_key="key_test", endpoint="https://sandbox.invalid/", mute_bars=True
+    )
+    monkeypatch.setattr(client, "_get", sandbox.get)
+    yield client
+    client.session.close()
+
+
+@pytest.fixture
+def live_client(request):
+    from atomscale import Client
+
+    if not request.node.get_closest_marker("live"):
+        pytest.fail("Tests using live_client must be marked live")
+    if not request.config.getoption("--run-live"):
+        pytest.skip("Live API check; opt in with --run-live")
+    endpoint = os.getenv("AS_TEST_API_ENDPOINT")
+    key = os.getenv("AS_TEST_API_KEY")
+    if not endpoint or not key:
+        pytest.fail(
+            "Live checks require AS_TEST_API_ENDPOINT and AS_TEST_API_KEY for a dedicated test environment"
+        )
+    client = Client(api_key=key, endpoint=endpoint, mute_bars=True)
+    yield client
+    client.session.close()

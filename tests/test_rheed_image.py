@@ -1,3 +1,4 @@
+import os
 from io import BytesIO
 
 import numpy as np
@@ -11,8 +12,6 @@ from atomscale import Client
 from atomscale.results import RHEEDImageResult
 from atomscale.results.rheed_image import _get_rheed_image_result, decode_mask_rle
 
-from .conftest import ResultIDs
-
 # Fully-qualified target for the frame image builder as looked up inside the
 # RHEED provider (get_frame delegates to provider.fetch_snapshot, which calls
 # _get_rheed_image_result imported into the timeseries.rheed module namespace).
@@ -20,58 +19,29 @@ _RHEED_IMAGE_BUILDER = "atomscale.timeseries.rheed._get_rheed_image_result"
 
 
 @pytest.fixture
-def client():
-    return Client()
-
-
-# Number of rheed_image catalogue entries to sample when looking for one with a
-# populated fingerprint. Some entries legitimately have empty fingerprints, so we
-# search up to this many before giving up.
-_SAMPLE_LIMIT = 15
-
-
-def _has_pattern_data(res: RHEEDImageResult | None) -> bool:
-    return (
-        res is not None
-        and res.pattern_graph is not None
-        and res.pattern_graph.number_of_nodes() > 0
-    )
-
-
-@pytest.fixture
-def result(client: Client):
-    # Honour a pinned id if one is configured, otherwise discover candidates.
-    if ResultIDs.rheed_image:
-        data_ids = [ResultIDs.rheed_image]
-    else:
-        catalogue = client.search(data_type="rheed_image", status="success")
-        data_ids = (
-            catalogue["Data ID"].tolist()[:_SAMPLE_LIMIT]
-            if "Data ID" in catalogue.columns
-            else []
+def result(live_client):
+    data_id = os.getenv("AS_TEST_RHEED_IMAGE_ID")
+    if not data_id:
+        pytest.fail(
+            "Set AS_TEST_RHEED_IMAGE_ID to a curated image with a populated fingerprint"
         )
-
-    if not data_ids:
-        pytest.skip("No successful rheed_image entries available to test against.")
-
-    # Sample entries until we find one with a populated fingerprint. Empty
-    # fingerprints are fine to skip over.
-    for data_id in data_ids:
-        res = client.get(data_ids=data_id)[0]
-        if _has_pattern_data(res):
-            return res
-
-    pytest.skip(
-        f"No rheed_image entry with a populated fingerprint found in the first "
-        f"{len(data_ids)} sampled entries."
+    results = live_client.get(data_ids=data_id)
+    assert len(results) == 1, f"Pinned image {data_id} is missing"
+    result = results[0]
+    assert isinstance(result, RHEEDImageResult)
+    assert (
+        result.pattern_graph is not None and result.pattern_graph.number_of_nodes() > 0
     )
+    return result
 
 
+@pytest.mark.live
 def test_get_plot(result: RHEEDImageResult):
     plot = result.get_plot()
     assert isinstance(plot, Image)
 
 
+@pytest.mark.live
 def test_get_laue(result: RHEEDImageResult):
     radius, (x, y) = result.get_laue_zero_radius()
     assert isinstance(radius, float)
@@ -79,6 +49,7 @@ def test_get_laue(result: RHEEDImageResult):
     assert isinstance(y, float)
 
 
+@pytest.mark.live
 def test_get_dataframe(result: RHEEDImageResult):
     cols = {
         "node_id",

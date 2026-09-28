@@ -9,8 +9,6 @@ from atomscale.timeseries.metrology import MetrologyProvider
 from atomscale.timeseries.registry import get_provider
 from atomscale.timeseries.tool_state import ToolStateProvider
 
-from .conftest import ResultIDs
-
 PROP_PAYLOAD = {
     "properties": {
         "Sub T setpoint": {
@@ -39,11 +37,6 @@ PROP_PAYLOAD = {
     },
     "series_max_time": 4.0,
 }
-
-
-@pytest.fixture
-def client():
-    return Client()
 
 
 def test_property_centric_parse():
@@ -172,22 +165,20 @@ def test_metrology_names_remain_compatibility_aliases():
 
 
 # -----------------------------------------------------------------------------
-# Live data path (skipped unless ResultIDs.tool_state is populated)
+# Result construction through the offline client sandbox
 # -----------------------------------------------------------------------------
 
 
 @pytest.fixture
-def result(client: Client):
-    if not ResultIDs.tool_state:
-        pytest.skip("No tool-state data available")
-
-    results = client.get(data_ids=ResultIDs.tool_state)
+def result(client: Client, result_ids):
+    results = client.get(data_ids=result_ids.tool_state)
+    assert len(results) == 1
     return results[0]
 
 
-def test_live_get_dataframe(result: ToolStateResult):
+def test_get_dataframe(result: ToolStateResult):
     df = result.timeseries_data
     assert isinstance(df, DataFrame)
-    if not df.empty:
-        assert "UNIX Timestamp" in df.columns
-        assert "Time" in df.columns
+    assert not df.empty
+    assert "UNIX Timestamp" in df.columns
+    assert "Time" in df.columns

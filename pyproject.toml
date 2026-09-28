@@ -85,6 +85,7 @@ addopts = ["-p no:warnings", "--import-mode=importlib"]
 xfail_strict = true
 log_cli_level = "warn"
 testpaths = ["tests"]
+markers = ["live: opt-in checks against a dedicated API test environment"]
 
 [tool.coverage.run]
 source = ["src"]
