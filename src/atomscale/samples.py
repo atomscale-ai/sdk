@@ -190,13 +190,14 @@ def spatial_annotations_to_dataframe(payload: Sequence[Mapping[str, Any]]) -> Da
             ``id``, ``property_name``, ``property_value``, optional
             ``property_unit`` / ``char_source_type`` / ``data_id``, the
             ``coord_x`` / ``coord_y`` / ``coord_z`` surface position with its
-            ``coord_ref_frame`` and ``coord_units``, and ``metadata``.
+            ``coord_ref_frame`` and ``coord_units``, and ``annotation_metadata``.
 
     Returns:
         DataFrame: The columns in :data:`SPATIAL_ANNOTATION_COLUMNS`, sorted by
         ``property_name`` then position so a scan reads left-to-right. The
         server-side ``id`` is exposed as ``annotation_id`` to keep it distinct
-        from ``data_id``. No annotations yields an empty frame, never an error.
+        from ``data_id``. ``annotation_metadata`` is exposed as ``metadata``.
+        No annotations yields an empty frame, never an error.
     """
     records = list(payload or [])
     if not records:
@@ -219,7 +220,7 @@ def spatial_annotations_to_dataframe(payload: Sequence[Mapping[str, Any]]) -> Da
             "coord_z": _as_float(record.get("coord_z")),
             "coord_ref_frame": record.get("coord_ref_frame"),
             "coord_units": record.get("coord_units"),
-            "metadata": record.get("metadata"),
+            "metadata": record.get("annotation_metadata"),
             "last_updated": record.get("last_updated"),
         }
         for record in records
