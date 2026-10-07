@@ -61,11 +61,9 @@ _RETRYABLE_STATUSES = frozenset({429, 500, 502, 503, 504})
 # don't have to choose one; this value is available for effectively all RHEED data.
 _DEFAULT_SIMILARITY_METRIC = "specular_intensity"
 
-# The frame-mask endpoint requires an inclusive upper frame bound. When a caller
-# asks for the whole video (``to_frame=None``) we send this sentinel — far larger
-# than any real frame count — and let the server clamp it to the artifact's actual
-# range, fetching every featurized frame without a preliminary frame-count lookup.
-_ALL_FRAMES_SENTINEL = 2**31 - 1
+# The frame-mask endpoint serves at most this many frames (an inclusive window) per
+# request, so longer spans are fetched as consecutive windows.
+_FRAME_MASK_WINDOW = 500
 
 
 def _retry_client_call(
@@ -787,32 +785,36 @@ class Client(BaseClient):
         *,
         frame_index: int = 0,
     ) -> RHEEDImageResult | None:
-        """Fetch a single extracted RHEED frame as a :class:`RHEEDImageResult`.
+        """Fetch one RHEED frame of a video as a :class:`RHEEDImageResult`.
+
+        Frames are the video's snapshots, the same ones
+        :attr:`RHEEDVideoResult.snapshot_image_data` holds: each view's seed frame
+        and any saved pattern, in frame order. A view's frame from a newer analysis
+        is read from the video and has no ``pattern_graph``; its per-slot
+        measurements are in :meth:`get_rheed_timeseries` with
+        ``include_low_level_features=True``.
 
         Args:
             data_id: Data ID of the RHEED video.
-            frame_index: Index into the video's extracted-frame list (supports
-                negative indexing). Defaults to ``0`` (first extracted frame).
+            frame_index: Index into the video's snapshots (supports negative
+                indexing). Defaults to ``0`` (the first).
 
         Returns:
             RHEEDImageResult | None: The frame's image result, or ``None`` if the
-            video has no extracted frames, ``frame_index`` is out of range, or the
+            video has no snapshots, ``frame_index`` is out of range, or the
             selected frame has no image.
         """
         provider = get_provider("rheed")
         frames_payload: dict | None = self._get(  # type: ignore[assignment]
             sub_url=provider.snapshot_url(data_id)
         )
-        frames = (frames_payload or {}).get("frames", [])
-        if not frames or not (-len(frames) <= frame_index < len(frames)):
-            return None
-
-        frame = frames[frame_index]
-        metadata = {k: v for k, v in frame.items() if k == "timestamp_seconds"}
-        # Returns None when the selected frame has no associated image.
-        return provider.fetch_snapshot(
-            self, {"image_uuid": frame.get("image_uuid"), "metadata": metadata}
+        requests = provider.snapshot_requests(
+            data_id, frames_payload, self.get_rheed_azimuths(data_id)
         )
+        if not -len(requests) <= frame_index < len(requests):
+            return None
+        # Returns None when the selected frame has no associated image.
+        return provider.fetch_snapshot(self, requests[frame_index])
 
     def get_frame_masks(
         self,
@@ -843,8 +845,9 @@ class Client(BaseClient):
             from_frame: First absolute frame number to fetch, inclusive. Must be
                 ``>= 0``. Defaults to ``0``.
             to_frame: Last absolute frame number to fetch, inclusive. ``None``
-                (default) fetches through the end of the video (every featurized
-                frame from ``from_frame`` onward).
+                (default) fetches through the video's last analysed frame (every
+                featurized frame from ``from_frame`` onward). Spans longer than the
+                server's per-request window are fetched window by window.
             decode: When ``True``, decode each RLE mask into an ``(H, W)`` uint8
                 (0/1) NumPy array and return a dict keyed by frame number. When
                 ``False`` (default), return the raw rows with the RLE string intact.
@@ -867,15 +870,29 @@ class Client(BaseClient):
                 f"to_frame ({to_frame}) must be >= from_frame ({from_frame})"
             )
 
-        resolved_to = _ALL_FRAMES_SENTINEL if to_frame is None else to_frame
-
-        rows: list[dict] | None = self._get(  # type: ignore[assignment]
-            sub_url=f"rheed/images/{data_id}/frame_masks",
-            params={"from": from_frame, "to": resolved_to},
+        # Masks exist only for analysed frames, so the last one bounds the video's.
+        resolved_to = (
+            to_frame if to_frame is not None else self._last_analysed_frame(data_id)
         )
+        if resolved_to is None or resolved_to < from_frame:
+            return {} if decode else []
 
         # `_get` returns None for a 404 ("No frame-mask artifact for this video")
-        # and for an empty body; both mean "no masks available" here.
+        # and for an empty body; both mean "no masks" for that window.
+        pages = self._multi_thread(
+            self._get,
+            [
+                {
+                    "sub_url": f"rheed/images/{data_id}/frame_masks",
+                    "params": {
+                        "from": start,
+                        "to": min(start + _FRAME_MASK_WINDOW - 1, resolved_to),
+                    },
+                }
+                for start in range(from_frame, resolved_to + 1, _FRAME_MASK_WINDOW)
+            ],
+        )
+        rows = [row for page in pages for row in page or []]
         if not rows:
             return {} if decode else []
 
@@ -888,6 +905,17 @@ class Client(BaseClient):
             )
             for row in rows
         }
+
+    def _last_analysed_frame(self, data_id: str) -> int | None:
+        """The last frame any view of the RHEED video analysed, or ``None`` if none."""
+        raw = get_provider("rheed").fetch_raw(self, data_id, last_n=1)
+        frames = [
+            point["frame_number"]
+            for view in (raw or {}).get("series_by_angle", [])
+            for point in view.get("series", [])
+            if point.get("frame_number") is not None
+        ]
+        return max(frames, default=None)
 
     def iter_poll_similarity_trajectory(
         self,

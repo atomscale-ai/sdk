@@ -3,13 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from pandas import DataFrame, concat, json_normalize
+from pandas import DataFrame, concat, isna, json_normalize
 
 from atomscale.core import BaseClient
 from atomscale.results import (
     RHEEDImageResult,
     RHEEDVideoResult,
     _get_rheed_image_result,
+    _get_rheed_view_still,
 )
 from atomscale.rheed_metadata import legacy_views_frame
 from atomscale.timeseries.provider import TimeseriesProvider
@@ -207,14 +208,65 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         return f"data_entries/video_single_frames/{data_id}"
 
     def snapshot_image_uuids(self, frames_payload: dict[str, Any]) -> list[dict]:
-        # payload shape: {"frames": [{"image_uuid": "...", "timestamp_seconds": ...}, ...]}
+        # payload shape: {"frames": [{"image_uuid": "...", "frame_number": ..., "timestamp_seconds": ...}, ...]}
         out = []
         for frame in (frames_payload or {}).get("frames", []):
-            meta = {k: v for k, v in frame.items() if k in {"timestamp_seconds"}}
-            out.append({"image_uuid": frame["image_uuid"], "metadata": meta})
+            meta = {
+                k: v
+                for k, v in frame.items()
+                if k in {"timestamp_seconds", "frame_number"}
+            }
+            out.append({"image_uuid": frame.get("image_uuid"), "metadata": meta})
         return out
 
+    def snapshot_requests(
+        self, data_id: str, frames_payload: dict[str, Any] | None, views: DataFrame
+    ) -> list[dict]:
+        """What a video's snapshots are read from, in frame order.
+
+        Every extracted frame the backend lists (an older analysis's seed frames,
+        saved patterns, scan frames), plus each view's seed frame read from the
+        video itself when no listed frame is that frame. Analyses since the backend
+        stopped extracting seed frames list none, so their views come from the video;
+        older analyses keep their extracted seed frames.
+        """
+        listed = self.snapshot_image_uuids(frames_payload or {})
+        listed_frames = {req["metadata"].get("frame_number") for req in listed}
+        seeds = views if "seed_frame" in views.columns else DataFrame()
+        stills = []
+        for view in seeds.to_dict("records"):
+            if isna(view["seed_frame"]) or int(view["seed_frame"]) in listed_frames:
+                continue
+            seed_frame = int(view["seed_frame"])
+            listed_frames.add(seed_frame)
+            stills.append(
+                {
+                    "video_data_id": data_id,
+                    "metadata": {
+                        "frame_number": seed_frame,
+                        "seed_frame": seed_frame,
+                        "view_id": view.get("view_id"),
+                        "azimuth_label": view.get("azimuth_label"),
+                    },
+                }
+            )
+        # Frames the listing gives no number for keep their listed order, last.
+        return sorted(
+            listed + stills,
+            key=lambda req: (
+                req["metadata"].get("frame_number") is None,
+                req["metadata"].get("frame_number") or 0,
+            ),
+        )
+
     def fetch_snapshot(self, client: BaseClient, req: dict) -> RHEEDImageResult | None:
+        if req.get("video_data_id"):
+            return _get_rheed_view_still(
+                client,
+                data_id=req["video_data_id"],
+                frame_number=req["metadata"]["frame_number"],
+                metadata=req["metadata"],
+            )
         img_uuid = req.get("image_uuid")
         if not img_uuid:
             return None
@@ -230,20 +282,6 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         data_type: str,
         ts_df: DataFrame,
     ) -> RHEEDVideoResult:
-        extracted = None
-        idx_url = self.snapshot_url(data_id)
-        if idx_url:
-            frames_payload: dict | None = client._get(sub_url=idx_url)  # type: ignore[assignment]
-            if frames_payload:
-                reqs = self.snapshot_image_uuids(frames_payload)
-                extracted = [
-                    res
-                    for res in client._multi_thread(
-                        self.fetch_snapshot,
-                        [{"client": client, "req": r} for r in reqs],
-                    )
-                    if res
-                ]
         # ``get_rheed_azimuths`` comes back empty on a backend with no views
         # endpoint (its 404 is swallowed as None). Fall back to what the legacy
         # catalogue type states about rotation, so ``rotating`` keeps answering
@@ -251,6 +289,18 @@ class RHEEDProvider(TimeseriesProvider[RHEEDVideoResult]):
         views = client.get_rheed_azimuths(data_id)
         if views.empty:
             views = legacy_views_frame(data_type)
+        frames_payload: dict | None = client._get(sub_url=self.snapshot_url(data_id))  # type: ignore[assignment]
+        reqs = self.snapshot_requests(data_id, frames_payload, views)
+        extracted = None
+        if frames_payload or reqs:
+            extracted = [
+                res
+                for res in client._multi_thread(
+                    self.fetch_snapshot,
+                    [{"client": client, "req": r} for r in reqs],
+                )
+                if res
+            ]
         return RHEEDVideoResult(
             data_id=data_id,
             timeseries_data=ts_df,
