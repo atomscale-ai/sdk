@@ -76,7 +76,7 @@ def _annotations_payload():
             "coord_z": None,
             "coord_ref_frame": "sample_relative",
             "coord_units": "mm",
-            "metadata": None,
+            "annotation_metadata": None,
             "last_updated": "2026-04-03T14:36:51.973648",
         },
         {
@@ -92,7 +92,7 @@ def _annotations_payload():
             "coord_z": None,
             "coord_ref_frame": "sample_relative",
             "coord_units": "mm",
-            "metadata": {"scan": "line"},
+            "annotation_metadata": {"scan": "line"},
             "last_updated": "2026-04-03T14:36:51.973750",
         },
         {
@@ -108,7 +108,7 @@ def _annotations_payload():
             "coord_z": None,
             "coord_ref_frame": "sample_relative",
             "coord_units": "mm",
-            "metadata": None,
+            "annotation_metadata": None,
             "last_updated": "2026-04-03T14:36:51.973719",
         },
         {
@@ -124,7 +124,7 @@ def _annotations_payload():
             "coord_z": None,
             "coord_ref_frame": "sample_relative",
             "coord_units": "mm",
-            "metadata": None,
+            "annotation_metadata": None,
             "last_updated": "2026-04-03T14:36:52.000000",
         },
     ]
@@ -236,6 +236,8 @@ def test_spatial_annotations_shape_and_position_sort():
     assert df["data_id"].tolist().count(DID_A) == 1
     # Offset-free ``last_updated`` is normalized to UTC, not tz-naive.
     assert str(df["last_updated"].dt.tz) == "UTC"
+    # Payload stores ``annotation_metadata`` in ``metadata``.
+    assert df["metadata"].tolist() == [None, None, {"scan": "line"}, None]
 
 
 def test_spatial_annotations_missing_coord_becomes_nan():
