@@ -9,7 +9,13 @@ from pycocotools import mask as mask_util
 
 from atomscale import Client
 from atomscale.results import RHEEDImageResult
-from atomscale.results.rheed_image import _get_rheed_image_result, decode_mask_rle
+from atomscale.results.rheed_image import (
+    _get_rheed_image_result,
+    _get_rheed_view_still,
+    decode_mask_rle,
+)
+from atomscale.rheed_metadata import rheed_azimuths_to_dataframe
+from atomscale.timeseries.registry import get_provider
 
 from .conftest import ResultIDs
 
@@ -172,17 +178,32 @@ def test_get_rheed_image_result_handles_missing_mask(monkeypatch):
     assert isinstance(result.processed_image, Image)
 
 
+def _answer_by_url(monkeypatch, unit_client, routes):
+    """Answer ``_get`` per URL as the backend would; any other URL is a 404 (None)."""
+    calls = []
+
+    def fake_get(sub_url, params=None, **kwargs):
+        calls.append((sub_url, params))
+        answer = routes.get(sub_url)
+        return answer(params) if callable(answer) else answer
+
+    monkeypatch.setattr(unit_client, "_get", fake_get)
+    return calls
+
+
+def _listing(*frames):
+    return {"data_entries/video_single_frames/video-1": {"frames": list(frames)}}
+
+
 def _two_frame_client(monkeypatch):
     unit_client = Client(api_key="key_test", endpoint="http://example.com/")
-    monkeypatch.setattr(
+    _answer_by_url(
+        monkeypatch,
         unit_client,
-        "_get",
-        lambda *a, **k: {
-            "frames": [
-                {"image_uuid": "img-0", "timestamp_seconds": 1.0},
-                {"image_uuid": "img-1", "timestamp_seconds": 2.0},
-            ]
-        },
+        _listing(
+            {"image_uuid": "img-0", "timestamp_seconds": 1.0},
+            {"image_uuid": "img-1", "timestamp_seconds": 2.0},
+        ),
     )
     return unit_client
 
@@ -220,11 +241,9 @@ def test_get_frame_negative_index_resolves_last_frame(monkeypatch):
 
 def test_get_frame_missing_image_uuid_returns_none(monkeypatch):
     unit_client = Client(api_key="key_test", endpoint="http://example.com/")
-    monkeypatch.setattr(
-        unit_client,
-        "_get",
-        lambda *a, **k: {"frames": [{"timestamp_seconds": 1.0}]},  # no image_uuid
-    )
+    _answer_by_url(
+        monkeypatch, unit_client, _listing({"timestamp_seconds": 1.0})
+    )  # no image_uuid
     called = {"n": 0}
 
     def fake_image_result(**kwargs):
@@ -239,11 +258,7 @@ def test_get_frame_missing_image_uuid_returns_none(monkeypatch):
 
 def test_get_frame_out_of_range_returns_none(monkeypatch):
     unit_client = Client(api_key="key_test", endpoint="http://example.com/")
-    monkeypatch.setattr(
-        unit_client,
-        "_get",
-        lambda *a, **k: {"frames": [{"image_uuid": "img-0"}]},
-    )
+    _answer_by_url(monkeypatch, unit_client, _listing({"image_uuid": "img-0"}))
     assert unit_client.get_frame("video-1", frame_index=5) is None
 
 
@@ -251,6 +266,113 @@ def test_get_frame_no_frames_returns_none(monkeypatch):
     unit_client = Client(api_key="key_test", endpoint="http://example.com/")
     monkeypatch.setattr(unit_client, "_get", lambda *a, **k: None)
     assert unit_client.get_frame("video-1") is None
+
+
+def _view(seed_frame, view_id):
+    return {
+        "data_id": "video-1",
+        "view_id": view_id,
+        "interval_id": "interval-1",
+        "seed_frame": seed_frame,
+        "azimuth_label": f"label-{view_id}",
+    }
+
+
+def _png(height=6, width=8):
+    buffer = BytesIO()
+    PILImage.new("L", (width, height)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _crop_mask_row(frame_number):
+    """A mask stored for a 2x3 crop that sits at row 1, column 2 of a 6x8 frame."""
+    crop = np.ones((2, 3), dtype=np.uint8)
+    counts = mask_util.encode(np.asfortranarray(crop))["counts"].decode("utf-8")
+    return {
+        "processed_data_id": "proc-1",
+        "frame_number": frame_number,
+        "mask_rle": counts,
+        "mask_height": 2,
+        "mask_width": 3,
+        "mask_origin_row": 1,
+        "mask_origin_col": 2,
+        "frame_height": 6,
+        "frame_width": 8,
+    }
+
+
+def _still_routes(frame_number):
+    return {
+        f"rheed/images/video-1/frames/{frame_number}": _png(),
+        "rheed/images/video-1/frame_masks": [_crop_mask_row(frame_number)],
+    }
+
+
+def test_an_older_analysis_keeps_its_extracted_seed_frames():
+    views = rheed_azimuths_to_dataframe([_view(10, "a"), _view(20, "b")])
+    listing = {
+        "frames": [
+            {"image_uuid": "seed-20", "frame_number": 20},
+            {"image_uuid": "seed-10", "frame_number": 10},
+        ]
+    }
+
+    requests = get_provider("rheed").snapshot_requests("video-1", listing, views)
+
+    assert [req.get("image_uuid") for req in requests] == ["seed-10", "seed-20"]
+
+
+def test_a_newer_analysis_reads_each_views_frame_from_the_video():
+    views = rheed_azimuths_to_dataframe([_view(10, "a"), _view(20, "b")])
+    listing = {"frames": [{"image_uuid": "saved-15", "frame_number": 15}]}
+
+    requests = get_provider("rheed").snapshot_requests("video-1", listing, views)
+
+    assert [req["metadata"]["frame_number"] for req in requests] == [10, 15, 20]
+    assert [req.get("image_uuid") for req in requests] == [None, "saved-15", None]
+    assert requests[0]["metadata"]["view_id"] == "a"
+    assert requests[2]["metadata"]["azimuth_label"] == "label-b"
+
+
+def test_a_view_still_carries_its_mask_on_the_full_frame(monkeypatch):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    _answer_by_url(monkeypatch, unit_client, _still_routes(10))
+
+    still = _get_rheed_view_still(unit_client, "video-1", 10, {"view_id": "a"})
+
+    assert isinstance(still, RHEEDImageResult)
+    assert still.processed_image.size == (8, 6)
+    assert still.pattern_graph is None
+    assert still.metadata == {"view_id": "a", "frame_number": 10}
+    expected = np.zeros((6, 8), dtype=np.uint8)
+    expected[1:3, 2:5] = 1
+    assert np.array_equal(still.mask, expected)
+
+
+def test_a_frame_without_a_kept_image_has_no_still(monkeypatch):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    _answer_by_url(monkeypatch, unit_client, {})
+
+    assert _get_rheed_view_still(unit_client, "video-1", 10) is None
+
+
+def test_get_frame_reads_a_newer_analysis_views_from_the_video(monkeypatch):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    _answer_by_url(
+        monkeypatch,
+        unit_client,
+        {
+            **_listing(),
+            "rheed/video-1/azimuths": [_view(10, "a")],
+            **_still_routes(10),
+        },
+    )
+
+    frame = unit_client.get_frame("video-1", frame_index=0)
+
+    assert isinstance(frame, RHEEDImageResult)
+    assert frame.metadata["view_id"] == "a"
+    assert frame.metadata["frame_number"] == 10
 
 
 # --------------------------------------------------------------------------
@@ -282,25 +404,54 @@ def test_decode_mask_rle_roundtrips():
     assert mask.sum() > 0
 
 
+# Two views whose last analysed samples are frames 3 and 5.
+_LAST_SAMPLES = {
+    "rheed/timeseries/video-1/": {
+        "series_by_angle": [
+            {"series": [{"frame_number": 3}]},
+            {"series": [{"frame_number": 5}]},
+        ]
+    }
+}
+
+
 def test_get_frame_masks_returns_raw_rows(monkeypatch):
     unit_client = Client(api_key="key_test", endpoint="http://example.com/")
     rows = [_mask_row(0), _mask_row(5)]
-    captured: dict = {}
-
-    def fake_get(sub_url, params=None, **kwargs):
-        captured["sub_url"] = sub_url
-        captured["params"] = params
-        return rows
-
-    monkeypatch.setattr(unit_client, "_get", fake_get)
+    calls = _answer_by_url(
+        monkeypatch,
+        unit_client,
+        {**_LAST_SAMPLES, "rheed/images/video-1/frame_masks": rows},
+    )
 
     out = unit_client.get_frame_masks("video-1")
 
-    assert out is rows  # raw rows passed through untouched
-    assert captured["sub_url"] == "rheed/images/video-1/frame_masks"
-    # to_frame=None → whole video via the clamp sentinel
-    assert captured["params"]["from"] == 0
-    assert captured["params"]["to"] == 2**31 - 1
+    assert out == rows  # raw rows passed through untouched
+    # to_frame=None → through the last analysed frame of any view
+    assert calls == [
+        ("rheed/timeseries/video-1/", {"last_n": 1}),
+        ("rheed/images/video-1/frame_masks", {"from": 0, "to": 5}),
+    ]
+
+
+def test_get_frame_masks_fetches_long_spans_window_by_window(monkeypatch):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    calls = _answer_by_url(
+        monkeypatch,
+        unit_client,
+        {
+            "rheed/images/video-1/frame_masks": lambda params: [
+                _mask_row(params["from"])
+            ]
+        },
+    )
+
+    out = unit_client.get_frame_masks("video-1", from_frame=0, to_frame=1200)
+
+    # The server serves at most 500 frames per request.
+    assert sorted(params["from"] for _, params in calls) == [0, 500, 1000]
+    assert sorted(params["to"] for _, params in calls) == [499, 999, 1200]
+    assert [row["frame_number"] for row in out] == [0, 500, 1000]
 
 
 def test_get_frame_masks_explicit_range(monkeypatch):
@@ -320,7 +471,16 @@ def test_get_frame_masks_explicit_range(monkeypatch):
 def test_get_frame_masks_decode(monkeypatch):
     unit_client = Client(api_key="key_test", endpoint="http://example.com/")
     rows = [_mask_row(0), _mask_row(7)]
-    monkeypatch.setattr(unit_client, "_get", lambda *a, **k: rows)
+    _answer_by_url(
+        monkeypatch,
+        unit_client,
+        {
+            "rheed/timeseries/video-1/": {
+                "series_by_angle": [{"series": [{"frame_number": 7}]}]
+            },
+            "rheed/images/video-1/frame_masks": rows,
+        },
+    )
 
     masks = unit_client.get_frame_masks("video-1", decode=True)
 

@@ -155,21 +155,31 @@ k-nearest-neighbour query over the embedding index with
 Extracted Frames
 ----------------
 
-Access snapshots extracted during analysis:
+``video.snapshot_image_data`` holds the video's frames in frame order: each
+view's seed frame and any pattern saved from the video. Each is a
+:class:`~atomscale.results.rheed_image.RHEEDImageResult` with the frame image and
+its segmentation mask; :meth:`~atomscale.client.Client.get_frame` fetches one by
+index without fetching the rest. It is ``None`` when the video has none:
 
 .. code-block:: python
 
    snapshot = video.snapshot_image_data[0]
+   print(snapshot.metadata)  # frame_number, plus view_id / azimuth_label for a view's frame
 
-   # Get matplotlib figure
-   fig = snapshot.get_plot()
-   fig.savefig("snapshot.png")
+   # Get the frame as a PIL image (with the pattern graph drawn, when it has one)
+   image = snapshot.get_plot()
+   image.save("snapshot.png")
 
-   # Get diffraction pattern as DataFrame
-   pattern_df = snapshot.get_pattern_dataframe()
+A view's frame from a newer analysis is read from the video itself and has no
+``pattern_graph``, so ``get_pattern_dataframe()`` raises for it. The per-slot
+measurements of every analysed frame are in the low-level timeseries features
+(see `Low-Level Features`_). Frames extracted by older analyses, and saved
+patterns, keep their pattern graph:
 
-   # Get pattern as NetworkX graph
-   graph = snapshot.pattern_graph
+.. code-block:: python
+
+   if snapshot.pattern_graph is not None:
+       pattern_df = snapshot.get_pattern_dataframe()
 
 Result Types
 ------------

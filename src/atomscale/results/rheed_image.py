@@ -802,3 +802,53 @@ def _get_rheed_image_result(
         pattern_graph=graph,
         metadata=metadata,
     )
+
+
+def _get_rheed_view_still(
+    client: BaseClient, data_id: str, frame_number: int, metadata: dict | None = None
+) -> RHEEDImageResult | None:
+    """One analysed frame of a RHEED video with its segmentation mask, read from the video.
+
+    Newer analyses keep no extracted child image per view; the frame comes from the
+    video's stored frames instead. There is no pattern graph for it: the per-slot
+    measurements of the frame are in the video's timeseries
+    (:meth:`atomscale.Client.get_rheed_timeseries` with
+    ``include_low_level_features=True``). Returns ``None`` when the backend has no
+    image for the frame.
+    """
+    image_bytes = client._get(
+        sub_url=f"rheed/images/{data_id}/frames/{frame_number}", deserialize=False
+    )
+    if image_bytes is None:
+        return None
+    rows = client._get(
+        sub_url=f"rheed/images/{data_id}/frame_masks",
+        params={"from": frame_number, "to": frame_number},
+    )
+    row = next(
+        (row for row in rows or [] if row.get("frame_number") == frame_number), None
+    )
+    return RHEEDImageResult(
+        data_id=data_id,
+        processed_data_id=row["processed_data_id"] if row else data_id,
+        processed_image=PILImage.open(BytesIO(image_bytes)),  # type: ignore[arg-type]
+        mask=_frame_mask_on_frame(row) if row else None,
+        pattern_graph=None,
+        metadata={**(metadata or {}), "frame_number": frame_number},
+    )
+
+
+def _frame_mask_on_frame(row: dict) -> NDArray:
+    """A ``frame_masks`` row decoded onto its full frame.
+
+    The mask is stored for the segmented crop of the frame; the row says where that
+    crop sits. A row without its placement is returned at crop size.
+    """
+    crop = decode_mask_rle(row["mask_rle"], row["mask_height"], row["mask_width"])
+    frame_height, frame_width = row.get("frame_height"), row.get("frame_width")
+    if frame_height is None or frame_width is None:
+        return crop
+    top, left = row.get("mask_origin_row") or 0, row.get("mask_origin_col") or 0
+    mask = np.zeros((frame_height, frame_width), dtype=crop.dtype)
+    mask[top : top + crop.shape[0], left : left + crop.shape[1]] = crop
+    return mask
