@@ -136,12 +136,13 @@ class RHEEDImageResult(MSONable):
                             fill=(255, 255, 255, 255),
                         )
 
-            if show_mask and self.mask is not None:
-                overlay = np.zeros((*self.mask.shape, 4), dtype=np.uint8)
-                overlay[np.where(self.mask)] = [255, 0, 0, int(alpha * (255))]
+        # A view's frame read from the video carries a mask but no pattern graph.
+        if show_mask and self.mask is not None:
+            overlay = np.zeros((*self.mask.shape, 4), dtype=np.uint8)
+            overlay[np.where(self.mask)] = [255, 0, 0, int(alpha * (255))]
 
-                overlay_image = PILImage.fromarray(overlay)
-                image.paste(overlay_image, mask=overlay_image)
+            overlay_image = PILImage.fromarray(overlay)
+            image.paste(overlay_image, mask=overlay_image)
 
         return image
 

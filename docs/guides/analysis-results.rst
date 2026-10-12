@@ -158,15 +158,16 @@ Extracted Frames
 ``video.snapshot_image_data`` holds the video's frames in frame order: each
 view's seed frame and any pattern saved from the video. Each is a
 :class:`~atomscale.results.rheed_image.RHEEDImageResult` with the frame image and
-its segmentation mask; :meth:`~atomscale.client.Client.get_frame` fetches one by
-index without fetching the rest. It is ``None`` when the video has none:
+its segmentation mask; :meth:`~atomscale.client.Client.get_frame` fetches the frame
+at the same index without fetching the whole list. A frame the video kept no image
+of is left out of both. It is ``None`` when the video has none:
 
 .. code-block:: python
 
    snapshot = video.snapshot_image_data[0]
    print(snapshot.metadata)  # frame_number, plus view_id / azimuth_label for a view's frame
 
-   # Get the frame as a PIL image (with the pattern graph drawn, when it has one)
+   # Get the frame as a PIL image with its mask (and the pattern graph, when it has one)
    image = snapshot.get_plot()
    image.save("snapshot.png")
 

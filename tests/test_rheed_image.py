@@ -375,6 +375,46 @@ def test_get_frame_reads_a_newer_analysis_views_from_the_video(monkeypatch):
     assert frame.metadata["frame_number"] == 10
 
 
+def test_get_frame_and_snapshots_skip_a_missing_still_alike(monkeypatch):
+    # The video kept no still of view a's frame 10, only of view b's frame 20.
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    _answer_by_url(
+        monkeypatch,
+        unit_client,
+        {
+            **_listing(),
+            "rheed/video-1/azimuths": [_view(10, "a"), _view(20, "b")],
+            **_still_routes(20),
+        },
+    )
+
+    snapshots = (
+        get_provider("rheed")
+        .build_result(unit_client, "video-1", "rheed", DataFrame())
+        .snapshot_image_data
+    )
+
+    frames = [unit_client.get_frame("video-1", frame_index=i) for i in (0, -1, 1)]
+    frame_numbers = [frame and frame.metadata["frame_number"] for frame in frames]
+
+    assert [frame.metadata["frame_number"] for frame in snapshots] == [20]
+    assert frame_numbers == [20, 20, None]
+
+
+def test_a_view_still_plots_its_mask_without_a_pattern_graph(monkeypatch):
+    unit_client = Client(api_key="key_test", endpoint="http://example.com/")
+    _answer_by_url(monkeypatch, unit_client, _still_routes(10))
+    still = _get_rheed_view_still(unit_client, "video-1", 10)
+
+    masked = still.get_plot(show_mask=True, alpha=1.0)
+    plain = still.get_plot(show_mask=False)
+
+    # The mask covers rows 1-2, columns 2-4 of the frame.
+    assert masked.getpixel((2, 1)) == (255, 0, 0, 255)
+    assert masked.getpixel((0, 0)) == plain.getpixel((0, 0))
+    assert plain.getpixel((2, 1)) != (255, 0, 0, 255)
+
+
 # --------------------------------------------------------------------------
 # Unit tests (no live API) for per-frame mask fetching / decoding.
 # --------------------------------------------------------------------------

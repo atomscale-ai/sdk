@@ -797,12 +797,12 @@ class Client(BaseClient):
         Args:
             data_id: Data ID of the RHEED video.
             frame_index: Index into the video's snapshots (supports negative
-                indexing). Defaults to ``0`` (the first).
+                indexing), counting only frames that have an image, as
+                ``snapshot_image_data`` does. Defaults to ``0`` (the first).
 
         Returns:
             RHEEDImageResult | None: The frame's image result, or ``None`` if the
-            video has no snapshots, ``frame_index`` is out of range, or the
-            selected frame has no image.
+            video has no snapshots or ``frame_index`` is out of range.
         """
         provider = get_provider("rheed")
         frames_payload: dict | None = self._get(  # type: ignore[assignment]
@@ -811,10 +811,18 @@ class Client(BaseClient):
         requests = provider.snapshot_requests(
             data_id, frames_payload, self.get_rheed_azimuths(data_id)
         )
-        if not -len(requests) <= frame_index < len(requests):
-            return None
-        # Returns None when the selected frame has no associated image.
-        return provider.fetch_snapshot(self, requests[frame_index])
+        # A frame without an image is skipped, as snapshot_image_data skips it, so
+        # an index selects the same frame from either. Frames are fetched only
+        # until the index is reached, from the end for a negative one.
+        remaining = frame_index if frame_index >= 0 else -frame_index - 1
+        for request in requests if frame_index >= 0 else reversed(requests):
+            frame = provider.fetch_snapshot(self, request)
+            if frame is None:
+                continue
+            if remaining == 0:
+                return frame
+            remaining -= 1
+        return None
 
     def get_frame_masks(
         self,
