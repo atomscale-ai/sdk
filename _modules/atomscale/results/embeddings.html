@@ -194,7 +194,7 @@
 
     <div id="content" role="main">
       <h1>Source code for atomscale.results.embeddings</h1><div class="highlight"><pre>
-<span></span><code><span id="line-1"><span class="sd">&quot;&quot;&quot;Result object for similarity embedding vectors.&quot;&quot;&quot;</span>
+<span></span><code><span id="line-1"><span class="sd">"""Result object for similarity embedding vectors."""</span>
 </span><span id="line-2">
 </span><span id="line-3"><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 </span><span id="line-4">
@@ -210,24 +210,24 @@
 <div class="viewcode-block" id="EmbeddingsResult">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.results.embeddings.EmbeddingsResult.html#atomscale.results.embeddings.EmbeddingsResult">[docs]</a>
 </span><span id="line-14"><span class="k">class</span><span class="w"> </span><span class="nc">EmbeddingsResult</span><span class="p">(</span><span class="n">MSONable</span><span class="p">):</span>
-</span><span id="line-15"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Embedding vectors for a single data entry.</span>
+</span><span id="line-15"><span class="w">    </span><span class="sd">"""Embedding vectors for a single data entry.</span>
 </span><span id="line-16">
 </span><span id="line-17"><span class="sd">    Returned by :meth:`atomscale.Client.get_embeddings`. The vectors are held as</span>
 </span><span id="line-18"><span class="sd">    a dense ``(n_returned, dimension)`` float array in :attr:`vectors`, with</span>
 </span><span id="line-19"><span class="sd">    parallel metadata arrays. The two ``kind`` variants carry different metadata:</span>
 </span><span id="line-20">
-</span><span id="line-21"><span class="sd">    - ``kind=&quot;window&quot;``: one time-resolved vector per window. :attr:`real_times`</span>
+</span><span id="line-21"><span class="sd">    - ``kind="window"``: one time-resolved vector per window. :attr:`real_times`</span>
 </span><span id="line-22"><span class="sd">      (relative seconds) and :attr:`unix_times_ms` (absolute milliseconds) give</span>
 </span><span id="line-23"><span class="sd">      the point in time each vector corresponds to.</span>
-</span><span id="line-24"><span class="sd">    - ``kind=&quot;prototype&quot;``: a small set of representative vectors.</span>
+</span><span id="line-24"><span class="sd">    - ``kind="prototype"``: a small set of representative vectors.</span>
 </span><span id="line-25"><span class="sd">      :attr:`cluster_sizes` gives how many windows each one summarizes.</span>
 </span><span id="line-26">
 </span><span id="line-27"><span class="sd">    Metadata arrays not relevant to the returned ``kind`` are ``None``.</span>
 </span><span id="line-28">
 </span><span id="line-29"><span class="sd">    Attributes:</span>
 </span><span id="line-30"><span class="sd">        data_id (UUID | str): Data ID the embeddings were computed for.</span>
-</span><span id="line-31"><span class="sd">        workflow (str): Similarity workflow name (e.g. ``&quot;rheed_stationary&quot;``).</span>
-</span><span id="line-32"><span class="sd">        kind (str): ``&quot;window&quot;`` or ``&quot;prototype&quot;``.</span>
+</span><span id="line-31"><span class="sd">        workflow (str): Similarity workflow name (e.g. ``"rheed_stationary"``).</span>
+</span><span id="line-32"><span class="sd">        kind (str): ``"window"`` or ``"prototype"``.</span>
 </span><span id="line-33"><span class="sd">        window_span (float): Window span (seconds) the vectors were computed at.</span>
 </span><span id="line-34"><span class="sd">        vectors (NDArray): ``(n_returned, dimension)`` array of embedding vectors,</span>
 </span><span id="line-35"><span class="sd">            where ``n_returned == len(vectors)``.</span>
@@ -241,7 +241,7 @@
 </span><span id="line-43"><span class="sd">        real_times (NDArray | None): ``(n_returned,)`` relative time in seconds (window kind).</span>
 </span><span id="line-44"><span class="sd">        unix_times_ms (NDArray | None): ``(n_returned,)`` absolute unix time in ms (window kind).</span>
 </span><span id="line-45"><span class="sd">        cluster_sizes (NDArray | None): ``(n_returned,)`` windows summarized per vector (prototype kind).</span>
-</span><span id="line-46"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-46"><span class="sd">    """</span>
 </span><span id="line-47">
 <div class="viewcode-block" id="EmbeddingsResult.__init__">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.results.embeddings.EmbeddingsResult.html#atomscale.results.embeddings.EmbeddingsResult.__init__">[docs]</a>
@@ -276,23 +276,23 @@
 </span><span id="line-75">
 </span><span id="line-76">    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 </span><span id="line-77">        <span class="k">return</span> <span class="p">(</span>
-</span><span id="line-78">            <span class="sa">f</span><span class="s2">&quot;EmbeddingsResult(data_id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_id</span><span class="si">!r}</span><span class="s2">, kind=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">, &quot;</span>
-</span><span id="line-79">            <span class="sa">f</span><span class="s2">&quot;returned=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vectors</span><span class="p">)</span><span class="si">}</span><span class="s2">, count=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="si">}</span><span class="s2">, &quot;</span>
-</span><span id="line-80">            <span class="sa">f</span><span class="s2">&quot;dimension=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimension</span><span class="si">}</span><span class="s2">, truncated=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">truncated</span><span class="si">}</span><span class="s2">)&quot;</span>
+</span><span id="line-78">            <span class="sa">f</span><span class="s2">"EmbeddingsResult(data_id=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_id</span><span class="si">!r}</span><span class="s2">, kind=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">kind</span><span class="si">!r}</span><span class="s2">, "</span>
+</span><span id="line-79">            <span class="sa">f</span><span class="s2">"returned=</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">vectors</span><span class="p">)</span><span class="si">}</span><span class="s2">, count=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="si">}</span><span class="s2">, "</span>
+</span><span id="line-80">            <span class="sa">f</span><span class="s2">"dimension=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">dimension</span><span class="si">}</span><span class="s2">, truncated=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">truncated</span><span class="si">}</span><span class="s2">)"</span>
 </span><span id="line-81">        <span class="p">)</span>
 </span><span id="line-82">
 </span><span id="line-83">    <span class="nd">@staticmethod</span>
 </span><span id="line-84">    <span class="k">def</span><span class="w"> </span><span class="nf">_point_column</span><span class="p">(</span>
 </span><span id="line-85">        <span class="n">points</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">integer</span><span class="p">:</span> <span class="nb">bool</span>
 </span><span id="line-86">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NDArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-87"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Collect ``point[key]`` across ``points`` into an array (``None`` if all absent).</span>
+</span><span id="line-87"><span class="w">        </span><span class="sd">"""Collect ``point[key]`` across ``points`` into an array (``None`` if all absent).</span>
 </span><span id="line-88">
 </span><span id="line-89"><span class="sd">        Returns an ``int64`` array for integer columns when every value is</span>
 </span><span id="line-90"><span class="sd">        present; otherwise a ``float64`` array with ``NaN`` for missing entries</span>
 </span><span id="line-91"><span class="sd">        (``int64`` cannot represent a null). Used for the per-kind metadata</span>
 </span><span id="line-92"><span class="sd">        columns (``real_time_seconds``/``unix_time_ms``/``cluster_size``), which</span>
 </span><span id="line-93"><span class="sd">        the endpoint only populates for the matching ``kind``.</span>
-</span><span id="line-94"><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="line-94"><span class="sd">        """</span>
 </span><span id="line-95">        <span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">]</span>
 </span><span id="line-96">        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="p">):</span>
 </span><span id="line-97">            <span class="k">return</span> <span class="kc">None</span>
@@ -314,25 +314,25 @@
 </span><span id="line-111">        <span class="n">kind</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="line-112">        <span class="n">window_span</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
 </span><span id="line-113">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EmbeddingsResult</span><span class="p">:</span>
-</span><span id="line-114"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Build an :class:`EmbeddingsResult` from a raw endpoint payload.</span>
+</span><span id="line-114"><span class="w">        </span><span class="sd">"""Build an :class:`EmbeddingsResult` from a raw endpoint payload.</span>
 </span><span id="line-115">
 </span><span id="line-116"><span class="sd">        When no embeddings are available for the given workflow / window span,</span>
 </span><span id="line-117"><span class="sd">        this emits a :class:`UserWarning` and returns an empty result so loops</span>
-</span><span id="line-118"><span class="sd">        over many IDs don&#39;t crash.</span>
-</span><span id="line-119"><span class="sd">        &quot;&quot;&quot;</span>
+</span><span id="line-118"><span class="sd">        over many IDs don't crash.</span>
+</span><span id="line-119"><span class="sd">        """</span>
 </span><span id="line-120">        <span class="n">payload</span> <span class="o">=</span> <span class="n">payload</span> <span class="ow">or</span> <span class="p">{}</span>
-</span><span id="line-121">        <span class="n">points</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;points&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+</span><span id="line-121">        <span class="n">points</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"points"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
 </span><span id="line-122">
 </span><span id="line-123">        <span class="c1"># The endpoint echoes kind/window_span; prefer them, fall back to request.</span>
-</span><span id="line-124">        <span class="n">resolved_kind</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kind&quot;</span><span class="p">,</span> <span class="n">kind</span><span class="p">)</span>
-</span><span id="line-125">        <span class="n">resolved_span</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;window_span&quot;</span><span class="p">,</span> <span class="n">window_span</span><span class="p">)</span>
+</span><span id="line-124">        <span class="n">resolved_kind</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"kind"</span><span class="p">,</span> <span class="n">kind</span><span class="p">)</span>
+</span><span id="line-125">        <span class="n">resolved_span</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"window_span"</span><span class="p">,</span> <span class="n">window_span</span><span class="p">)</span>
 </span><span id="line-126">
 </span><span id="line-127">        <span class="k">if</span> <span class="ow">not</span> <span class="n">points</span><span class="p">:</span>
 </span><span id="line-128">            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-</span><span id="line-129">                <span class="sa">f</span><span class="s2">&quot;No embeddings returned for data_id </span><span class="si">{</span><span class="n">data_id</span><span class="si">!r}</span><span class="s2"> (workflow &quot;</span>
-</span><span id="line-130">                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">workflow</span><span class="si">!r}</span><span class="s2">, kind </span><span class="si">{</span><span class="n">resolved_kind</span><span class="si">!r}</span><span class="s2">, window_span &quot;</span>
-</span><span id="line-131">                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">resolved_span</span><span class="si">}</span><span class="s2">). The entry may not be embedded for this &quot;</span>
-</span><span id="line-132">                <span class="s2">&quot;workflow/window span.&quot;</span><span class="p">,</span>
+</span><span id="line-129">                <span class="sa">f</span><span class="s2">"No embeddings returned for data_id </span><span class="si">{</span><span class="n">data_id</span><span class="si">!r}</span><span class="s2"> (workflow "</span>
+</span><span id="line-130">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">workflow</span><span class="si">!r}</span><span class="s2">, kind </span><span class="si">{</span><span class="n">resolved_kind</span><span class="si">!r}</span><span class="s2">, window_span "</span>
+</span><span id="line-131">                <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">resolved_span</span><span class="si">}</span><span class="s2">). The entry may not be embedded for this "</span>
+</span><span id="line-132">                <span class="s2">"workflow/window span."</span><span class="p">,</span>
 </span><span id="line-133">                <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
 </span><span id="line-134">            <span class="p">)</span>
 </span><span id="line-135">            <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
@@ -341,27 +341,27 @@
 </span><span id="line-138">                <span class="n">kind</span><span class="o">=</span><span class="n">resolved_kind</span><span class="p">,</span>
 </span><span id="line-139">                <span class="n">window_span</span><span class="o">=</span><span class="n">resolved_span</span><span class="p">,</span>
 </span><span id="line-140">                <span class="n">vectors</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
-</span><span id="line-141">                <span class="n">dimension</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dimension&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">),</span>
-</span><span id="line-142">                <span class="n">count</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;count&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
-</span><span id="line-143">                <span class="n">offset</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;offset&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
-</span><span id="line-144">                <span class="n">truncated</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;truncated&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+</span><span id="line-141">                <span class="n">dimension</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dimension"</span><span class="p">)</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">),</span>
+</span><span id="line-142">                <span class="n">count</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"count"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+</span><span id="line-143">                <span class="n">offset</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"offset"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+</span><span id="line-144">                <span class="n">truncated</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"truncated"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
 </span><span id="line-145">            <span class="p">)</span>
 </span><span id="line-146">
 </span><span id="line-147">        <span class="k">try</span><span class="p">:</span>
-</span><span id="line-148">            <span class="n">vectors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">p</span><span class="p">[</span><span class="s2">&quot;vector&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</span><span id="line-148">            <span class="n">vectors</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="n">p</span><span class="p">[</span><span class="s2">"vector"</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 </span><span id="line-149">            <span class="k">if</span> <span class="n">vectors</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
-</span><span id="line-150">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;expected 2-D vectors, got shape </span><span class="si">{</span><span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</span><span id="line-150">                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"expected 2-D vectors, got shape </span><span class="si">{</span><span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="line-151">        <span class="k">except</span> <span class="p">(</span><span class="ne">ValueError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">,</span> <span class="ne">TypeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
 </span><span id="line-152">            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-</span><span id="line-153">                <span class="sa">f</span><span class="s2">&quot;Malformed embeddings payload for data_id </span><span class="si">{</span><span class="n">data_id</span><span class="si">!r}</span><span class="s2"> &quot;</span>
-</span><span id="line-154">                <span class="sa">f</span><span class="s2">&quot;(workflow </span><span class="si">{</span><span class="n">workflow</span><span class="si">!r}</span><span class="s2">, kind </span><span class="si">{</span><span class="n">resolved_kind</span><span class="si">!r}</span><span class="s2">): could not build &quot;</span>
-</span><span id="line-155">                <span class="sa">f</span><span class="s2">&quot;a numeric (count, dimension) array from the point vectors &quot;</span>
-</span><span id="line-156">                <span class="sa">f</span><span class="s2">&quot;(likely ragged or non-numeric). </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="line-153">                <span class="sa">f</span><span class="s2">"Malformed embeddings payload for data_id </span><span class="si">{</span><span class="n">data_id</span><span class="si">!r}</span><span class="s2"> "</span>
+</span><span id="line-154">                <span class="sa">f</span><span class="s2">"(workflow </span><span class="si">{</span><span class="n">workflow</span><span class="si">!r}</span><span class="s2">, kind </span><span class="si">{</span><span class="n">resolved_kind</span><span class="si">!r}</span><span class="s2">): could not build "</span>
+</span><span id="line-155">                <span class="sa">f</span><span class="s2">"a numeric (count, dimension) array from the point vectors "</span>
+</span><span id="line-156">                <span class="sa">f</span><span class="s2">"(likely ragged or non-numeric). </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">"</span>
 </span><span id="line-157">            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
 </span><span id="line-158">
-</span><span id="line-159">        <span class="n">declared_dim</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;dimension&quot;</span><span class="p">)</span>
+</span><span id="line-159">        <span class="n">declared_dim</span> <span class="o">=</span> <span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"dimension"</span><span class="p">)</span>
 </span><span id="line-160">        <span class="n">dimension</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">declared_dim</span><span class="p">)</span> <span class="k">if</span> <span class="n">declared_dim</span> <span class="k">else</span> <span class="nb">int</span><span class="p">(</span><span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-</span><span id="line-161">        <span class="n">count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;count&quot;</span><span class="p">,</span> <span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+</span><span id="line-161">        <span class="n">count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"count"</span><span class="p">,</span> <span class="n">vectors</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
 </span><span id="line-162">
 </span><span id="line-163">        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
 </span><span id="line-164">            <span class="n">data_id</span><span class="o">=</span><span class="n">data_id</span><span class="p">,</span>
@@ -371,11 +371,11 @@
 </span><span id="line-168">            <span class="n">vectors</span><span class="o">=</span><span class="n">vectors</span><span class="p">,</span>
 </span><span id="line-169">            <span class="n">dimension</span><span class="o">=</span><span class="n">dimension</span><span class="p">,</span>
 </span><span id="line-170">            <span class="n">count</span><span class="o">=</span><span class="n">count</span><span class="p">,</span>
-</span><span id="line-171">            <span class="n">offset</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;offset&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
-</span><span id="line-172">            <span class="n">truncated</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;truncated&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
-</span><span id="line-173">            <span class="n">real_times</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_point_column</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="s2">&quot;real_time_seconds&quot;</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
-</span><span id="line-174">            <span class="n">unix_times_ms</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_point_column</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="s2">&quot;unix_time_ms&quot;</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
-</span><span id="line-175">            <span class="n">cluster_sizes</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_point_column</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="s2">&quot;cluster_size&quot;</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="line-171">            <span class="n">offset</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"offset"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+</span><span id="line-172">            <span class="n">truncated</span><span class="o">=</span><span class="nb">bool</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"truncated"</span><span class="p">,</span> <span class="kc">False</span><span class="p">)),</span>
+</span><span id="line-173">            <span class="n">real_times</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_point_column</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="s2">"real_time_seconds"</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+</span><span id="line-174">            <span class="n">unix_times_ms</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_point_column</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="s2">"unix_time_ms"</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+</span><span id="line-175">            <span class="n">cluster_sizes</span><span class="o">=</span><span class="bp">cls</span><span class="o">.</span><span class="n">_point_column</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="s2">"cluster_size"</span><span class="p">,</span> <span class="n">integer</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
 </span><span id="line-176">        <span class="p">)</span></div>
 </div>
 

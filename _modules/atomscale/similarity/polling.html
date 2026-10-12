@@ -194,7 +194,7 @@
 
     <div id="content" role="main">
       <h1>Source code for atomscale.similarity.polling</h1><div class="highlight"><pre>
-<span></span><code><span id="line-1"><span class="sd">&quot;&quot;&quot;Polling utilities for similarity trajectory data.&quot;&quot;&quot;</span>
+<span></span><code><span id="line-1"><span class="sd">"""Polling utilities for similarity trajectory data."""</span>
 </span><span id="line-2">
 </span><span id="line-3"><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 </span><span id="line-4">
@@ -215,11 +215,11 @@
 </span><span id="line-19"><span class="n">Predicate</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="nb">bool</span><span class="p">]</span>
 </span><span id="line-20"><span class="n">ErrorHandler</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="ne">BaseException</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span>
 </span><span id="line-21">
-</span><span id="line-22"><span class="n">_DEFAULT_TRAJECTORY_WORKFLOW</span> <span class="o">=</span> <span class="s2">&quot;rheed&quot;</span>
+</span><span id="line-22"><span class="n">_DEFAULT_TRAJECTORY_WORKFLOW</span> <span class="o">=</span> <span class="s2">"rheed"</span>
 </span><span id="line-23">
 </span><span id="line-24">
 </span><span id="line-25"><span class="k">def</span><span class="w"> </span><span class="nf">_fetch_trajectory_result</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">source_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">last_n</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">:</span>
-</span><span id="line-26"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Fetch trajectory data via SimilarityTrajectoryProvider.</span>
+</span><span id="line-26"><span class="w">    </span><span class="sd">"""Fetch trajectory data via SimilarityTrajectoryProvider.</span>
 </span><span id="line-27">
 </span><span id="line-28"><span class="sd">    Args:</span>
 </span><span id="line-29"><span class="sd">        client: API client instance passed to the provider.</span>
@@ -227,21 +227,21 @@
 </span><span id="line-31"><span class="sd">        last_n: Last number of entries to poll for.</span>
 </span><span id="line-32">
 </span><span id="line-33"><span class="sd">    Returns:</span>
-</span><span id="line-34"><span class="sd">        DataFrame: Trajectory data with multi-index [&quot;Reference ID&quot;, &quot;Time&quot;].</span>
-</span><span id="line-35"><span class="sd">    &quot;&quot;&quot;</span>
-</span><span id="line-36">    <span class="n">provider</span> <span class="o">=</span> <span class="n">get_provider</span><span class="p">(</span><span class="s2">&quot;similarity_trajectory&quot;</span><span class="p">)</span>
-</span><span id="line-37">    <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;workflow&quot;</span><span class="p">:</span> <span class="n">_DEFAULT_TRAJECTORY_WORKFLOW</span><span class="p">}</span>
+</span><span id="line-34"><span class="sd">        DataFrame: Trajectory data with multi-index ["Reference ID", "Time"].</span>
+</span><span id="line-35"><span class="sd">    """</span>
+</span><span id="line-36">    <span class="n">provider</span> <span class="o">=</span> <span class="n">get_provider</span><span class="p">(</span><span class="s2">"similarity_trajectory"</span><span class="p">)</span>
+</span><span id="line-37">    <span class="n">kwargs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"workflow"</span><span class="p">:</span> <span class="n">_DEFAULT_TRAJECTORY_WORKFLOW</span><span class="p">}</span>
 </span><span id="line-38">    <span class="k">if</span> <span class="n">last_n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-39">        <span class="n">kwargs</span><span class="p">[</span><span class="s2">&quot;last_n&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">last_n</span>
+</span><span id="line-39">        <span class="n">kwargs</span><span class="p">[</span><span class="s2">"last_n"</span><span class="p">]</span> <span class="o">=</span> <span class="n">last_n</span>
 </span><span id="line-40">    <span class="n">raw</span> <span class="o">=</span> <span class="n">provider</span><span class="o">.</span><span class="n">fetch_raw</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">source_id</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </span><span id="line-41">    <span class="k">return</span> <span class="n">provider</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span>
 </span><span id="line-42">
 </span><span id="line-43">
 </span><span id="line-44"><span class="k">def</span><span class="w"> </span><span class="nf">_default_trajectory_until</span><span class="p">(</span><span class="n">df</span><span class="p">:</span> <span class="n">Result</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-</span><span id="line-45"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Default stop condition: stop when trajectory has data and is no longer active.&quot;&quot;&quot;</span>
+</span><span id="line-45"><span class="w">    </span><span class="sd">"""Default stop condition: stop when trajectory has data and is no longer active."""</span>
 </span><span id="line-46">    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
 </span><span id="line-47">        <span class="k">return</span> <span class="kc">False</span>
-</span><span id="line-48">    <span class="k">return</span> <span class="ow">not</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Active&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+</span><span id="line-48">    <span class="k">return</span> <span class="ow">not</span> <span class="n">df</span><span class="p">[</span><span class="s2">"Active"</span><span class="p">]</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
 </span><span id="line-49">
 </span><span id="line-50">
 <div class="viewcode-block" id="iter_poll_trajectory">
@@ -259,7 +259,7 @@
 </span><span id="line-61">    <span class="n">jitter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
 </span><span id="line-62">    <span class="n">on_error</span><span class="p">:</span> <span class="n">ErrorHandler</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="line-63"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Result</span><span class="p">]:</span>
-</span><span id="line-64"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Synchronously poll similarity trajectory data, yielding DataFrames.</span>
+</span><span id="line-64"><span class="w">    </span><span class="sd">"""Synchronously poll similarity trajectory data, yielding DataFrames.</span>
 </span><span id="line-65">
 </span><span id="line-66"><span class="sd">    Args:</span>
 </span><span id="line-67"><span class="sd">        client: API client instance forwarded to the provider.</span>
@@ -270,7 +270,7 @@
 </span><span id="line-72"><span class="sd">            deduping. If provided, only results with a new key are yielded.</span>
 </span><span id="line-73"><span class="sd">        until: Optional predicate; stop when it returns True for a result.</span>
 </span><span id="line-74"><span class="sd">            If None, defaults to stopping when no trajectory is active</span>
-</span><span id="line-75"><span class="sd">            (i.e., ``not df[&quot;Active&quot;].any()``).</span>
+</span><span id="line-75"><span class="sd">            (i.e., ``not df["Active"].any()``).</span>
 </span><span id="line-76"><span class="sd">        max_polls: Optional maximum number of polls before stopping.</span>
 </span><span id="line-77"><span class="sd">        fire_immediately: If True, perform the first poll immediately; otherwise</span>
 </span><span id="line-78"><span class="sd">            wait one interval before the first poll. Defaults to True.</span>
@@ -280,13 +280,13 @@
 </span><span id="line-82"><span class="sd">            poll fails. Errors are swallowed so polling continues.</span>
 </span><span id="line-83">
 </span><span id="line-84"><span class="sd">    Yields:</span>
-</span><span id="line-85"><span class="sd">        DataFrame: Trajectory data with multi-index [&quot;Reference ID&quot;, &quot;Time&quot;].</span>
+</span><span id="line-85"><span class="sd">        DataFrame: Trajectory data with multi-index ["Reference ID", "Time"].</span>
 </span><span id="line-86">
 </span><span id="line-87"><span class="sd">    Notes:</span>
 </span><span id="line-88"><span class="sd">        - Uses drift-corrected scheduling to maintain the requested cadence</span>
 </span><span id="line-89"><span class="sd">          even if individual polls are slow.</span>
 </span><span id="line-90"><span class="sd">        - Stops when `until` is satisfied or `max_polls` is reached (if set).</span>
-</span><span id="line-91"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-91"><span class="sd">    """</span>
 </span><span id="line-92">    <span class="n">effective_until</span> <span class="o">=</span> <span class="n">until</span> <span class="k">if</span> <span class="n">until</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_default_trajectory_until</span>
 </span><span id="line-93">    <span class="n">last_key</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
 </span><span id="line-94">    <span class="n">polls</span> <span class="o">=</span> <span class="mi">0</span>
@@ -335,7 +335,7 @@
 </span><span id="line-134">    <span class="n">jitter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
 </span><span id="line-135">    <span class="n">on_error</span><span class="p">:</span> <span class="n">ErrorHandler</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="line-136"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncIterator</span><span class="p">[</span><span class="n">Result</span><span class="p">]:</span>
-</span><span id="line-137"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Asynchronously poll similarity trajectory data without blocking the loop.</span>
+</span><span id="line-137"><span class="w">    </span><span class="sd">"""Asynchronously poll similarity trajectory data without blocking the loop.</span>
 </span><span id="line-138">
 </span><span id="line-139"><span class="sd">    Uses the same semantics as `iter_poll_trajectory`.</span>
 </span><span id="line-140">
@@ -348,7 +348,7 @@
 </span><span id="line-147"><span class="sd">            deduping. If provided, only results with a new key are yielded.</span>
 </span><span id="line-148"><span class="sd">        until: Optional predicate; stop when it returns True for a result.</span>
 </span><span id="line-149"><span class="sd">            If None, defaults to stopping when no trajectory is active</span>
-</span><span id="line-150"><span class="sd">            (i.e., ``not df[&quot;Active&quot;].any()``).</span>
+</span><span id="line-150"><span class="sd">            (i.e., ``not df["Active"].any()``).</span>
 </span><span id="line-151"><span class="sd">        max_polls: Optional maximum number of polls before stopping.</span>
 </span><span id="line-152"><span class="sd">        fire_immediately: If True, perform the first poll immediately; otherwise</span>
 </span><span id="line-153"><span class="sd">            wait one interval before the first poll. Defaults to True.</span>
@@ -358,13 +358,13 @@
 </span><span id="line-157"><span class="sd">            poll fails. Errors are swallowed so polling continues.</span>
 </span><span id="line-158">
 </span><span id="line-159"><span class="sd">    Yields:</span>
-</span><span id="line-160"><span class="sd">        DataFrame: Trajectory data with multi-index [&quot;Reference ID&quot;, &quot;Time&quot;].</span>
+</span><span id="line-160"><span class="sd">        DataFrame: Trajectory data with multi-index ["Reference ID", "Time"].</span>
 </span><span id="line-161">
 </span><span id="line-162"><span class="sd">    Notes:</span>
 </span><span id="line-163"><span class="sd">        - Uses `asyncio.to_thread` so provider calls never block the event loop.</span>
 </span><span id="line-164"><span class="sd">        - Drift-corrected scheduling preserves cadence even with slow polls.</span>
 </span><span id="line-165"><span class="sd">        - Stops when `until` is satisfied or `max_polls` is reached (if set).</span>
-</span><span id="line-166"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-166"><span class="sd">    """</span>
 </span><span id="line-167">    <span class="n">effective_until</span> <span class="o">=</span> <span class="n">until</span> <span class="k">if</span> <span class="n">until</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_default_trajectory_until</span>
 </span><span id="line-168">    <span class="n">loop</span> <span class="o">=</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">get_running_loop</span><span class="p">()</span>
 </span><span id="line-169">    <span class="n">last_key</span> <span class="o">=</span> <span class="nb">object</span><span class="p">()</span>
@@ -416,7 +416,7 @@
 </span><span id="line-212">    <span class="n">on_result</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="kc">None</span><span class="p">],</span>
 </span><span id="line-213">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 </span><span id="line-214"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">:</span>
-</span><span id="line-215"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Start polling trajectory data in a background daemon thread.</span>
+</span><span id="line-215"><span class="w">    </span><span class="sd">"""Start polling trajectory data in a background daemon thread.</span>
 </span><span id="line-216">
 </span><span id="line-217"><span class="sd">    Wraps `iter_poll_trajectory` in a daemon thread and invokes</span>
 </span><span id="line-218"><span class="sd">    `on_result(result)` for each yielded item. Returns a `threading.Event`</span>
@@ -434,7 +434,7 @@
 </span><span id="line-230">
 </span><span id="line-231"><span class="sd">    Returns:</span>
 </span><span id="line-232"><span class="sd">        threading.Event: Event that, when set, requests the polling thread to stop.</span>
-</span><span id="line-233"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-233"><span class="sd">    """</span>
 </span><span id="line-234">    <span class="n">stop</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Event</span><span class="p">()</span>
 </span><span id="line-235">
 </span><span id="line-236">    <span class="k">def</span><span class="w"> </span><span class="nf">_runner</span><span class="p">():</span>
@@ -446,7 +446,7 @@
 </span><span id="line-242">            <span class="n">on_result</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
 </span><span id="line-243">
 </span><span id="line-244">    <span class="n">t</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span>
-</span><span id="line-245">        <span class="n">target</span><span class="o">=</span><span class="n">_runner</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;poll_trajectory:</span><span class="si">{</span><span class="n">source_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span>
+</span><span id="line-245">        <span class="n">target</span><span class="o">=</span><span class="n">_runner</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">"poll_trajectory:</span><span class="si">{</span><span class="n">source_id</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span>
 </span><span id="line-246">    <span class="p">)</span>
 </span><span id="line-247">    <span class="n">t</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 </span><span id="line-248">    <span class="k">return</span> <span class="n">stop</span></div>
@@ -464,7 +464,7 @@
 </span><span id="line-257">    <span class="n">on_result</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Result</span><span class="p">],</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 </span><span id="line-258">    <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
 </span><span id="line-259"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">Task</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
-</span><span id="line-260"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Start polling trajectory data as an `asyncio.Task`.</span>
+</span><span id="line-260"><span class="w">    </span><span class="sd">"""Start polling trajectory data as an `asyncio.Task`.</span>
 </span><span id="line-261">
 </span><span id="line-262"><span class="sd">    Wraps `aiter_poll_trajectory` in a background Task. If `on_result` returns</span>
 </span><span id="line-263"><span class="sd">    a coroutine, it will be awaited before the next iteration.</span>
@@ -485,7 +485,7 @@
 </span><span id="line-278">
 </span><span id="line-279"><span class="sd">    Raises:</span>
 </span><span id="line-280"><span class="sd">        RuntimeError: If no running event loop is available when called.</span>
-</span><span id="line-281"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-281"><span class="sd">    """</span>
 </span><span id="line-282">
 </span><span id="line-283">    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_runner</span><span class="p">():</span>
 </span><span id="line-284">        <span class="k">async</span> <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">aiter_poll_trajectory</span><span class="p">(</span>
@@ -497,7 +497,7 @@
 </span><span id="line-290">            <span class="k">if</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">iscoroutine</span><span class="p">(</span><span class="n">maybe</span><span class="p">):</span>
 </span><span id="line-291">                <span class="k">await</span> <span class="n">maybe</span>
 </span><span id="line-292">
-</span><span id="line-293">    <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">_runner</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;poll_trajectory:</span><span class="si">{</span><span class="n">source_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+</span><span id="line-293">    <span class="k">return</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">create_task</span><span class="p">(</span><span class="n">_runner</span><span class="p">(),</span> <span class="n">name</span><span class="o">=</span><span class="sa">f</span><span class="s2">"poll_trajectory:</span><span class="si">{</span><span class="n">source_id</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span></div>
 
 </span></code></pre></div>
     </div><div class="flex justify-between items-center pt-6 mt-12 border-t border-border gap-4">

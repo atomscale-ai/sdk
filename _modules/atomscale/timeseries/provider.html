@@ -194,7 +194,7 @@
 
     <div id="content" role="main">
       <h1>Source code for atomscale.timeseries.provider</h1><div class="highlight"><pre>
-<span></span><code><span id="line-1"><span class="sd">&quot;&quot;&quot;Provider classes for accessing timeseries data.&quot;&quot;&quot;</span>
+<span></span><code><span id="line-1"><span class="sd">"""Provider classes for accessing timeseries data."""</span>
 </span><span id="line-2">
 </span><span id="line-3"><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 </span><span id="line-4">
@@ -209,36 +209,36 @@
 </span><span id="line-13">
 </span><span id="line-14"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale.core</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseClient</span>
 </span><span id="line-15">
-</span><span id="line-16"><span class="n">R</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;R&quot;</span><span class="p">)</span>  <span class="c1"># the result type this provider returns</span>
+</span><span id="line-16"><span class="n">R</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">"R"</span><span class="p">)</span>  <span class="c1"># the result type this provider returns</span>
 </span><span id="line-17">
 </span><span id="line-18">
 </span><span id="line-19"><span class="n">_STAT_SUFFIX_LABELS</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-20">    <span class="s2">&quot;_z_score&quot;</span><span class="p">:</span> <span class="s2">&quot;Z Score&quot;</span><span class="p">,</span>
-</span><span id="line-21">    <span class="s2">&quot;_ema_z_score&quot;</span><span class="p">:</span> <span class="s2">&quot;EMA Z Score&quot;</span><span class="p">,</span>
-</span><span id="line-22">    <span class="s2">&quot;_anomaly_probability&quot;</span><span class="p">:</span> <span class="s2">&quot;Anomaly Probability&quot;</span><span class="p">,</span>
+</span><span id="line-20">    <span class="s2">"_z_score"</span><span class="p">:</span> <span class="s2">"Z Score"</span><span class="p">,</span>
+</span><span id="line-21">    <span class="s2">"_ema_z_score"</span><span class="p">:</span> <span class="s2">"EMA Z Score"</span><span class="p">,</span>
+</span><span id="line-22">    <span class="s2">"_anomaly_probability"</span><span class="p">:</span> <span class="s2">"Anomaly Probability"</span><span class="p">,</span>
 </span><span id="line-23"><span class="p">}</span>
 </span><span id="line-24">
 </span><span id="line-25">
 <div class="viewcode-block" id="extend_with_statistics">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.provider.extend_with_statistics.html#atomscale.timeseries.provider.extend_with_statistics">[docs]</a>
 </span><span id="line-26"><span class="k">def</span><span class="w"> </span><span class="nf">extend_with_statistics</span><span class="p">(</span><span class="n">rename_map</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-</span><span id="line-27"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Add suffix-based statistical labels to a rename map.&quot;&quot;&quot;</span>
+</span><span id="line-27"><span class="w">    </span><span class="sd">"""Add suffix-based statistical labels to a rename map."""</span>
 </span><span id="line-28">    <span class="n">extended</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">rename_map</span><span class="p">)</span>
 </span><span id="line-29">    <span class="k">for</span> <span class="n">source_name</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">rename_map</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
 </span><span id="line-30">        <span class="k">for</span> <span class="n">suffix</span><span class="p">,</span> <span class="n">suffix_label</span> <span class="ow">in</span> <span class="n">_STAT_SUFFIX_LABELS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-</span><span id="line-31">            <span class="n">extended</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">source_name</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">suffix_label</span><span class="si">}</span><span class="s2">&quot;</span>
+</span><span id="line-31">            <span class="n">extended</span><span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">source_name</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">"</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">suffix_label</span><span class="si">}</span><span class="s2">"</span>
 </span><span id="line-32">    <span class="k">return</span> <span class="n">extended</span></div>
 
 </span><span id="line-33">
 </span><span id="line-34">
 </span><span id="line-35"><span class="k">def</span><span class="w"> </span><span class="nf">_to_int64_ms</span><span class="p">(</span><span class="n">values</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-</span><span id="line-36"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Coerce a sequence of unix-ms values (Decimal | float | int | str) to int64.</span>
+</span><span id="line-36"><span class="w">    </span><span class="sd">"""Coerce a sequence of unix-ms values (Decimal | float | int | str) to int64.</span>
 </span><span id="line-37">
 </span><span id="line-38"><span class="sd">    Whole-millisecond values fit losslessly in int64 well past year 2286.</span>
 </span><span id="line-39"><span class="sd">    Decimals with sub-millisecond fractional parts are truncated; this is</span>
 </span><span id="line-40"><span class="sd">    correct for the property-centric API where ms are emitted as whole</span>
 </span><span id="line-41"><span class="sd">    numbers (DECIMAL(13,3) seconds * 1000 -&gt; integer ms).</span>
-</span><span id="line-42"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-42"><span class="sd">    """</span>
 </span><span id="line-43">    <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">values</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
 </span><span id="line-44">    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">values</span><span class="p">):</span>
 </span><span id="line-45">        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">Decimal</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">integer</span> <span class="o">|</span> <span class="nb">float</span><span class="p">):</span>
@@ -253,16 +253,16 @@
 </span><span id="line-52"><span class="k">def</span><span class="w"> </span><span class="nf">properties_payload_to_dataframe</span><span class="p">(</span>
 </span><span id="line-53">    <span class="n">properties</span><span class="p">:</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
 </span><span id="line-54"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="line-55"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Merge a property-centric payload into a wide DataFrame.</span>
+</span><span id="line-55"><span class="w">    </span><span class="sd">"""Merge a property-centric payload into a wide DataFrame.</span>
 </span><span id="line-56">
 </span><span id="line-57"><span class="sd">    The payload shape is::</span>
 </span><span id="line-58">
 </span><span id="line-59"><span class="sd">        {</span>
-</span><span id="line-60"><span class="sd">          &quot;&lt;property_name&gt;&quot;: {</span>
-</span><span id="line-61"><span class="sd">            &quot;relative_time_seconds&quot;: [...],</span>
-</span><span id="line-62"><span class="sd">            &quot;unix_timestamp_ms&quot;:     [...],</span>
-</span><span id="line-63"><span class="sd">            &quot;values&quot;:                [...],</span>
-</span><span id="line-64"><span class="sd">            &quot;units&quot;: &quot;...&quot;</span>
+</span><span id="line-60"><span class="sd">          "&lt;property_name&gt;": {</span>
+</span><span id="line-61"><span class="sd">            "relative_time_seconds": [...],</span>
+</span><span id="line-62"><span class="sd">            "unix_timestamp_ms":     [...],</span>
+</span><span id="line-63"><span class="sd">            "values":                [...],</span>
+</span><span id="line-64"><span class="sd">            "units": "..."</span>
 </span><span id="line-65"><span class="sd">          },</span>
 </span><span id="line-66"><span class="sd">          ...</span>
 </span><span id="line-67"><span class="sd">        }</span>
@@ -281,7 +281,7 @@
 </span><span id="line-80"><span class="sd">    Returned columns:</span>
 </span><span id="line-81"><span class="sd">      - ``UNIX Timestamp`` (int64, milliseconds)</span>
 </span><span id="line-82"><span class="sd">      - ``Time`` (float64, relative seconds; anchored to the longest</span>
-</span><span id="line-83"><span class="sd">        property&#39;s t=0 via piecewise-linear extrapolation)</span>
+</span><span id="line-83"><span class="sd">        property's t=0 via piecewise-linear extrapolation)</span>
 </span><span id="line-84"><span class="sd">      - one column per property keyed by its API name (case preserved —</span>
 </span><span id="line-85"><span class="sd">        these are setpoint/shutter/etc. names users grep for)</span>
 </span><span id="line-86">
@@ -289,7 +289,7 @@
 </span><span id="line-88">
 </span><span id="line-89"><span class="sd">    Unix timestamps are accepted as ``Decimal``, ``float``, ``int``, or</span>
 </span><span id="line-90"><span class="sd">    numeric strings; they are cast to int64 for the DataFrame column.</span>
-</span><span id="line-91"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-91"><span class="sd">    """</span>
 </span><span id="line-92">    <span class="k">if</span> <span class="ow">not</span> <span class="n">properties</span><span class="p">:</span>
 </span><span id="line-93">        <span class="k">return</span> <span class="n">DataFrame</span><span class="p">()</span>
 </span><span id="line-94">
@@ -300,9 +300,9 @@
 </span><span id="line-99">    <span class="n">longest_rel</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 </span><span id="line-100">
 </span><span id="line-101">    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">prop</span> <span class="ow">in</span> <span class="n">properties</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-</span><span id="line-102">        <span class="n">ts_raw</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;unix_timestamp_ms&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
-</span><span id="line-103">        <span class="n">values</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;values&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
-</span><span id="line-104">        <span class="n">rel_raw</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;relative_time_seconds&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+</span><span id="line-102">        <span class="n">ts_raw</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"unix_timestamp_ms"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+</span><span id="line-103">        <span class="n">values</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"values"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
+</span><span id="line-104">        <span class="n">rel_raw</span> <span class="o">=</span> <span class="n">prop</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"relative_time_seconds"</span><span class="p">)</span> <span class="ow">or</span> <span class="p">[]</span>
 </span><span id="line-105">
 </span><span id="line-106">        <span class="c1"># Drop entries where the timestamp is null.</span>
 </span><span id="line-107">        <span class="n">kept_ts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
@@ -333,33 +333,33 @@
 </span><span id="line-132">        <span class="c1"># Collapse duplicate timestamps within this property. Two samples that</span>
 </span><span id="line-133">        <span class="c1"># share a unix-ms make the per-property index non-unique, which breaks</span>
 </span><span id="line-134">        <span class="c1"># the outer-join below: pandas cannot reindex a duplicate-labelled axis</span>
-</span><span id="line-135">        <span class="c1"># onto the merged index and raises &quot;cannot reindex on an axis with</span>
-</span><span id="line-136">        <span class="c1"># duplicate labels&quot;. Sort by time and keep the last reading at each</span>
+</span><span id="line-135">        <span class="c1"># onto the merged index and raises "cannot reindex on an axis with</span>
+</span><span id="line-136">        <span class="c1"># duplicate labels". Sort by time and keep the last reading at each</span>
 </span><span id="line-137">        <span class="c1"># instant (latest value wins; this also gives the np.interp time anchor</span>
 </span><span id="line-138">        <span class="c1"># a strictly-increasing x-axis).</span>
-</span><span id="line-139">        <span class="n">prop_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">kept_values</span><span class="p">,</span> <span class="s2">&quot;rel&quot;</span><span class="p">:</span> <span class="n">rel_ms</span><span class="p">},</span> <span class="n">index</span><span class="o">=</span><span class="n">ts_ms</span><span class="p">)</span>
-</span><span id="line-140">        <span class="n">prop_df</span> <span class="o">=</span> <span class="n">prop_df</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">&quot;stable&quot;</span><span class="p">)</span>
-</span><span id="line-141">        <span class="n">prop_df</span> <span class="o">=</span> <span class="n">prop_df</span><span class="p">[</span><span class="o">~</span><span class="n">prop_df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="s2">&quot;last&quot;</span><span class="p">)]</span>
+</span><span id="line-139">        <span class="n">prop_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"value"</span><span class="p">:</span> <span class="n">kept_values</span><span class="p">,</span> <span class="s2">"rel"</span><span class="p">:</span> <span class="n">rel_ms</span><span class="p">},</span> <span class="n">index</span><span class="o">=</span><span class="n">ts_ms</span><span class="p">)</span>
+</span><span id="line-140">        <span class="n">prop_df</span> <span class="o">=</span> <span class="n">prop_df</span><span class="o">.</span><span class="n">sort_index</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="s2">"stable"</span><span class="p">)</span>
+</span><span id="line-141">        <span class="n">prop_df</span> <span class="o">=</span> <span class="n">prop_df</span><span class="p">[</span><span class="o">~</span><span class="n">prop_df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="n">keep</span><span class="o">=</span><span class="s2">"last"</span><span class="p">)]</span>
 </span><span id="line-142">
-</span><span id="line-143">        <span class="n">series_by_name</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">prop_df</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+</span><span id="line-143">        <span class="n">series_by_name</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">prop_df</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
 </span><span id="line-144">
 </span><span id="line-145">        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">prop_df</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">longest_len</span><span class="p">:</span>
 </span><span id="line-146">            <span class="n">longest_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">prop_df</span><span class="p">)</span>
 </span><span id="line-147">            <span class="n">longest_name</span> <span class="o">=</span> <span class="n">name</span>
 </span><span id="line-148">            <span class="n">longest_ts_ms</span> <span class="o">=</span> <span class="n">prop_df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
-</span><span id="line-149">            <span class="n">longest_rel</span> <span class="o">=</span> <span class="n">prop_df</span><span class="p">[</span><span class="s2">&quot;rel&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</span><span id="line-149">            <span class="n">longest_rel</span> <span class="o">=</span> <span class="n">prop_df</span><span class="p">[</span><span class="s2">"rel"</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 </span><span id="line-150">
 </span><span id="line-151">    <span class="k">if</span> <span class="ow">not</span> <span class="n">series_by_name</span><span class="p">:</span>
 </span><span id="line-152">        <span class="k">return</span> <span class="n">DataFrame</span><span class="p">()</span>
 </span><span id="line-153">
-</span><span id="line-154">    <span class="n">merged</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">series_by_name</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="s2">&quot;outer&quot;</span><span class="p">)</span>
+</span><span id="line-154">    <span class="n">merged</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">series_by_name</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="s2">"outer"</span><span class="p">)</span>
 </span><span id="line-155">    <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
 </span><span id="line-156">    <span class="n">merged</span> <span class="o">=</span> <span class="n">merged</span><span class="o">.</span><span class="n">ffill</span><span class="p">()</span>
 </span><span id="line-157">
 </span><span id="line-158">    <span class="n">unix_ms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">merged</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
 </span><span id="line-159">
 </span><span id="line-160">    <span class="c1"># Build a Time (relative seconds) column anchored to the longest</span>
-</span><span id="line-161">    <span class="c1"># property&#39;s t=0 via piecewise-linear extrapolation on its</span>
+</span><span id="line-161">    <span class="c1"># property's t=0 via piecewise-linear extrapolation on its</span>
 </span><span id="line-162">    <span class="c1"># (unix_ms, relative_seconds) pairs.</span>
 </span><span id="line-163">    <span class="k">if</span> <span class="n">longest_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">longest_ts_ms</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
 </span><span id="line-164">        <span class="c1"># np.interp clamps outside-range values to the nearest endpoint.</span>
@@ -384,8 +384,8 @@
 </span><span id="line-183">        <span class="n">time_col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">unix_ms</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
 </span><span id="line-184">
 </span><span id="line-185">    <span class="n">out</span> <span class="o">=</span> <span class="n">merged</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</span><span id="line-186">    <span class="n">out</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;UNIX Timestamp&quot;</span><span class="p">,</span> <span class="n">unix_ms</span><span class="p">)</span>
-</span><span id="line-187">    <span class="n">out</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Time&quot;</span><span class="p">,</span> <span class="n">time_col</span><span class="p">)</span>
+</span><span id="line-186">    <span class="n">out</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s2">"UNIX Timestamp"</span><span class="p">,</span> <span class="n">unix_ms</span><span class="p">)</span>
+</span><span id="line-187">    <span class="n">out</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">"Time"</span><span class="p">,</span> <span class="n">time_col</span><span class="p">)</span>
 </span><span id="line-188">    <span class="k">return</span> <span class="n">out</span></div>
 
 </span><span id="line-189">
@@ -395,26 +395,26 @@
 </span><span id="line-191"><span class="k">def</span><span class="w"> </span><span class="nf">series_payload_to_dataframe</span><span class="p">(</span>
 </span><span id="line-192">    <span class="n">series</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
 </span><span id="line-193"><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="line-194"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Parse the legacy row-oriented ``series`` payload into a wide DataFrame.</span>
+</span><span id="line-194"><span class="w">    </span><span class="sd">"""Parse the legacy row-oriented ``series`` payload into a wide DataFrame.</span>
 </span><span id="line-195">
 </span><span id="line-196"><span class="sd">    Each row carries ``unix_timestamp_ms``, ``relative_time_seconds``, and one</span>
 </span><span id="line-197"><span class="sd">    key per property. This shape predates the property-centric payload and is</span>
 </span><span id="line-198"><span class="sd">    still emitted by un-migrated API deployments. Output schema mirrors</span>
 </span><span id="line-199"><span class="sd">    :func:`properties_payload_to_dataframe` so downstream code is shape-stable</span>
 </span><span id="line-200"><span class="sd">    across both API versions.</span>
-</span><span id="line-201"><span class="sd">    &quot;&quot;&quot;</span>
+</span><span id="line-201"><span class="sd">    """</span>
 </span><span id="line-202">    <span class="k">if</span> <span class="ow">not</span> <span class="n">series</span><span class="p">:</span>
 </span><span id="line-203">        <span class="k">return</span> <span class="n">DataFrame</span><span class="p">()</span>
 </span><span id="line-204">
 </span><span id="line-205">    <span class="n">rows</span> <span class="o">=</span> <span class="n">DataFrame</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">series</span><span class="p">))</span>
 </span><span id="line-206">
-</span><span id="line-207">    <span class="k">if</span> <span class="s2">&quot;unix_timestamp_ms&quot;</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-</span><span id="line-208">        <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;unix_timestamp_ms&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">_to_int64_ms</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">&quot;unix_timestamp_ms&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
-</span><span id="line-209">    <span class="k">if</span> <span class="s2">&quot;relative_time_seconds&quot;</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-</span><span id="line-210">        <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;relative_time_seconds&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="s2">&quot;relative_time_seconds&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;float64&quot;</span><span class="p">)</span>
+</span><span id="line-207">    <span class="k">if</span> <span class="s2">"unix_timestamp_ms"</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+</span><span id="line-208">        <span class="n">rows</span><span class="p">[</span><span class="s2">"unix_timestamp_ms"</span><span class="p">]</span> <span class="o">=</span> <span class="n">_to_int64_ms</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="s2">"unix_timestamp_ms"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+</span><span id="line-209">    <span class="k">if</span> <span class="s2">"relative_time_seconds"</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+</span><span id="line-210">        <span class="n">rows</span><span class="p">[</span><span class="s2">"relative_time_seconds"</span><span class="p">]</span> <span class="o">=</span> <span class="n">rows</span><span class="p">[</span><span class="s2">"relative_time_seconds"</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">"float64"</span><span class="p">)</span>
 </span><span id="line-211">
 </span><span id="line-212">    <span class="n">leading</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="line-213">        <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;unix_timestamp_ms&quot;</span><span class="p">,</span> <span class="s2">&quot;relative_time_seconds&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span>
+</span><span id="line-213">        <span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"unix_timestamp_ms"</span><span class="p">,</span> <span class="s2">"relative_time_seconds"</span><span class="p">)</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span>
 </span><span id="line-214">    <span class="p">]</span>
 </span><span id="line-215">    <span class="n">remaining</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">rows</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">leading</span><span class="p">]</span>
 </span><span id="line-216">    <span class="k">return</span> <span class="n">rows</span><span class="p">[</span><span class="n">leading</span> <span class="o">+</span> <span class="n">remaining</span><span class="p">]</span></div>
@@ -424,7 +424,7 @@
 <div class="viewcode-block" id="TimeseriesProvider">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.provider.TimeseriesProvider.html#atomscale.timeseries.provider.TimeseriesProvider">[docs]</a>
 </span><span id="line-219"><span class="k">class</span><span class="w"> </span><span class="nc">TimeseriesProvider</span><span class="p">(</span><span class="n">ABC</span><span class="p">,</span> <span class="n">Generic</span><span class="p">[</span><span class="n">R</span><span class="p">]):</span>
-</span><span id="line-220"><span class="w">    </span><span class="sd">&quot;&quot;&quot;Strategy interface for parsing timeseries by domain.&quot;&quot;&quot;</span>
+</span><span id="line-220"><span class="w">    </span><span class="sd">"""Strategy interface for parsing timeseries by domain."""</span>
 </span><span id="line-221">
 </span><span id="line-222">    <span class="c1"># canonical domain name used as a key in the registry</span>
 </span><span id="line-223">    <span class="n">TYPE</span><span class="p">:</span> <span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
@@ -433,14 +433,14 @@
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.provider.TimeseriesProvider.html#atomscale.timeseries.provider.TimeseriesProvider.fetch_raw">[docs]</a>
 </span><span id="line-225">    <span class="nd">@abstractmethod</span>
 </span><span id="line-226">    <span class="k">def</span><span class="w"> </span><span class="nf">fetch_raw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">:</span> <span class="n">BaseClient</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
-</span><span id="line-227"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform the HTTP GET(s) to retrieve raw payload(s).&quot;&quot;&quot;</span></div>
+</span><span id="line-227"><span class="w">        </span><span class="sd">"""Perform the HTTP GET(s) to retrieve raw payload(s)."""</span></div>
 
 </span><span id="line-228">
 <div class="viewcode-block" id="TimeseriesProvider.to_dataframe">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.provider.TimeseriesProvider.html#atomscale.timeseries.provider.TimeseriesProvider.to_dataframe">[docs]</a>
 </span><span id="line-229">    <span class="nd">@abstractmethod</span>
 </span><span id="line-230">    <span class="k">def</span><span class="w"> </span><span class="nf">to_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
-</span><span id="line-231"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert raw payload to a tidy DataFrame with domain-specific renames/index.&quot;&quot;&quot;</span></div>
+</span><span id="line-231"><span class="w">        </span><span class="sd">"""Convert raw payload to a tidy DataFrame with domain-specific renames/index."""</span></div>
 
 </span><span id="line-232">
 <div class="viewcode-block" id="TimeseriesProvider.build_result">
@@ -453,15 +453,15 @@
 </span><span id="line-238">        <span class="n">data_type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
 </span><span id="line-239">        <span class="n">ts_df</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">,</span>
 </span><span id="line-240">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">R</span><span class="p">:</span>
-</span><span id="line-241"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Build time series result object&quot;&quot;&quot;</span></div>
+</span><span id="line-241"><span class="w">        </span><span class="sd">"""Build time series result object"""</span></div>
 
 </span><span id="line-242">
 </span><span id="line-243">    <span class="c1"># Optional override points</span>
 <div class="viewcode-block" id="TimeseriesProvider.snapshot_url">
 <a class="viewcode-back" href="../../../_autosummary/atomscale.timeseries.provider.TimeseriesProvider.html#atomscale.timeseries.provider.TimeseriesProvider.snapshot_url">[docs]</a>
 </span><span id="line-244">    <span class="k">def</span><span class="w"> </span><span class="nf">snapshot_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>  <span class="c1"># noqa: ARG002</span>
-</span><span id="line-245"><span class="w">        </span><span class="sd">&quot;&quot;&quot;API endpoint that exposes extracted/snapshot frames.&quot;&quot;&quot;</span>
-</span><span id="line-246">        <span class="k">return</span> <span class="s2">&quot;&quot;</span></div>
+</span><span id="line-245"><span class="w">        </span><span class="sd">"""API endpoint that exposes extracted/snapshot frames."""</span>
+</span><span id="line-246">        <span class="k">return</span> <span class="s2">""</span></div>
 
 </span><span id="line-247">
 <div class="viewcode-block" id="TimeseriesProvider.snapshot_image_uuids">
@@ -470,7 +470,7 @@
 </span><span id="line-249">        <span class="bp">self</span><span class="p">,</span>
 </span><span id="line-250">        <span class="n">frames_payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>  <span class="c1"># noqa: ARG002</span>
 </span><span id="line-251">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
-</span><span id="line-252"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract requests from frames payload. Default: no snapshots.&quot;&quot;&quot;</span>
+</span><span id="line-252"><span class="w">        </span><span class="sd">"""Extract requests from frames payload. Default: no snapshots."""</span>
 </span><span id="line-253">        <span class="k">return</span> <span class="p">[]</span></div>
 
 </span><span id="line-254">
@@ -481,7 +481,7 @@
 </span><span id="line-257">        <span class="n">client</span><span class="p">:</span> <span class="n">BaseClient</span><span class="p">,</span>  <span class="c1"># noqa: ARG002</span>
 </span><span id="line-258">        <span class="n">req</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>  <span class="c1"># noqa: ARG002</span>
 </span><span id="line-259">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-260"><span class="w">        </span><span class="sd">&quot;&quot;&quot;Resolve one snapshot request → domain-specific ImageResult (or None).&quot;&quot;&quot;</span>
+</span><span id="line-260"><span class="w">        </span><span class="sd">"""Resolve one snapshot request → domain-specific ImageResult (or None)."""</span>
 </span><span id="line-261">        <span class="k">return</span> <span class="kc">None</span></div>
 </div>
 
