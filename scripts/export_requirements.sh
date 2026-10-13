@@ -7,6 +7,9 @@
 # markers, so each file installs on every platform the package supports. They are
 # derived, never resolved on their own, so they cannot drift from the lock.
 #
+# They exist for installing with pip; CI and uv users install from uv.lock directly:
+#   pip install -r requirements/requirements_extras.txt && pip install --no-deps -e .
+#
 # Don't edit them by hand or recompile them with `uv pip compile`. Change
 # pyproject.toml, run `uv lock` (or `uv lock --upgrade-package <pkg>`), then run this.
 set -euo pipefail

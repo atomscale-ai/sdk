@@ -4,8 +4,8 @@ name: Upgrade Dependencies
 # requirements files from it, and open (or refresh) one PR. "Newest" honours the
 # 7-day cooldown (exclude-newer in pyproject.toml), so a release has to survive a
 # week on PyPI before it lands here. One lock covers every OS and Python version, so
-# there is nothing to resolve per platform: the PR's Testing workflow installs the
-# regenerated files on the full OS x Python matrix.
+# there is nothing to resolve per platform: the PR's Testing workflow tests the new
+# lock on the full OS x Python matrix.
 
 on:
   workflow_dispatch:
