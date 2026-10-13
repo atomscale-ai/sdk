@@ -24,25 +24,26 @@ repos:
         exclude_types: [json, bib, svg]
         args: [--ignore-words-list, "mater,fwe,te"]
 
-  # ruff and ty run from the project environment (`uv sync --extra dev`), so they
-  # use the versions pinned in uv.lock rather than a separate hook rev.
+  # ruff and ty run through `uv run`, so they always use the versions pinned in uv.lock
+  # (not a separate hook rev, or whatever is on PATH). Needs uv on PATH; the first run
+  # syncs the project environment like `uv sync --extra dev`, building the extension.
   - repo: local
     hooks:
       - id: ruff
         name: ruff
-        entry: ruff check --force-exclude --fix --show-fixes
+        entry: uv run --locked --extra dev ruff check --force-exclude --fix --show-fixes
         language: system
         types_or: [python, pyi]
         require_serial: true
       - id: ruff-format
         name: ruff-format
-        entry: ruff format --force-exclude
+        entry: uv run --locked --extra dev ruff format --force-exclude
         language: system
         types_or: [python, pyi]
         require_serial: true
       - id: ty
         name: ty
-        entry: ty check src/atomicds
+        entry: uv run --locked --extra dev ty check src/atomicds
         language: system
         types: [python]
         pass_filenames: false
