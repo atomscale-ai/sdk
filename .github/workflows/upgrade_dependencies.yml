@@ -1,87 +1,85 @@
 name: Upgrade Dependencies
 
+# Re-resolve uv.lock to the newest versions pyproject.toml allows, regenerate the
+# requirements files from it, and open (or refresh) one PR. "Newest" honours the
+# 7-day cooldown (exclude-newer in pyproject.toml), so a release has to survive a
+# week on PyPI before it lands here. One lock covers every OS and Python version, so
+# there is nothing to resolve per platform: the PR's Testing workflow installs the
+# regenerated files on the full OS x Python matrix.
+
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  BRANCH: auto-dependency-upgrades
+
 jobs:
   upgrade:
-    name: ${{ matrix.package }} (${{ matrix.os }}/py${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-        package: ["atomicds"]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'pip'
-      - name: Upgrade Python dependencies
-        shell: bash
-        run: |
-          python -m pip install --upgrade pip pip-tools
-          python -m piptools compile -q --upgrade --resolver=backtracking -o requirements/requirements-${{ matrix.os }}_py${{ matrix.python-version }}.txt pyproject.toml
-          python -m piptools compile -q --upgrade --resolver=backtracking --all-extras -o requirements/requirements-${{ matrix.os }}_py${{ matrix.python-version }}_extras.txt pyproject.toml
-      - name: Detect changes
-        id: changes
-        shell: bash
-        run: |
-          echo "count=$(git diff-index HEAD | wc -l | xargs)" >> $GITHUB_OUTPUT
-          echo "files=$(git ls-files --exclude-standard --others | wc -l | xargs)" >> $GITHUB_OUTPUT
-      - name: commit & push changes
-        if: steps.changes.outputs.count > 0 || steps.changes.outputs.files > 0
-        shell: bash
-        run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add requirements/requirements-${{ matrix.os }}_py${{ matrix.python-version }}.txt
-          git add requirements/requirements-${{ matrix.os }}_py${{ matrix.python-version }}_extras.txt
-          git commit -m "Update ${{ matrix.os }} dependencies for ${{ matrix.package }}"
-          git push -f origin ${{ github.ref_name }}:auto-dependency-upgrades-${{ matrix.package }}-${{ matrix.os }}-py${{ matrix.python-version }}
-
-  pull_request:
-    name: Merge all branches and open PR
+    name: Upgrade uv.lock
     runs-on: ubuntu-latest
-    needs: upgrade
-    strategy:
-      matrix:
-        python-version: ["3.11"]
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v6
+          # Pushes made with the default GITHUB_TOKEN don't trigger workflows, so a
+          # refreshed branch on an already-open PR would never get CI.
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: detect auto-upgrade-dependency branches
-        id: changes
-        run: echo "count=$(git branch -r | grep auto-dependency-upgrades- | wc -l | xargs)" >> $GITHUB_OUTPUT
-      - name: merge all auto-dependency-upgrades branches
-        if: steps.changes.outputs.count > 0
+          version: "0.12.20"  # keep in step with required-version in pyproject.toml
+
+      - name: Upgrade uv.lock and regenerate requirements
         run: |
+          set -o pipefail
+          uv lock --upgrade 2>&1 | tee "$RUNNER_TEMP/uv-lock.log"
+          scripts/export_requirements.sh
+
+      - name: Summarize upgrades
+        run: |
+          python3 scripts/summarize_uv_lock_upgrade.py \
+            < "$RUNNER_TEMP/uv-lock.log" > "$RUNNER_TEMP/summary.md"
+          cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push
+        id: commit
+        run: |
+          if [ -z "$(git status --porcelain -- uv.lock requirements)" ]; then
+            echo "uv.lock is already up to date."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git checkout -b auto-dependency-upgrades
-          git branch -r | grep auto-dependency-upgrades- | xargs -I {} git merge {}
-          git rebase ${GITHUB_REF##*/}
-          git push -f origin auto-dependency-upgrades
-          git branch -r | grep auto-dependency-upgrades- | cut -d/ -f2 | xargs -I {} git push origin :{}
-      - name: Open pull request if needed
-        if: steps.changes.outputs.count > 0
+          git checkout -B "$BRANCH"
+          git add uv.lock requirements
+          git commit -m "Upgrade dependencies" \
+            -m "uv lock --upgrade, then scripts/export_requirements.sh."
+          git push -f origin "$BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the pull request
+        if: steps.commit.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        # Only open a PR if the branch is not attached to an existing one
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          PR=$(gh pr list --head auto-dependency-upgrades --json number -q '.[0].number')
-          if [ -z $PR ]; then
-            gh pr create \
-            --head auto-dependency-upgrades \
-            --title "Automated dependency upgrades" \
-            --body "Full log: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} (THIS IS AN AUTOMATED COMMENT)"
+          {
+            echo "\`uv lock --upgrade\`, with the requirements files regenerated from the new lock."
+            echo "Only releases older than the 7-day cooldown are eligible."
+            echo
+            cat "$RUNNER_TEMP/summary.md"
+            echo
+            echo "Full log: $RUN_URL (THIS IS AN AUTOMATED PR)"
+          } > "$RUNNER_TEMP/body.md"
+          PR=$(gh pr list --head "$BRANCH" --json number -q '.[0].number')
+          if [ -z "$PR" ]; then
+            gh pr create --base "$GITHUB_REF_NAME" --head "$BRANCH" \
+              --title "Automated dependency upgrades" --body-file "$RUNNER_TEMP/body.md"
           else
-            echo "Pull request already exists, won't create a new one."
+            gh pr edit "$PR" --body-file "$RUNNER_TEMP/body.md"
           fi
