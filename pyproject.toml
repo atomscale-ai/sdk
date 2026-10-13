@@ -69,6 +69,19 @@ where = ["src"]
 include = ["atomscale*", "atomicds"]
 exclude = ["atomscale.streaming.target*"]
 
+[tool.uv]
+# CI pins an exact uv (`version:` on every setup-uv step). This range keeps local uv
+# close enough to write the same uv.lock and requirements exports
+# (scripts/export_requirements.sh). Raise it together with those pins.
+required-version = ">=0.11.21,<0.13"
+# Dependency cooldown: resolve only releases at least this old. Most malicious
+# uploads are caught and yanked within days, so this keeps a compromised release
+# out of uv.lock, and so out of CI, which installs only from it.
+# For an urgent fix that is younger than this, exempt just that package and re-lock:
+#   exclude-newer-package = { <pkg> = false }
+#   uv lock --upgrade-package <pkg> && scripts/export_requirements.sh
+exclude-newer = "7 days"
+
 [tool.setuptools-rust]
 debug = false
 # optional global defaults (e.g., debug = false)
