@@ -13,23 +13,27 @@ import sys
 LINE = re.compile(r"^(Update|Add|Remove)(?:d|ed)? (\S+) v(.+?)(?: -> v(.+))?$")
 
 
-def newest(versions: str) -> str:
-    return versions.rsplit(", v", maxsplit=1)[-1]
+def versions(field: str) -> list[str]:
+    return field.split(", v")
 
 
-def leading_release(version: str) -> tuple[int, ...]:
-    return tuple(int(part) for part in re.findall(r"\d+", version)[:2])
-
-
-def is_major(old: str, new: str) -> bool:
+def major_key(version: str) -> tuple[int, ...]:
+    release = tuple(int(part) for part in re.findall(r"\d+", version)[:2])
     # A 0.x package signals breaking changes in its minor version (semver's 0.y rule).
     # Calendar versions (2026.6 -> 2027.1) also count, which errs towards flagging.
-    old_release, new_release = leading_release(old), leading_release(new)
-    if not old_release or not new_release:
+    return release if release[:1] == (0,) else release[:1]
+
+
+def is_major(old: list[str], new: list[str]) -> bool:
+    old_keys, new_keys = [major_key(v) for v in old], [major_key(v) for v in new]
+    if not all(old_keys + new_keys):
         return True
-    if old_release[0] != new_release[0]:
-        return True
-    return old_release[0] == 0 and old_release[1:2] != new_release[1:2]
+    # uv lists one version per fork, in ascending order. With the same number of forks
+    # on both sides, compare them pairwise. Otherwise which old version became which
+    # new one is unknown, so flag anything not within a single major on both sides.
+    if len(old_keys) == len(new_keys):
+        return old_keys != new_keys
+    return len(set(old_keys + new_keys)) > 1
 
 
 def main() -> None:
@@ -46,7 +50,7 @@ def main() -> None:
             removed.append(f"- `{name}` {old_display}")
         elif new:
             entry = f"| `{name}` | {old_display} | {new.replace(', v', ', ')} |"
-            (majors if is_major(newest(old), newest(new)) else others).append(entry)
+            (majors if is_major(versions(old), versions(new)) else others).append(entry)
 
     if not (majors or others or added or removed):
         print("No dependency changes.")
