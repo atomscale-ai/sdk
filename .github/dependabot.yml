@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Only GitHub Actions. Python dependencies are upgraded through uv.lock by
+  # .github/workflows/upgrade_dependencies.yml, which nothing here should compete with.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    # Same cooldown as uv's exclude-newer in pyproject.toml.
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns: ["*"]
