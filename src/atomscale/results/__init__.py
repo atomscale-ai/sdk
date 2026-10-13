@@ -11,6 +11,7 @@ from .rheed_image import (
     RHEEDImageCollection,
     RHEEDImageResult,
     _get_rheed_image_result,
+    _get_rheed_view_still,
     decode_mask_rle,
 )
 from .rheed_video import RHEEDVideoResult
@@ -40,5 +41,6 @@ __all__ = [
     "XPSResult",
     "XRDResult",
     "_get_rheed_image_result",
+    "_get_rheed_view_still",
     "decode_mask_rle",
 ]
