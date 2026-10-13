@@ -153,18 +153,14 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b
         with:
-          version: "latest"
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
+          version: "0.12.20"  # keep in step with required-version in pyproject.toml
           python-version: "3.11"
+          activate-environment: true
 
       - name: Install dependencies
         run: |
-          uv pip install --system -r requirements/requirements-ubuntu-latest_py3.11.txt
-          uv pip install --system -r requirements/requirements-ubuntu-latest_py3.11_extras.txt
-          uv pip install --system -e .
+          uv pip install -r requirements/requirements_extras.txt
+          uv pip install -e . --no-deps
 
       - name: Build docs
         run: sphinx-build ./docs ./docs/_build
