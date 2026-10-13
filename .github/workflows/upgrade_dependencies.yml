@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          # Always upgrade main, whichever branch the run was dispatched from: Testing
+          # only runs on PRs into main, and every run force-pushes the one $BRANCH.
+          ref: main
           # Pushes made with the default GITHUB_TOKEN don't trigger workflows, so a
           # refreshed branch on an already-open PR would never get CI.
           token: ${{ secrets.GH_TOKEN }}
@@ -78,7 +81,7 @@ jobs:
           } > "$RUNNER_TEMP/body.md"
           PR=$(gh pr list --head "$BRANCH" --json number -q '.[0].number')
           if [ -z "$PR" ]; then
-            gh pr create --base "$GITHUB_REF_NAME" --head "$BRANCH" \
+            gh pr create --base main --head "$BRANCH" \
               --title "Automated dependency upgrades" --body-file "$RUNNER_TEMP/body.md"
           else
             gh pr edit "$PR" --body-file "$RUNNER_TEMP/body.md"
