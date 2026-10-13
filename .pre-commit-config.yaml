@@ -16,15 +16,6 @@ repos:
       - id: mixed-line-ending
       - id: trailing-whitespace
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.4
-    hooks:
-      - id: ruff
-        args: [--fix, --show-fixes]
-        exclude: '\.ipynb$'
-      - id: ruff-format
-        exclude: '\.ipynb$'
-
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
@@ -33,8 +24,22 @@ repos:
         exclude_types: [json, bib, svg]
         args: [--ignore-words-list, "mater,fwe,te"]
 
+  # ruff and ty run from the project environment (`uv sync --extra dev`), so they
+  # use the versions pinned in uv.lock rather than a separate hook rev.
   - repo: local
     hooks:
+      - id: ruff
+        name: ruff
+        entry: ruff check --force-exclude --fix --show-fixes
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: ruff-format
+        name: ruff-format
+        entry: ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
       - id: ty
         name: ty
         entry: ty check src/atomicds

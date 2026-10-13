@@ -143,6 +143,7 @@ lint.extend-ignore = [
   "B028",  # No explicit stacklevel
   "EM101", # Exception must not use a string literal
   "EM102", # Exception must not use an f-string literal
+  "PLC0415", # Import not at top level (lazy imports are deliberate)
 ]
 lint.typing-modules = ["mypackage._compat.typing"]
 src = ["src"]
