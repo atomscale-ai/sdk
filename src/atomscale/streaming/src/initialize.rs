@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use reqwest::Client;
+use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Debug)]
@@ -48,6 +48,12 @@ struct CreatePhysicalSampleResponse {
     physical_sample_id: String,
 }
 
+/// The body of the 409 the server answers when the name is already taken in the org.
+#[derive(Deserialize, Debug)]
+struct PhysicalSampleNameTaken {
+    detail: CreatePhysicalSampleResponse,
+}
+
 #[derive(Serialize)]
 struct LinkPhysicalSampleRequest {
     data_ids: Vec<String>,
@@ -73,8 +79,70 @@ fn looks_like_uuid(s: &str) -> bool {
     true
 }
 
+async fn list_physical_samples(
+    client: &Client,
+    list_url: &str,
+    api_key: &str,
+) -> Result<Vec<PhysicalSampleSummary>> {
+    client
+        .get(list_url)
+        .header("X-API-KEY", api_key)
+        .send()
+        .await
+        .context("failed to request physical samples")?
+        .error_for_status()
+        .context("physical sample list returned error status")?
+        .json()
+        .await
+        .context("failed to deserialize physical sample list")
+}
+
+/// Names match the way the server keys uniqueness: trimmed, ignoring case.
+fn find_sample_named(samples: &[PhysicalSampleSummary], name: &str) -> Option<String> {
+    samples
+        .iter()
+        .find(|s| s.name.trim().eq_ignore_ascii_case(name))
+        .map(|s| s.id.clone())
+}
+
+/// Creates a sample named `name`. A 409 means the name is already taken in the org, and its
+/// body names the existing sample, which is returned instead.
+async fn create_physical_sample(
+    client: &Client,
+    list_url: &str,
+    api_key: &str,
+    name: &str,
+) -> Result<String> {
+    let response = client
+        .post(list_url)
+        .header("X-API-KEY", api_key)
+        .json(&CreatePhysicalSampleRequest { name })
+        .send()
+        .await
+        .context("failed to create physical sample")?;
+    if response.status() == StatusCode::CONFLICT {
+        let taken: PhysicalSampleNameTaken = response
+            .json()
+            .await
+            .context("physical sample creation returned 409 without the existing sample's id")?;
+        return Ok(taken.detail.physical_sample_id);
+    }
+    let created: CreatePhysicalSampleResponse = response
+        .error_for_status()
+        .context("physical sample creation returned error status")?
+        .json()
+        .await
+        .context("failed to deserialize physical sample creation response")?;
+    Ok(created.physical_sample_id)
+}
+
 /// Resolves a physical sample name or UUID to its id. A UUID must match an existing sample; a
 /// name is matched case-insensitively, and a sample is created if none matches.
+///
+/// Creating a sample races when several streams are initialized at once with the same new
+/// name: every caller sees it missing and POSTs it. The server lets the first through and
+/// answers the rest with 409 and the winner's id. Any other failed create re-lists the samples
+/// and takes the one that now exists, failing only if it is still missing.
 async fn resolve_physical_sample(
     client: &Client,
     base_endpoint: &str,
@@ -87,55 +155,28 @@ async fn resolve_physical_sample(
     }
 
     let list_url = format!("{base_endpoint}/physical_samples/");
-    let existing_samples: Vec<PhysicalSampleSummary> = client
-        .get(&list_url)
-        .header("X-API-KEY", api_key)
-        .send()
-        .await
-        .context("failed to request physical samples")?
-        .error_for_status()
-        .context("physical sample list returned error status")?
-        .json()
-        .await
-        .context("failed to deserialize physical sample list")?;
+    let existing_samples = list_physical_samples(client, &list_url, api_key).await?;
 
-    // Determine if input looks like a UUID or a name
-    let sample_id = if looks_like_uuid(sample_name_or_id) {
-        // UUID provided: look up by ID, error if not found
-        existing_samples
-            .into_iter()
+    if looks_like_uuid(sample_name_or_id) {
+        return existing_samples
+            .iter()
             .find(|sample| sample.id == sample_name_or_id)
-            .map(|sample| sample.id)
-            .ok_or_else(|| anyhow::anyhow!(
-                "physical sample with id '{}' not found",
-                sample_name_or_id
-            ))?
-    } else {
-        // Name provided: look up by name (case-insensitive), create if not found
-        if let Some(sample) = existing_samples
-            .into_iter()
-            .find(|sample| sample.name.eq_ignore_ascii_case(sample_name_or_id))
-        {
-            sample.id
-        } else {
-            let create_body = CreatePhysicalSampleRequest { name: sample_name_or_id };
-            let created: CreatePhysicalSampleResponse = client
-                .post(&list_url)
-                .header("X-API-KEY", api_key)
-                .json(&create_body)
-                .send()
-                .await
-                .context("failed to create physical sample")?
-                .error_for_status()
-                .context("physical sample creation returned error status")?
-                .json()
-                .await
-                .context("failed to deserialize physical sample creation response")?;
-            created.physical_sample_id
-        }
-    };
-
-    Ok(sample_id)
+            .map(|sample| sample.id.clone())
+            .ok_or_else(|| {
+                anyhow::anyhow!("physical sample with id '{}' not found", sample_name_or_id)
+            });
+    }
+    if let Some(id) = find_sample_named(&existing_samples, sample_name_or_id) {
+        return Ok(id);
+    }
+    match create_physical_sample(client, &list_url, api_key, sample_name_or_id).await {
+        Ok(id) => Ok(id),
+        Err(create_err) => list_physical_samples(client, &list_url, api_key)
+            .await
+            .ok()
+            .and_then(|samples| find_sample_named(&samples, sample_name_or_id))
+            .ok_or(create_err),
+    }
 }
 
 async fn link_physical_sample(

@@ -276,6 +276,40 @@ class TestTimeseriesStreamerInitialize:
         attach = next(r for r in server.stop_and_get_requests() if "/tags/data-items/" in r)
         assert winner_id in attach
 
+    def test_initialize_reuses_sample_named_in_409(self, mock_server_factory):
+        """A sample create answered 409 (another stream just made it) reuses that sample.
+
+        The race itself is covered in test_rheed_stream; this pins the timeseries wiring.
+        """
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        winner_id = "55555555-5555-5555-5555-555555555555"
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 4,
+            "__status_sequence__": {"POST /physical_samples/": [409]},
+            "GET /physical_samples/": "[]",
+            "POST /physical_samples/": json.dumps({
+                "detail": {"message": "taken", "physical_sample_id": winner_id}
+            }),
+            "POST /data_entries/physical_sample": '"OK"',
+            "/tool-state/stream/initialize": json.dumps({
+                "data_id": "ts-data-id",
+                "processed_data_id": "ts-proc-id",
+            }),
+        })
+
+        server = mock_server_factory(routes)
+        streamer = TimeseriesStreamer(api_key="k", endpoint=server.endpoint)
+
+        data_id = streamer.initialize(stream_name="Tool state", physical_sample="Shared-Run")
+
+        assert data_id == "ts-data-id"
+        link = next(
+            r for r in server.stop_and_get_requests() if "/data_entries/physical_sample" in r
+        )
+        assert winner_id in link
+
     def test_initialize_link_failure_finalizes_stream_and_names_data_id(
         self, mock_server_factory
     ):
