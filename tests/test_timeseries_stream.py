@@ -245,6 +245,89 @@ class TestTimeseriesStreamerInitialize:
         assert tag_id in attach
         assert "ts-data-id" in attach
 
+    def test_initialize_reuses_tag_created_by_concurrent_stream(self, mock_server_factory):
+        """A tag create rejected as a duplicate (another stream just made it) reuses that tag.
+
+        The race itself is covered in test_rheed_stream; this pins the timeseries wiring.
+        """
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        winner_id = "44444444-4444-4444-4444-444444444444"
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 5,
+            "__body_sequence__": {"GET /tags/": ["[]"]},
+            "__status_sequence__": {"POST /tags/": [400]},
+            "POST /tags/data-items/": '{"success": true, "associations_created": 1}',
+            "GET /tags/": json.dumps([{"id": winner_id, "name": "tool-state"}]),
+            "POST /tags/": json.dumps({"detail": "Tag with name 'tool-state' already exists"}),
+            "/tool-state/stream/initialize": json.dumps({
+                "data_id": "ts-data-id",
+                "processed_data_id": "ts-proc-id",
+            }),
+        })
+
+        server = mock_server_factory(routes)
+        streamer = TimeseriesStreamer(api_key="k", endpoint=server.endpoint)
+
+        data_id = streamer.initialize(stream_name="Tool state", tags=["tool-state"])
+
+        assert data_id == "ts-data-id"
+        attach = next(r for r in server.stop_and_get_requests() if "/tags/data-items/" in r)
+        assert winner_id in attach
+
+    def test_initialize_link_failure_finalizes_stream_and_names_data_id(
+        self, mock_server_factory
+    ):
+        """A tag attach failing after the stream exists finalizes the stream, and the error
+        names the data_id instead of leaving a `stream_active` item the caller cannot see."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        stream = json.dumps({"data_id": "ts-data-id", "processed_data_id": "ts-proc-id"})
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 4,
+            "__status_sequence__": {"POST /tags/data-items/": [500]},
+            "GET /tags/": json.dumps([{"id": "t1", "name": "growth"}]),
+            "POST /tags/data-items/": '{"detail": "boom"}',
+            "/tool-state/stream/ts-data-id/finalize": stream,
+            "/tool-state/stream/initialize": stream,
+        })
+
+        server = mock_server_factory(routes)
+        streamer = TimeseriesStreamer(api_key="k", endpoint=server.endpoint)
+
+        with pytest.raises(RuntimeError, match="stream ts-data-id was created .* so it was ended"):
+            streamer.initialize(stream_name="Tool state", tags=["growth"])
+
+        assert any(
+            r.startswith("REQUEST:POST:/tool-state/stream/ts-data-id/finalize:")
+            for r in server.stop_and_get_requests()
+        )
+
+    def test_initialize_unknown_tag_creates_no_stream(self, mock_server_factory):
+        """An unknown tag UUID raises before the stream is created."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 2,
+            "GET /tags/": "[]",
+            "/tool-state/stream/initialize": json.dumps({
+                "data_id": "ts-data-id",
+                "processed_data_id": "ts-proc-id",
+            }),
+        })
+
+        server = mock_server_factory(routes)
+        streamer = TimeseriesStreamer(api_key="k", endpoint=server.endpoint)
+
+        with pytest.raises(RuntimeError, match="tag with id .* not found"):
+            streamer.initialize(tags=["99999999-9999-9999-9999-999999999999"])
+
+        requests = server.stop_and_get_requests()
+        assert not any("/tool-state/stream/initialize" in r for r in requests)
+
 
 class TestTimeseriesStreamerPush:
     """Tests for TimeseriesStreamer.push() method."""

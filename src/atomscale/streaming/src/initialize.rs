@@ -73,11 +73,12 @@ fn looks_like_uuid(s: &str) -> bool {
     true
 }
 
-pub async fn ensure_physical_sample_link(
+/// Resolves a physical sample name or UUID to its id. A UUID must match an existing sample; a
+/// name is matched case-insensitively, and a sample is created if none matches.
+async fn resolve_physical_sample(
     client: &Client,
     base_endpoint: &str,
     api_key: &str,
-    data_id: &str,
     sample_name_or_id: &str,
 ) -> Result<String> {
     let sample_name_or_id = sample_name_or_id.trim();
@@ -134,10 +135,20 @@ pub async fn ensure_physical_sample_link(
         }
     };
 
+    Ok(sample_id)
+}
+
+async fn link_physical_sample(
+    client: &Client,
+    base_endpoint: &str,
+    api_key: &str,
+    data_id: &str,
+    sample_id: &str,
+) -> Result<()> {
     let link_url = format!("{base_endpoint}/data_entries/physical_sample");
     let link_body = LinkPhysicalSampleRequest {
         data_ids: vec![data_id.to_string()],
-        physical_sample_id: sample_id.clone(),
+        physical_sample_id: sample_id.to_string(),
     };
 
     client
@@ -150,7 +161,7 @@ pub async fn ensure_physical_sample_link(
         .error_for_status()
         .context("physical sample link returned error status")?;
 
-    Ok(sample_id)
+    Ok(())
 }
 
 /// Adds a physical sample to a project's tracking list (and project membership).
@@ -174,7 +185,7 @@ struct AddTrackingSampleBody<'a> {
     set_active: bool,
 }
 
-pub async fn add_sample_to_project(
+async fn add_sample_to_project(
     client: &Client,
     base_endpoint: &str,
     api_key: &str,
@@ -222,7 +233,43 @@ struct AttachTagsRequest {
     tag_ids: Vec<String>,
 }
 
-/// Resolves tag inputs to tag IDs and attaches them to a data item.
+async fn list_tags(client: &Client, list_url: &str, api_key: &str) -> Result<Vec<TagSummary>> {
+    client
+        .get(list_url)
+        .header("X-API-KEY", api_key)
+        .send()
+        .await
+        .context("failed to request tags")?
+        .error_for_status()
+        .context("tag list returned error status")?
+        .json()
+        .await
+        .context("failed to deserialize tag list")
+}
+
+fn find_tag_named(tags: &[TagSummary], name: &str) -> Option<String> {
+    tags.iter()
+        .find(|t| t.name.eq_ignore_ascii_case(name))
+        .map(|t| t.id.clone())
+}
+
+async fn create_tag(client: &Client, list_url: &str, api_key: &str, name: &str) -> Result<String> {
+    let created: CreateTagResponse = client
+        .post(list_url)
+        .header("X-API-KEY", api_key)
+        .json(&CreateTagRequest { name })
+        .send()
+        .await
+        .context("failed to create tag")?
+        .error_for_status()
+        .context("tag creation returned error status")?
+        .json()
+        .await
+        .context("failed to deserialize tag creation response")?;
+    Ok(created.id)
+}
+
+/// Resolves tag inputs to tag IDs.
 ///
 /// For each input string:
 ///   - If it looks like a UUID, looks up the tag by id (errors if not found).
@@ -234,13 +281,14 @@ struct AttachTagsRequest {
 /// resolution. If no inputs remain, no requests are made and an empty
 /// vector is returned.
 ///
-/// On success, issues a single bulk `POST /tags/data-items/` to attach all
-/// resolved tag IDs to the given `data_id`.
-pub async fn ensure_tags_attached(
+/// Creating a tag races when several streams are initialized at once with the same new tag:
+/// every caller sees it missing and POSTs it, and the server rejects all but the first (400
+/// for a duplicate name). So a failed create re-lists the tags and takes the one that now
+/// exists, failing only if it is still missing.
+async fn resolve_tag_ids(
     client: &Client,
     base_endpoint: &str,
     api_key: &str,
-    data_id: &str,
     tag_inputs: &[String],
 ) -> Result<Vec<String>> {
     // Trim, drop empties, dedupe case-insensitively (preserve first-seen casing).
@@ -263,17 +311,7 @@ pub async fn ensure_tags_attached(
     }
 
     let list_url = format!("{base_endpoint}/tags/");
-    let existing_tags: Vec<TagSummary> = client
-        .get(&list_url)
-        .header("X-API-KEY", api_key)
-        .send()
-        .await
-        .context("failed to request tags")?
-        .error_for_status()
-        .context("tag list returned error status")?
-        .json()
-        .await
-        .context("failed to deserialize tag list")?;
+    let existing_tags = list_tags(client, &list_url, api_key).await?;
 
     let mut tag_ids: Vec<String> = Vec::with_capacity(cleaned.len());
     for input in &cleaned {
@@ -283,34 +321,40 @@ pub async fn ensure_tags_attached(
                 .find(|t| t.id == *input)
                 .map(|t| t.id.clone())
                 .ok_or_else(|| anyhow::anyhow!("tag with id '{}' not found", input))?
-        } else if let Some(tag) = existing_tags
-            .iter()
-            .find(|t| t.name.eq_ignore_ascii_case(input))
-        {
-            tag.id.clone()
+        } else if let Some(id) = find_tag_named(&existing_tags, input) {
+            id
         } else {
-            let body = CreateTagRequest { name: input };
-            let created: CreateTagResponse = client
-                .post(&list_url)
-                .header("X-API-KEY", api_key)
-                .json(&body)
-                .send()
-                .await
-                .context("failed to create tag")?
-                .error_for_status()
-                .context("tag creation returned error status")?
-                .json()
-                .await
-                .context("failed to deserialize tag creation response")?;
-            created.id
+            match create_tag(client, &list_url, api_key, input).await {
+                Ok(id) => id,
+                Err(create_err) => list_tags(client, &list_url, api_key)
+                    .await
+                    .ok()
+                    .and_then(|tags| find_tag_named(&tags, input))
+                    .ok_or(create_err)?,
+            }
         };
         tag_ids.push(id);
+    }
+
+    Ok(tag_ids)
+}
+
+/// Attaches `tag_ids` to `data_id` with a single bulk `POST /tags/data-items/`.
+async fn attach_tags(
+    client: &Client,
+    base_endpoint: &str,
+    api_key: &str,
+    data_id: &str,
+    tag_ids: &[String],
+) -> Result<()> {
+    if tag_ids.is_empty() {
+        return Ok(());
     }
 
     let attach_url = format!("{base_endpoint}/tags/data-items/");
     let attach_body = AttachTagsRequest {
         data_ids: vec![data_id.to_string()],
-        tag_ids: tag_ids.clone(),
+        tag_ids: tag_ids.to_vec(),
     };
 
     client
@@ -323,5 +367,97 @@ pub async fn ensure_tags_attached(
         .error_for_status()
         .context("tag attach returned error status")?;
 
-    Ok(tag_ids)
+    Ok(())
+}
+
+/// The physical sample, project and tags a new stream is linked to. Resolved by
+/// [`resolve_stream_links`] before the stream is created, applied by [`link_new_stream`] after.
+pub struct StreamLinks {
+    physical_sample_id: Option<String>,
+    project_id: Option<String>,
+    tag_ids: Vec<String>,
+}
+
+/// Resolves `initialize()`'s physical sample and tags to ids, creating any that do not exist
+/// yet. None of this needs the stream, so it runs before the stream is created: an unknown
+/// sample or tag UUID, or a failed create, then raises without leaving a `stream_active` item
+/// behind whose `data_id` the caller never received.
+pub async fn resolve_stream_links(
+    client: &Client,
+    base_endpoint: &str,
+    api_key: &str,
+    physical_sample: Option<&str>,
+    project_id: Option<String>,
+    tag_inputs: &[String],
+) -> Result<StreamLinks> {
+    let sample = async {
+        match physical_sample {
+            Some(sample) => resolve_physical_sample(client, base_endpoint, api_key, sample)
+                .await
+                .map(Some),
+            None => Ok(None),
+        }
+    };
+    let (physical_sample_id, tag_ids) = tokio::try_join!(
+        sample,
+        resolve_tag_ids(client, base_endpoint, api_key, tag_inputs),
+    )?;
+    Ok(StreamLinks {
+        physical_sample_id,
+        project_id,
+        tag_ids,
+    })
+}
+
+async fn link_sample_and_project(
+    client: &Client,
+    base_endpoint: &str,
+    api_key: &str,
+    data_id: &str,
+    links: &StreamLinks,
+) -> Result<()> {
+    let Some(sample_id) = links.physical_sample_id.as_deref() else {
+        return Ok(());
+    };
+    link_physical_sample(client, base_endpoint, api_key, data_id, sample_id).await?;
+    if let Some(project_id) = links.project_id.as_deref() {
+        add_sample_to_project(client, base_endpoint, api_key, project_id, sample_id).await?;
+    }
+    Ok(())
+}
+
+/// Links the new stream `data_id` to `links`. These calls need the stream, so they can only
+/// fail after it exists; when one does, the stream is ended at `end_url` instead of being left
+/// `stream_active` with a `data_id` the caller never received, and the error names `data_id`.
+pub async fn link_new_stream(
+    client: &Client,
+    base_endpoint: &str,
+    api_key: &str,
+    data_id: &str,
+    links: &StreamLinks,
+    end_url: &str,
+) -> Result<()> {
+    let linked = tokio::try_join!(
+        link_sample_and_project(client, base_endpoint, api_key, data_id, links),
+        attach_tags(client, base_endpoint, api_key, data_id, &links.tag_ids),
+    );
+    let Err(link_err) = linked else {
+        return Ok(());
+    };
+
+    let ended = client
+        .post(end_url)
+        .header("X-API-KEY", api_key)
+        .send()
+        .await
+        .and_then(|resp| resp.error_for_status());
+    Err(match ended {
+        Ok(_) => link_err.context(format!(
+            "stream {data_id} was created but could not be linked, so it was ended"
+        )),
+        Err(end_err) => link_err.context(format!(
+            "stream {data_id} was created but could not be linked, and ending it failed \
+             ({end_err}); call finalize(\"{data_id}\") to close it"
+        )),
+    })
 }

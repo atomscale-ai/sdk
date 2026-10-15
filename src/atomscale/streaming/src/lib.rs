@@ -20,8 +20,7 @@ use timeseries::TimeseriesStreamer;
 
 mod initialize;
 use initialize::{
-    add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached,
-    post_for_initialization, RHEEDStreamSettings,
+    link_new_stream, post_for_initialization, resolve_stream_links, RHEEDStreamSettings,
 };
 
 mod retry;
@@ -174,7 +173,9 @@ impl RHEEDStreamer {
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
-    ///     RuntimeError: If the initialization POST fails.
+    ///     RuntimeError: If the stream cannot be created or linked. The physical sample and tags
+    ///         are resolved before the stream is created, so a bad one creates nothing. If linking
+    ///         fails after creation, the stream is ended and the error names its `data_id`.
     #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None))]
     #[pyo3(
         text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None)"
@@ -224,8 +225,20 @@ impl RHEEDStreamer {
             project_id,
         };
 
-        let base_endpoint = self.endpoint.clone();
-        let post_url = format!("{base_endpoint}/rheed/stream/");
+        let links_fut = resolve_stream_links(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            physical_sample.as_deref(),
+            settings.project_id.clone(),
+            tags.as_deref().unwrap_or_default(),
+        );
+        let links = self
+            .rt
+            .block_on(links_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
+
+        let post_url = format!("{}/rheed/stream/", self.endpoint);
         let init_fut = post_for_initialization(&self.client, &post_url, &settings, &self.api_key);
 
         let data_id = self
@@ -233,51 +246,18 @@ impl RHEEDStreamer {
             .block_on(init_fut)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
-        if let Some(sample_name) = physical_sample {
-            let physical_sample_fut = ensure_physical_sample_link(
-                &self.client,
-                &base_endpoint,
-                &self.api_key,
-                &data_id,
-                &sample_name,
-            );
-            let sample_id = self
-                .rt
-                .block_on(physical_sample_fut)
-                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-
-            // If project_id was provided, add the sample to the project's membership.
-            // We deliberately do NOT touch growth-monitoring tracking config here —
-            // that endpoint blindly re-validates the project's full configuration
-            // and is fragile (see add_sample_to_project for details).
-            if let Some(ref proj_id) = settings.project_id {
-                let add_to_project_fut = add_sample_to_project(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    proj_id,
-                    &sample_id,
-                );
-                self.rt
-                    .block_on(add_to_project_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
-
-        if let Some(tag_inputs) = tags {
-            if !tag_inputs.is_empty() {
-                let tags_fut = ensure_tags_attached(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    &data_id,
-                    &tag_inputs,
-                );
-                self.rt
-                    .block_on(tags_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
+        let end_url = self.end_url(&data_id);
+        let link_fut = link_new_stream(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            &data_id,
+            &links,
+            &end_url,
+        );
+        self.rt
+            .block_on(link_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         // Insert per-stream state keyed by the new data_id. State is not
         // shared with any other concurrent stream on this streamer instance.
@@ -559,8 +539,7 @@ impl RHEEDStreamer {
     #[pyo3(signature = (data_id))]
     #[pyo3(text_signature = "(data_id)")]
     fn finalize(&self, data_id: String) -> PyResult<()> {
-        let base_endpoint = self.endpoint.clone();
-        let post_url = format!("{base_endpoint}/rheed/stream/{data_id}/end");
+        let post_url = self.end_url(&data_id);
         let final_fut = generic_post(&self.client, &post_url, &self.api_key);
 
         self.rt
@@ -590,6 +569,10 @@ const UPLOAD_BUDGET_MIB: u32 = 1024;
 
 // Private and rust only access
 impl RHEEDStreamer {
+    fn end_url(&self, data_id: &str) -> String {
+        format!("{}/rheed/stream/{data_id}/end", self.endpoint)
+    }
+
     /// cfg(self, data_id) -> Tuple[bool, float, int]
     ///
     /// Internal helper: looks up per-stream config for `data_id`. Returns the

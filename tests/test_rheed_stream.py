@@ -180,6 +180,15 @@ def mock_server_factory() -> Callable[[str], MockServer]:
         server.stop()
 
 
+def _logged_requests(server: MockServer) -> list[tuple[str, str, str]]:
+    """Every request the routes-mode server has logged so far.
+
+    Call after the SDK call returns: each request is logged before it is answered, so all
+    of them are already on their way to us and the short wait only bounds the read.
+    """
+    return server.get_captured_requests(expected_count=1_000, timeout_s=1)
+
+
 class TestRHEEDStreamerInitialize:
     """Tests for RHEEDStreamer.initialize() method."""
 
@@ -606,6 +615,166 @@ class TestRHEEDStreamerTags:
                 chunk_size=60,
                 tags=["99999999-9999-9999-9999-999999999999"],
             )
+
+        # Tags resolve before the stream is created, so nothing was created.
+        assert not any(p == "/rheed/stream/" for (_, p, _) in _logged_requests(server))
+
+    def test_initialize_reuses_tag_created_by_concurrent_stream(self, mock_server_factory):
+        """Losing the tag-creation race to a parallel initialize() reuses the winner's tag.
+
+        Streams initialized at once with the same new tag all list tags, all see it missing,
+        and all POST it; the server answers every POST after the first with 400. Here the
+        first GET /tags/ is empty, POST /tags/ is rejected as a duplicate, and the re-list
+        returns the tag the other caller created (stored in different casing).
+        """
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        winner_id = "44444444-4444-4444-4444-444444444444"
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 5,
+            "__body_sequence__": {"GET /tags/": ["[]"]},
+            "__status_sequence__": {"POST /tags/": [400]},
+            "POST /tags/data-items/": '{"success": true, "associations_created": 1}',
+            "GET /tags/": json.dumps([{"id": winner_id, "name": "shared-run"}]),
+            "POST /tags/": json.dumps(
+                {"detail": "Tag with name 'Shared-Run' already exists in your organization"}
+            ),
+            "/rheed/stream/": '"data-id-race"',
+        })
+
+        server = mock_server_factory(routes)
+        streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+
+        data_id = streamer.initialize(
+            fps=30.0, rotations_per_min=0.0, chunk_size=60, tags=["Shared-Run"]
+        )
+
+        assert data_id == "data-id-race"
+        requests = server.get_captured_requests(expected_count=5, timeout_s=5)
+        # Tags are resolved (and the lost create recovered) before the stream is created.
+        assert [(m, p) for (m, p, _) in requests] == [
+            ("GET", "/tags/"),
+            ("POST", "/tags/"),
+            ("GET", "/tags/"),
+            ("POST", "/rheed/stream/"),
+            ("POST", "/tags/data-items/"),
+        ]
+        attach_body = json.loads(requests[-1][2])
+        assert attach_body == {"data_ids": ["data-id-race"], "tag_ids": [winner_id]}
+
+    def test_initialize_tag_still_missing_after_failed_create_creates_no_stream(
+        self, mock_server_factory
+    ):
+        """A rejected tag create with no such tag on re-list raises before any stream exists."""
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 3,
+            "__status_sequence__": {"POST /tags/": [400]},
+            "GET /tags/": "[]",
+            "POST /tags/": json.dumps({"detail": "Tag name is invalid"}),
+            "/rheed/stream/": '"data-id-must-not-exist"',
+        })
+
+        server = mock_server_factory(routes)
+        streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+
+        with pytest.raises(RuntimeError, match="tag creation returned error status"):
+            streamer.initialize(
+                fps=30.0, rotations_per_min=0.0, chunk_size=60, tags=["new-tag"]
+            )
+
+        assert [(m, p) for (m, p, _) in _logged_requests(server)] == [
+            ("GET", "/tags/"),
+            ("POST", "/tags/"),
+            ("GET", "/tags/"),
+        ]
+
+
+class TestRHEEDStreamerInitializeNoOrphan:
+    """initialize() never leaves a `stream_active` item whose data_id the caller never got."""
+
+    def test_unknown_physical_sample_uuid_creates_no_stream(self, mock_server_factory):
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 2,
+            "GET /physical_samples/": "[]",
+            "/rheed/stream/": '"data-id-must-not-exist"',
+        })
+
+        server = mock_server_factory(routes)
+        streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+
+        with pytest.raises(RuntimeError, match="physical sample with id .* not found"):
+            streamer.initialize(
+                fps=30.0,
+                rotations_per_min=0.0,
+                chunk_size=60,
+                physical_sample="99999999-9999-9999-9999-999999999999",
+            )
+
+        assert not any(p == "/rheed/stream/" for (_, p, _) in _logged_requests(server))
+
+    @pytest.mark.parametrize(
+        "failing_route",
+        [
+            "POST /data_entries/physical_sample",
+            "POST /projects/550e8400-e29b-41d4-a716-446655440000/configuration/tracking_samples",
+            "POST /tags/data-items/",
+        ],
+    )
+    @pytest.mark.parametrize("end_status", [200, 500])
+    def test_link_failure_ends_stream_and_names_data_id(
+        self, mock_server_factory, failing_route, end_status
+    ):
+        """A link step failing after the stream exists ends the stream; the error names the
+        data_id, and says to finalize it by hand if ending it failed too."""
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        project_uuid = "550e8400-e29b-41d4-a716-446655440000"
+        data_id = "data-id-link-fails"
+        end_route = f"POST /rheed/stream/{data_id}/end"
+        routes = json.dumps({
+            "__routes__": True,
+            "__max_requests__": 7,
+            "__status_sequence__": {failing_route: [500], end_route: [end_status]},
+            "GET /physical_samples/": json.dumps([{"id": "s1", "name": "Sample"}]),
+            "POST /data_entries/physical_sample": '"OK"',
+            f"POST /projects/{project_uuid}/configuration/tracking_samples": '"OK"',
+            "GET /tags/": json.dumps([{"id": "t1", "name": "growth"}]),
+            "POST /tags/data-items/": '{"success": true, "associations_created": 1}',
+            end_route: '{"message": "Stream finalize successfully initiated"}',
+            "/rheed/stream/": f'"{data_id}"',
+        })
+
+        server = mock_server_factory(routes)
+        streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+
+        outcome = (
+            "so it was ended"
+            if end_status == 200
+            else rf'ending it failed .*call finalize\("{data_id}"\)'
+        )
+        with pytest.raises(RuntimeError, match=rf"stream {data_id} was created.*{outcome}"):
+            streamer.initialize(
+                fps=30.0,
+                rotations_per_min=0.0,
+                chunk_size=60,
+                physical_sample="Sample",
+                project_id=project_uuid,
+                tags=["growth"],
+            )
+
+        assert ("POST", f"/rheed/stream/{data_id}/end") in [
+            (m, p) for (m, p, _) in _logged_requests(server)
+        ]
+        # The ended stream kept no per-stream state on this streamer.
+        with pytest.raises(RuntimeError, match="no stream initialized"):
+            streamer.run(data_id, iter([]))
 
 
 class TestStreamingE2E:
