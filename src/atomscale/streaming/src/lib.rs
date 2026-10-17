@@ -41,6 +41,17 @@ fn chunk_end(start_ms: i64, n: usize, fps: f64) -> i64 {
     start_ms + ((n as f64 / fps) * 1000.0) as i64
 }
 
+/// The capture start of a chunk the caller handed over at `completed_ms`.
+///
+/// A chunk is pushed once its frames exist, so the moment it arrives here is when it finished
+/// being captured, not when it started: its first frame was captured one chunk span earlier.
+/// Stamping the arrival as the start would put every chunk, and the stream's alignment with
+/// other wall-clock data, a chunk span late.
+#[inline]
+fn capture_start_for_completed_chunk(completed_ms: i64, n: usize, fps: f64) -> i64 {
+    completed_ms - (chunk_end(0, n, fps))
+}
+
 /// RHEEDStreamer(api_key: str, endpoint: Optional[str] = None)
 ///
 /// A thin, high-performance Python interface (via PyO3) for **real-time RHEED frame
@@ -352,13 +363,13 @@ impl RHEEDStreamer {
     ///
     /// Timestamps
     /// ----------
-    /// When the caller does not supply a `capture_start_ms_utc`, this method
-    /// stamps each chunk with `Utc::now()` sampled the moment the iterator
-    /// yields, before any GIL-held packaging work. The chunk's
-    /// `end_unix_ms_utc` is then `start + (n / fps) * 1000`. Inter-chunk
-    /// gaps therefore reflect real arrival jitter; intra-chunk span follows
-    /// declared fps. Pass an explicit timestamp when you have a hardware
-    /// clock (camera trigger, OS monotonic-to-utc conversion).
+    /// Every chunk is stamped with when its first frame was **captured**, so the stream
+    /// aligns with other lab wall-clock data. The chunk's `end_unix_ms_utc` is
+    /// `start + (n / fps) * 1000`. Yield `(frames, capture_start_ms_utc)` whenever you have a
+    /// real capture clock (camera trigger, OS monotonic-to-utc conversion). When you yield
+    /// bare frames, each chunk is taken to have just finished capturing: `Utc::now()` is
+    /// sampled the moment the iterator yields, before any GIL-held packaging work, and the
+    /// start is that minus the chunk's span (`n / fps`).
     ///
     /// Args:
     ///     data_id (str): The stream data ID returned by `initialize(...)`.
@@ -426,7 +437,8 @@ impl RHEEDStreamer {
                 t0.elapsed(), flat_len
             );
 
-            let start_unix_ms_utc = caller_start_ms.unwrap_or(arrival_ms);
+            let start_unix_ms_utc = caller_start_ms
+                .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps));
             let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
 
             let metadata = FrameChunkMetadata {
@@ -491,13 +503,14 @@ impl RHEEDStreamer {
     ///
     /// Timestamps
     /// ----------
-    /// When `capture_start_ms_utc` is not provided, this method stamps each
-    /// chunk with `Utc::now()` sampled the moment `push()` is entered, before
-    /// any GIL-held packaging work. The chunk's `end_unix_ms_utc` is then
-    /// `start + (n / fps) * 1000`. Inter-chunk gaps therefore reflect real
-    /// arrival jitter; intra-chunk span follows declared fps. Pass an explicit
-    /// timestamp when you have a hardware clock (camera trigger, OS
-    /// monotonic-to-utc conversion).
+    /// Every chunk is stamped with when its first frame was **captured**, so the stream
+    /// aligns with other lab wall-clock data. The chunk's `end_unix_ms_utc` is
+    /// `start + (n / fps) * 1000`. Pass `capture_start_ms_utc` whenever you have a real
+    /// capture clock (camera trigger, OS monotonic-to-utc conversion). When you do not, the
+    /// chunk is taken to have just finished being captured: `push()` samples `Utc::now()` on
+    /// entry, before any GIL-held packaging work, and the start is that minus the chunk's
+    /// span (`n / fps`). That estimate is only as good as how promptly you push; a chunk
+    /// pushed late is stamped late.
     ///
     /// Args:
     ///     data_id (str): The remote data identifier returned by `initialize(...)`.
@@ -505,8 +518,8 @@ impl RHEEDStreamer {
     ///     frames (numpy.ndarray): `(N,H,W)` or `(H,W)` grayscale frames as `uint8`.
     ///     capture_start_ms_utc (Optional[int]): Capture-start timestamp in milliseconds
     ///         since UNIX epoch (UTC). Pass when you have a real capture-time clock
-    ///         (camera trigger, OS monotonic-to-utc conversion). When None, sampled
-    ///         from `Utc::now()` on entry.
+    ///         (camera trigger, OS monotonic-to-utc conversion). When None, the chunk is
+    ///         taken to have just finished capturing: `Utc::now()` on entry minus `n / fps`.
     ///
     /// Returns:
     ///     None
@@ -534,7 +547,8 @@ impl RHEEDStreamer {
         let py = frames.py();
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
-        let start_unix_ms_utc = capture_start_ms_utc.unwrap_or(arrival_ms);
+        let start_unix_ms_utc = capture_start_ms_utc
+            .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps));
         let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
 
         let metadata = FrameChunkMetadata {
@@ -757,7 +771,17 @@ fn rheed_stream(m: &Bound<PyModule>) -> PyResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::chunk_end;
+    use super::{capture_start_for_completed_chunk, chunk_end};
+
+    /// A chunk pushed the moment it finished capturing started one span earlier.
+    #[test]
+    fn a_completed_chunk_started_one_span_earlier() {
+        let completed = 1_700_000_010_000;
+        // 240 frames at 120 fps span 2000 ms.
+        let start = capture_start_for_completed_chunk(completed, 240, 120.0);
+        assert_eq!(start, completed - 2_000);
+        assert_eq!(chunk_end(start, 240, 120.0), completed);
+    }
 
     /// `end_unix_ms_utc - start_unix_ms_utc` is the chunk's intra-chunk span,
     /// scaled by declared fps. This is what the streamer writes alongside each

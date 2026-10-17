@@ -78,10 +78,12 @@ class RHEEDStreamer:
             chunk_idx: Zero-based chunk index for ordering.
             frames: Grayscale uint8 array, shape (N, H, W) or (H, W).
             capture_start_ms_utc: Optional capture-time timestamp (ms since
-                UNIX epoch, UTC) for the first frame in the chunk. When
-                omitted, the streamer samples ``Utc::now()`` at push entry.
-                Pass an explicit value when you have a hardware/trigger
-                timestamp aligned with frame capture.
+                UNIX epoch, UTC) for the first frame in the chunk. Pass it
+                whenever you have a hardware/trigger timestamp aligned with
+                frame capture. When omitted, the chunk is taken to have just
+                finished capturing: ``Utc::now()`` at push entry minus the
+                chunk's span (``N / fps``). Chunks are always stamped with
+                capture time, never push time.
         """
     def finalize(self, data_id: str) -> None: ...
 
@@ -114,6 +116,7 @@ class TimeseriesStreamer:
             points_per_chunk: Expected points per chunk for array positioning.
             verbosity: Logging verbosity (0-4). Higher = more detail.
         """
+
 
     def initialize(
         self,

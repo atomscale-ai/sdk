@@ -1193,3 +1193,53 @@ class TestFinalizeResilience:
         finally:
             server.stop()
         assert any(p.endswith("/end") for _, p, _ in requests), "the stream is still closed"
+
+
+class TestCaptureTimeStamps:
+    """Chunks are stamped with capture time, never the time they were pushed."""
+
+    def _push_one(self, **push_kwargs):
+        import time
+
+        import numpy as np
+
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        port = _get_free_port()
+        routes = json.dumps(
+            {
+                "__routes__": True,
+                "__max_requests__": 10,
+                "/rheed/stream/": '"stream-data-id"',
+                "/data_entries/raw_data/staged/upload_urls/": json.dumps(
+                    [{"url": f"http://127.0.0.1:{port}/upload/put"}]
+                ),
+                "/upload/put": '"OK"',
+            }
+        )
+        server = MockServer(port, routes)
+        server.start()
+        try:
+            streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+            data_id = streamer.initialize(fps=2.0, rotations_per_min=0.0, chunk_size=4)
+            frames = np.full((4, 8, 8), 7, dtype=np.uint8)
+            before_ms = int(time.time() * 1000)
+            streamer.push(data_id, 0, frames, **push_kwargs)
+            streamer.finalize(data_id)
+            after_ms = int(time.time() * 1000)
+            requests = _logged_requests(server)
+        finally:
+            server.stop()
+        presign = next(b for m, p, b in requests if p.startswith("/data_entries/raw_data/staged/"))
+        meta = json.loads(presign)
+        return before_ms, after_ms, int(meta["start_unix_ms_utc"]), int(meta["end_unix_ms_utc"])
+
+    def test_default_start_is_one_chunk_span_before_the_push(self):
+        before_ms, after_ms, start, end = self._push_one()
+        # 4 frames at 2 fps span 2000 ms, and the chunk had just finished when it was pushed.
+        assert end - start == 2000
+        assert before_ms <= end <= after_ms
+
+    def test_explicit_capture_start_is_used_as_given(self):
+        _, _, start, end = self._push_one(capture_start_ms_utc=1_700_000_000_000)
+        assert (start, end) == (1_700_000_000_000, 1_700_000_002_000)
