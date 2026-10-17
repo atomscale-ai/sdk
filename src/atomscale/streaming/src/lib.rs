@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context};
 use chrono::{Local, Utc};
 use pyo3::exceptions::{PyRuntimeError, PyRuntimeWarning, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyIterator, PyModule, PyTuple};
+use pyo3::types::{PyAny, PyDict, PyIterator, PyModule, PyTuple};
 use reqwest::Client;
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -12,6 +12,9 @@ use tokio::runtime::Runtime;
 use tokio::sync::{watch, Semaphore};
 use tokio::task::JoinHandle;
 use tracing::debug;
+
+mod clock;
+use clock::{clock_status_dict, lab_clock_for, LabClock};
 
 mod utils;
 use utils::{generic_post, init_tracing_once};
@@ -95,6 +98,10 @@ pub struct RHEEDStreamer {
     /// Bytes of chunk data (in MiB permits) that uploads may hold at once; see
     /// [`UPLOAD_BUDGET_MIB`].
     upload_budget: Arc<Semaphore>,
+
+    /// This computer's clock against AtomCloud's; every stamp leaves as reference UTC.
+    /// `None` when correction is switched off.
+    clock: Option<Arc<LabClock>>,
 }
 
 /// Per-`data_id` runtime config. One `RHEEDStreamer` instance can service
@@ -189,6 +196,8 @@ impl RHEEDStreamer {
 
         debug!("[rheed_stream] init: base_url={}", endpoint);
 
+        let clock = lab_clock_for(&endpoint);
+
         Ok(Self {
             api_key,
             endpoint,
@@ -196,6 +205,7 @@ impl RHEEDStreamer {
             rt,
             streams: Mutex::new(HashMap::new()),
             upload_budget: Arc::new(Semaphore::new(UPLOAD_BUDGET_MIB as usize)),
+            clock,
         })
     }
 
@@ -240,6 +250,7 @@ impl RHEEDStreamer {
     )]
     fn initialize(
         &self,
+        py: Python<'_>,
         fps: f64,
         rotations_per_min: f64,
         chunk_size: usize,
@@ -248,6 +259,11 @@ impl RHEEDStreamer {
         project_id: Option<String>,
         tags: Option<Vec<String>>,
     ) -> PyResult<String> {
+        // Measure the lab clock before the first chunk is stamped; a failure streams uncorrected.
+        if let Some(clock) = &self.clock {
+            py.detach(|| clock.wait_for_first_attempt());
+        }
+
         // Guard: chunk_size must be >= ceil(2 * fps)
         let min_chunk = (2.0 * fps).ceil() as usize;
         if chunk_size < min_chunk {
@@ -437,8 +453,10 @@ impl RHEEDStreamer {
                 t0.elapsed(), flat_len
             );
 
-            let start_unix_ms_utc = caller_start_ms
-                .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps));
+            let start_unix_ms_utc = self.reference_utc_ms(
+                caller_start_ms
+                    .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps)),
+            );
             let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
 
             let metadata = FrameChunkMetadata {
@@ -547,8 +565,10 @@ impl RHEEDStreamer {
         let py = frames.py();
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
-        let start_unix_ms_utc = capture_start_ms_utc
-            .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps));
+        let start_unix_ms_utc = self.reference_utc_ms(
+            capture_start_ms_utc
+                .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps)),
+        );
         let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
 
         let metadata = FrameChunkMetadata {
@@ -574,6 +594,17 @@ impl RHEEDStreamer {
             ledger.finished(chunk_idx, outcome);
         });
         Ok(())
+    }
+
+    /// clock_status(self) -> Optional[dict]
+    ///
+    /// This computer's clock measured against AtomCloud's reference clock, or `None` when
+    /// correction is off (`ATOMSCALE_SKIP_CLOCK_SYNC`) or no measurement has succeeded yet.
+    /// Every chunk is stamped in reference UTC, so `offset_ms` (reference minus host) is the
+    /// correction in effect, `uncertainty_ms` bounds its error (half the best round trip) and
+    /// `measured_at_unix_ms` is the reference time of the sample it came from.
+    fn clock_status<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyDict>>> {
+        clock_status_dict(py, self.clock.as_deref())
     }
 
     /// finalize(self, data_id: str) -> None
@@ -662,6 +693,13 @@ const UPLOAD_BUDGET_MIB: u32 = 1024;
 impl RHEEDStreamer {
     fn end_url(&self, data_id: &str) -> String {
         format!("{}/rheed/stream/{data_id}/end", self.endpoint)
+    }
+
+    /// A host-clock time as reference UTC (unchanged when correction is off or not yet measured).
+    fn reference_utc_ms(&self, host_ms: i64) -> i64 {
+        self.clock
+            .as_ref()
+            .map_or(host_ms, |clock| clock.to_utc_ms(host_ms))
     }
 
     fn upload_ledger(&self, data_id: &str) -> PyResult<Arc<UploadLedger>> {

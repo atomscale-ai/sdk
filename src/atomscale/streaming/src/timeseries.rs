@@ -5,11 +5,13 @@ use pyo3::types::{PyDict, PyIterator};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
+use crate::clock::{clock_status_dict, lab_clock_for, LabClock};
 use crate::initialize::{link_new_stream, resolve_stream_links};
 use crate::retry::{with_retries, HttpStatusError};
 use crate::utils::init_tracing_once;
@@ -92,6 +94,9 @@ pub struct TimeseriesStreamer {
     client: Client,
     rt: Runtime,
     points_per_chunk: usize,
+    /// This computer's clock against AtomCloud's; every timestamp leaves as reference UTC.
+    /// `None` when correction is switched off.
+    clock: Option<Arc<LabClock>>,
 }
 
 #[pymethods]
@@ -122,12 +127,15 @@ impl TimeseriesStreamer {
 
         debug!("[timeseries_stream] init: base_url={}", endpoint);
 
+        let clock = lab_clock_for(&endpoint);
+
         Ok(Self {
             api_key,
             endpoint,
             client,
             rt,
             points_per_chunk,
+            clock,
         })
     }
 
@@ -168,12 +176,18 @@ impl TimeseriesStreamer {
     )]
     fn initialize(
         &self,
+        py: Python<'_>,
         stream_name: Option<String>,
         synth_source_id: Option<i64>,
         physical_sample: Option<String>,
         project_id: Option<String>,
         tags: Option<Vec<String>>,
     ) -> PyResult<String> {
+        // Measure the lab clock before the first point is stamped; a failure streams uncorrected.
+        if let Some(clock) = &self.clock {
+            py.detach(|| clock.wait_for_first_attempt());
+        }
+
         let physical_sample = physical_sample
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
@@ -251,6 +265,16 @@ impl TimeseriesStreamer {
         Ok(data_id)
     }
 
+    /// clock_status(self) -> Optional[dict]
+    ///
+    /// This computer's clock measured against AtomCloud's reference clock, or `None` when
+    /// correction is off (`ATOMSCALE_SKIP_CLOCK_SYNC`) or no measurement has succeeded yet.
+    /// Pushed timestamps are read as this computer's clock and sent as reference UTC:
+    /// `offset_ms` (reference minus host) is the correction in effect.
+    fn clock_status<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyDict>>> {
+        clock_status_dict(py, self.clock.as_deref())
+    }
+
     /// push(self, data_id: str, chunk_index: int, channel_name: str, timestamps: list[float], values: list[float], ...) -> None
     ///
     /// Push a single chunk of time series data for a channel. This method is **fire-and-forget**:
@@ -290,7 +314,7 @@ impl TimeseriesStreamer {
             data_id,
             chunk_index,
             channel_name,
-            timestamps,
+            timestamps: self.reference_utc_secs(timestamps),
             values,
             units,
         };
@@ -403,7 +427,7 @@ impl TimeseriesStreamer {
             payload_channels.insert(
                 channel_name,
                 ChannelPayload {
-                    timestamps,
+                    timestamps: self.reference_utc_secs(timestamps),
                     values,
                     units,
                 },
@@ -504,6 +528,16 @@ impl TimeseriesStreamer {
         format!("{}/tool-state/stream/{data_id}/finalize", self.endpoint)
     }
 
+    /// Host-clock Unix seconds as reference UTC (unchanged when correction is off or not yet
+    /// measured). One offset is read per call, so a chunk's points shift together.
+    fn reference_utc_secs(&self, mut timestamps: Vec<f64>) -> Vec<f64> {
+        if let Some(clock) = &self.clock {
+            let offset_s = clock.offset_ms() / 1_000.0;
+            timestamps.iter_mut().for_each(|t| *t += offset_s);
+        }
+        timestamps
+    }
+
     /// Internal implementation of run() that handles iteration and task management.
     fn run_internal(
         &self,
@@ -552,7 +586,7 @@ impl TimeseriesStreamer {
                 data_id: data_id.clone(),
                 chunk_index,
                 channel_name: channel_name.clone(),
-                timestamps,
+                timestamps: self.reference_utc_secs(timestamps),
                 values,
                 units: units.clone(),
             };

@@ -86,6 +86,21 @@ class RHEEDStreamer:
                 capture time, never push time.
         """
     def finalize(self, data_id: str) -> None: ...
+    def clock_status(self) -> dict[str, float] | None:
+        """This computer's clock measured against AtomCloud's reference clock.
+
+        Every timestamp is read as this computer's clock and sent as reference UTC,
+        like the gateway: the offset comes from an NTP-style four-timestamp exchange
+        with ``GET /gateway/time``, so it accounts for the transit time in both
+        directions. Returns ``None`` when correction is off (set the
+        ``ATOMSCALE_SKIP_CLOCK_SYNC`` environment variable) or no measurement has
+        succeeded yet; then timestamps are sent as read.
+
+        Returns:
+            ``offset_ms`` (reference UTC minus this computer's clock),
+            ``uncertainty_ms`` (bound on its error: half the best round trip) and
+            ``measured_at_unix_ms``.
+        """
 
 class TimeseriesStreamer:
     """High-performance instrument timeseries streaming client.
@@ -117,6 +132,21 @@ class TimeseriesStreamer:
             verbosity: Logging verbosity (0-4). Higher = more detail.
         """
 
+    def clock_status(self) -> dict[str, float] | None:
+        """This computer's clock measured against AtomCloud's reference clock.
+
+        Every timestamp is read as this computer's clock and sent as reference UTC,
+        like the gateway: the offset comes from an NTP-style four-timestamp exchange
+        with ``GET /gateway/time``, so it accounts for the transit time in both
+        directions. Returns ``None`` when correction is off (set the
+        ``ATOMSCALE_SKIP_CLOCK_SYNC`` environment variable) or no measurement has
+        succeeded yet; then timestamps are sent as read.
+
+        Returns:
+            ``offset_ms`` (reference UTC minus this computer's clock),
+            ``uncertainty_ms`` (bound on its error: half the best round trip) and
+            ``measured_at_unix_ms``.
+        """
 
     def initialize(
         self,
