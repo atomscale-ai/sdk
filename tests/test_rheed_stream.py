@@ -1113,3 +1113,83 @@ class TestShardUploadRetries:
         assert error is not None and "403" in str(error)
         assert len(presigns) == 1
         assert puts == []
+
+
+class TestFinalizeResilience:
+    """finalize() waits for pushed uploads and rides out the server's "analysis still running" 503."""
+
+    def _stream(self, end_statuses=None, presign_statuses=None):
+        import numpy as np
+
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        port = _get_free_port()
+        data_id = "stream-data-id"
+        end_route = f"/rheed/stream/{data_id}/end"
+        routes = json.dumps(
+            {
+                "__routes__": True,
+                "__max_requests__": 20,
+                "__status_sequence__": {
+                    end_route: end_statuses or [],
+                    "/data_entries/raw_data/staged/upload_urls/": presign_statuses or [],
+                },
+                end_route: '{"message": "Stream finalize successfully initiated"}',
+                "/rheed/stream/": f'"{data_id}"',
+                "/data_entries/raw_data/staged/upload_urls/": json.dumps(
+                    [{"url": f"http://127.0.0.1:{port}/upload/put"}]
+                ),
+                "/upload/put": '"OK"',
+            }
+        )
+        server = MockServer(port, routes)
+        server.start()
+        streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+        stream_id = streamer.initialize(fps=1.0, rotations_per_min=0.0, chunk_size=2)
+        frames = np.full((2, 8, 8), 7, dtype=np.uint8)
+        return server, streamer, stream_id, frames
+
+    def test_finalize_retries_while_analysis_is_running(self):
+        server, streamer, data_id, _ = self._stream(end_statuses=[503, 503])
+        try:
+            streamer.finalize(data_id)
+            requests = _logged_requests(server)
+        finally:
+            server.stop()
+        assert [p for m, p, _ in requests if m == "POST" and p.endswith("/end")] == [
+            f"/rheed/stream/{data_id}/end"
+        ] * 3
+
+    def test_finalize_does_not_retry_a_final_rejection(self):
+        server, streamer, data_id, _ = self._stream(end_statuses=[422])
+        try:
+            with pytest.raises(RuntimeError, match="422"):
+                streamer.finalize(data_id)
+            requests = _logged_requests(server)
+        finally:
+            server.stop()
+        assert len([p for _, p, _ in requests if p.endswith("/end")]) == 1
+
+    def test_finalize_waits_for_pushed_uploads(self):
+        server, streamer, data_id, frames = self._stream()
+        try:
+            streamer.push(data_id, 0, frames, capture_start_ms_utc=1_700_000_000_000)
+            streamer.finalize(data_id)
+            requests = _logged_requests(server)
+        finally:
+            server.stop()
+        order = [f"{m} {p.split('?')[0]}" for m, p, _ in requests]
+        put_at = next(i for i, r in enumerate(order) if r.startswith("PUT"))
+        end_at = next(i for i, r in enumerate(order) if r.endswith("/end"))
+        assert put_at < end_at
+
+    def test_finalize_warns_about_a_shard_that_never_uploaded(self):
+        server, streamer, data_id, frames = self._stream(presign_statuses=[403])
+        try:
+            streamer.push(data_id, 4, frames, capture_start_ms_utc=1_700_000_000_000)
+            with pytest.warns(RuntimeWarning, match="shard 4 .* was not uploaded"):
+                streamer.finalize(data_id)
+            requests = _logged_requests(server)
+        finally:
+            server.stop()
+        assert any(p.endswith("/end") for _, p, _ in requests), "the stream is still closed"

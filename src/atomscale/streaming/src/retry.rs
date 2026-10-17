@@ -13,6 +13,8 @@ use reqwest::StatusCode;
 use tracing::{debug, warn};
 
 const FIRST_RETRY_DELAY: Duration = Duration::from_millis(500);
+/// Backoff stops doubling here, so a long retry budget polls steadily instead of idling for minutes.
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(30);
 
 /// A non-2xx HTTP response, kept typed so the retry loop can tell transient from final.
 #[derive(Debug)]
@@ -43,7 +45,7 @@ fn is_transient(error: &Error) -> bool {
     false
 }
 
-/// Run `op` up to `attempts` times with exponential backoff from 0.5 s, retrying transient
+/// Run `op` up to `attempts` times with exponential backoff from 0.5 s (capped at 30 s), retrying transient
 /// failures only. A failure that is final, or the last attempt's, is logged at warn and
 /// returned.
 pub async fn with_retries<T, F, Fut>(what: &str, attempts: u32, mut op: F) -> Result<T>
@@ -58,7 +60,7 @@ where
             Err(error) if attempt < attempts && is_transient(&error) => {
                 debug!("{what} failed (attempt {attempt}), retrying in {delay:?}: {error:#}");
                 tokio::time::sleep(delay).await;
-                delay *= 2;
+                delay = (delay * 2).min(MAX_RETRY_DELAY);
             }
             Err(error) => {
                 warn!("{what} failed after {attempt} attempt(s): {error:#}");
