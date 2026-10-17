@@ -1,14 +1,15 @@
 use anyhow::{anyhow, Context};
 use chrono::{Local, Utc};
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::exceptions::{PyRuntimeError, PyRuntimeWarning, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyIterator, PyModule, PyTuple};
 use reqwest::Client;
 use std::collections::HashMap;
+use std::ffi::CString;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tokio::runtime::Runtime;
-use tokio::sync::Semaphore;
+use tokio::sync::{watch, Semaphore};
 use tokio::task::JoinHandle;
 use tracing::debug;
 
@@ -20,8 +21,7 @@ use timeseries::TimeseriesStreamer;
 
 mod initialize;
 use initialize::{
-    add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached,
-    post_for_initialization, RHEEDStreamSettings,
+    link_new_stream, post_for_initialization, resolve_stream_links, RHEEDStreamSettings,
 };
 
 mod retry;
@@ -94,6 +94,52 @@ struct PerStreamState {
     rotating: bool,
     fps: f64,
     chunk_size: usize,
+    /// Detached `push(...)` uploads, so `finalize(...)` can wait for them.
+    uploads: Arc<UploadLedger>,
+}
+
+/// Uploads a stream's `push(...)` calls have detached and not yet finished.
+///
+/// `push` returns as soon as a chunk is queued, so without this `finalize` could close the stream
+/// while its last shards are still on the wire, and an upload that exhausted its retries would
+/// vanish without a trace.
+#[derive(Debug)]
+struct UploadLedger {
+    pending: watch::Sender<usize>,
+    failed: Mutex<Vec<(usize, String)>>,
+}
+
+impl UploadLedger {
+    fn new() -> Self {
+        Self {
+            pending: watch::channel(0).0,
+            failed: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn started(&self) {
+        self.pending.send_modify(|pending| *pending += 1);
+    }
+
+    fn finished(&self, chunk_idx: usize, outcome: anyhow::Result<()>) {
+        if let Err(error) = outcome {
+            self.failed
+                .lock()
+                .expect("upload ledger mutex poisoned")
+                .push((chunk_idx, format!("{error:#}")));
+        }
+        self.pending.send_modify(|pending| *pending -= 1);
+    }
+
+    async fn wait_idle(&self) {
+        let mut pending = self.pending.subscribe();
+        // The sender lives in `self`, so the channel cannot close while we wait.
+        let _ = pending.wait_for(|pending| *pending == 0).await;
+    }
+
+    fn take_failed(&self) -> Vec<(usize, String)> {
+        std::mem::take(&mut *self.failed.lock().expect("upload ledger mutex poisoned"))
+    }
 }
 
 #[pymethods]
@@ -174,7 +220,9 @@ impl RHEEDStreamer {
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
-    ///     RuntimeError: If the initialization POST fails.
+    ///     RuntimeError: If the stream cannot be created or linked. The physical sample and tags
+    ///         are resolved before the stream is created, so a bad one creates nothing. If linking
+    ///         fails after creation, the stream is ended and the error names its `data_id`.
     #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None))]
     #[pyo3(
         text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None)"
@@ -224,8 +272,20 @@ impl RHEEDStreamer {
             project_id,
         };
 
-        let base_endpoint = self.endpoint.clone();
-        let post_url = format!("{base_endpoint}/rheed/stream/");
+        let links_fut = resolve_stream_links(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            physical_sample.as_deref(),
+            settings.project_id.clone(),
+            tags.as_deref().unwrap_or_default(),
+        );
+        let links = self
+            .rt
+            .block_on(links_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
+
+        let post_url = format!("{}/rheed/stream/", self.endpoint);
         let init_fut = post_for_initialization(&self.client, &post_url, &settings, &self.api_key);
 
         let data_id = self
@@ -233,51 +293,18 @@ impl RHEEDStreamer {
             .block_on(init_fut)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
-        if let Some(sample_name) = physical_sample {
-            let physical_sample_fut = ensure_physical_sample_link(
-                &self.client,
-                &base_endpoint,
-                &self.api_key,
-                &data_id,
-                &sample_name,
-            );
-            let sample_id = self
-                .rt
-                .block_on(physical_sample_fut)
-                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-
-            // If project_id was provided, add the sample to the project's membership.
-            // We deliberately do NOT touch growth-monitoring tracking config here —
-            // that endpoint blindly re-validates the project's full configuration
-            // and is fragile (see add_sample_to_project for details).
-            if let Some(ref proj_id) = settings.project_id {
-                let add_to_project_fut = add_sample_to_project(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    proj_id,
-                    &sample_id,
-                );
-                self.rt
-                    .block_on(add_to_project_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
-
-        if let Some(tag_inputs) = tags {
-            if !tag_inputs.is_empty() {
-                let tags_fut = ensure_tags_attached(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    &data_id,
-                    &tag_inputs,
-                );
-                self.rt
-                    .block_on(tags_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
+        let end_url = self.end_url(&data_id);
+        let link_fut = link_new_stream(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            &data_id,
+            &links,
+            &end_url,
+        );
+        self.rt
+            .block_on(link_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         // Insert per-stream state keyed by the new data_id. State is not
         // shared with any other concurrent stream on this streamer instance.
@@ -295,6 +322,7 @@ impl RHEEDStreamer {
                     rotating: rotations_per_min > 0.0,
                     fps,
                     chunk_size,
+                    uploads: Arc::new(UploadLedger::new()),
                 },
             );
         }
@@ -522,8 +550,15 @@ impl RHEEDStreamer {
             end_unix_ms_utc,
         };
 
-        // Spawn via private helper; detach by dropping the handle
-        self.spawn_chunk_upload(py, chunk_idx, flat, n, h, w, metadata);
+        let ledger = self.upload_ledger(&data_id)?;
+        let upload = self.spawn_chunk_upload(py, chunk_idx, flat, n, h, w, metadata);
+        ledger.started();
+        self.rt.spawn(async move {
+            let outcome = upload
+                .await
+                .unwrap_or_else(|e| Err(anyhow!("upload task failed: {e}")));
+            ledger.finished(chunk_idx, outcome);
+        });
         Ok(())
     }
 
@@ -541,7 +576,11 @@ impl RHEEDStreamer {
     ///
     /// Notes
     /// -----
-    /// - The operation performs a single HTTP POST to the `.../end` endpoint.
+    /// - Waits for this stream's in-flight `push(...)` uploads first, so a shard still on the
+    ///   wire is never cut off. A shard that failed all its retries emits a `RuntimeWarning`
+    ///   naming its chunk index; the stream is still closed.
+    /// - The server answers 503 while the stream's first analysis is still running; the POST to
+    ///   the `.../end` endpoint is retried with backoff for about three minutes before it fails.
     /// - It is safe to call more than once; the server may treat it as idempotent,
     ///   but repeated calls are unnecessary.
     ///
@@ -558,14 +597,26 @@ impl RHEEDStreamer {
     ///     run(data_id, frames_iter), push(data_id, chunk_idx, frames)
     #[pyo3(signature = (data_id))]
     #[pyo3(text_signature = "(data_id)")]
-    fn finalize(&self, data_id: String) -> PyResult<()> {
-        let base_endpoint = self.endpoint.clone();
-        let post_url = format!("{base_endpoint}/rheed/stream/{data_id}/end");
-        let final_fut = generic_post(&self.client, &post_url, &self.api_key);
+    fn finalize(&self, py: Python<'_>, data_id: String) -> PyResult<()> {
+        let ledger = self.upload_ledger(&data_id)?;
+        py.detach(|| self.rt.block_on(ledger.wait_idle()));
+        for (chunk_idx, error) in ledger.take_failed() {
+            let message = format!("shard {chunk_idx} of stream {data_id} was not uploaded: {error}");
+            PyErr::warn(
+                py,
+                &py.get_type::<PyRuntimeWarning>(),
+                &CString::new(message.replace('\0', " ")).expect("NUL bytes were replaced"),
+                1,
+            )?;
+        }
 
-        self.rt
-            .block_on(final_fut)
-            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        let post_url = self.end_url(&data_id);
+        let final_fut = with_retries("[rheed_stream] finalize", FINALIZE_ATTEMPTS, || {
+            generic_post(&self.client, &post_url, &self.api_key)
+        });
+
+        py.detach(|| self.rt.block_on(final_fut))
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         // Drop the per-stream entry so the data_id is no longer addressable
         // from this streamer. Other streams' entries are untouched.
@@ -582,6 +633,11 @@ impl RHEEDStreamer {
 /// Presign + PUT attempts per shard: 0.5, 1, 2 and 4 s apart, about 8 s in all.
 const SHARD_UPLOAD_ATTEMPTS: u32 = 5;
 
+/// Attempts at closing a stream. The server answers 503 until the stream's first analysis has
+/// written its processed video, which can take a minute or more: 0.5, 1, 2, 4, 8, 16, then 30 s
+/// apart, about three minutes in all.
+const FINALIZE_ATTEMPTS: u32 = 12;
+
 /// Chunk data uploads may hold at once, in MiB. A chunk's raw frames stay in memory until
 /// its upload finishes, retries included, so an outage would otherwise buffer without
 /// limit; past the budget, `push`/`run` wait for an upload to finish (backpressure). A
@@ -590,6 +646,20 @@ const UPLOAD_BUDGET_MIB: u32 = 1024;
 
 // Private and rust only access
 impl RHEEDStreamer {
+    fn end_url(&self, data_id: &str) -> String {
+        format!("{}/rheed/stream/{data_id}/end", self.endpoint)
+    }
+
+    fn upload_ledger(&self, data_id: &str) -> PyResult<Arc<UploadLedger>> {
+        let streams = self.streams.lock().expect("streams mutex poisoned");
+        let state = streams.get(data_id).ok_or_else(|| {
+            PyRuntimeError::new_err(format!(
+                "no stream initialized for data_id={data_id}; call initialize(...) first."
+            ))
+        })?;
+        Ok(state.uploads.clone())
+    }
+
     /// cfg(self, data_id) -> Tuple[bool, float, int]
     ///
     /// Internal helper: looks up per-stream config for `data_id`. Returns the

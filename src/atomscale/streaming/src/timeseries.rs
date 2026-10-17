@@ -10,7 +10,7 @@ use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::initialize::{add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached};
+use crate::initialize::{link_new_stream, resolve_stream_links};
 use crate::retry::{with_retries, HttpStatusError};
 use crate::utils::init_tracing_once;
 
@@ -158,7 +158,10 @@ impl TimeseriesStreamer {
     ///     str: The data_id for this stream.
     ///
     /// Raises:
-    ///     RuntimeError: If the initialization request fails or instrument not found.
+    ///     RuntimeError: If the stream cannot be created or linked, or the instrument is not
+    ///         found. The physical sample and tags are resolved before the stream is created, so
+    ///         a bad one creates nothing. If linking fails after creation, the stream is
+    ///         finalized and the error names its `data_id`.
     #[pyo3(signature = (stream_name=None, synth_source_id=None, physical_sample=None, project_id=None, tags=None))]
     #[pyo3(
         text_signature = "(stream_name=None, synth_source_id=None, physical_sample=None, project_id=None, tags=None)"
@@ -179,11 +182,24 @@ impl TimeseriesStreamer {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
+        let links_fut = resolve_stream_links(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            physical_sample.as_deref(),
+            project_id.clone(),
+            tags.as_deref().unwrap_or_default(),
+        );
+        let links = self
+            .rt
+            .block_on(links_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
+
         let request = InitializeRequest {
             stream_name,
             synth_source_id,
             points_per_chunk: self.points_per_chunk,
-            project_id: project_id.clone(),
+            project_id,
         };
 
         let url = format!("{}/tool-state/stream/initialize", self.endpoint);
@@ -219,53 +235,18 @@ impl TimeseriesStreamer {
             Err(e) => return Err(PyRuntimeError::new_err(e.to_string())),
         };
 
-        // Handle physical sample linking (same flow as RHEEDStreamer)
-        let base_endpoint = self.endpoint.clone();
-        if let Some(sample_name) = physical_sample {
-            let physical_sample_fut = ensure_physical_sample_link(
-                &self.client,
-                &base_endpoint,
-                &self.api_key,
-                &data_id,
-                &sample_name,
-            );
-            let sample_id = self
-                .rt
-                .block_on(physical_sample_fut)
-                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-
-            // If project_id was provided, add the sample to the project's membership.
-            // We deliberately do NOT touch growth-monitoring tracking config here —
-            // that endpoint blindly re-validates the project's full configuration
-            // and is fragile (see add_sample_to_project for details).
-            if let Some(ref proj_id) = project_id {
-                let add_to_project_fut = add_sample_to_project(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    proj_id,
-                    &sample_id,
-                );
-                self.rt
-                    .block_on(add_to_project_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
-
-        if let Some(tag_inputs) = tags {
-            if !tag_inputs.is_empty() {
-                let tags_fut = ensure_tags_attached(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    &data_id,
-                    &tag_inputs,
-                );
-                self.rt
-                    .block_on(tags_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
+        let end_url = self.finalize_url(&data_id);
+        let link_fut = link_new_stream(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            &data_id,
+            &links,
+            &end_url,
+        );
+        self.rt
+            .block_on(link_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         Ok(data_id)
     }
@@ -489,7 +470,7 @@ impl TimeseriesStreamer {
     #[pyo3(signature = (data_id))]
     #[pyo3(text_signature = "(data_id)")]
     fn finalize(&self, data_id: String) -> PyResult<()> {
-        let url = format!("{}/tool-state/stream/{}/finalize", self.endpoint, data_id);
+        let url = self.finalize_url(&data_id);
 
         let result = self.rt.block_on(async {
             let resp = self
@@ -519,6 +500,10 @@ impl TimeseriesStreamer {
 }
 
 impl TimeseriesStreamer {
+    fn finalize_url(&self, data_id: &str) -> String {
+        format!("{}/tool-state/stream/{data_id}/finalize", self.endpoint)
+    }
+
     /// Internal implementation of run() that handles iteration and task management.
     fn run_internal(
         &self,
