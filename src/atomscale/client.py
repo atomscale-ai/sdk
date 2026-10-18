@@ -830,7 +830,9 @@ class Client(BaseClient):
                 body={"enabled": azimuth is not None, "label": azimuth},
             )
             if updated is None:
-                raise ValueError(f"RHEED view {target} not found on recording {data_id}")
+                raise ValueError(
+                    f"RHEED view {target} not found on recording {data_id}"
+                )
         return self.get_rheed_azimuths(data_id)
 
     def get_frame(
