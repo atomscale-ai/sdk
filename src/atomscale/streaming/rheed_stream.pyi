@@ -27,6 +27,7 @@ class RHEEDStreamer:
         physical_sample: str | None = None,
         project_id: str | None = None,
         tags: list[str] | None = None,
+        azimuth: str | None = None,
     ) -> str:
         """Initialize a new RHEED stream.
 
@@ -54,10 +55,18 @@ class RHEEDStreamer:
             tags: List of tag names or UUIDs to attach to the data item.
                 Names are matched case-insensitively against existing
                 organization tags; unknown names are created. UUIDs must
-                reference existing tags.
+                reference existing tags. Tags do not set the stream's
+                azimuth; use ``azimuth``.
+            azimuth: The azimuth a parked stream is recorded at, e.g. "100".
+                Its views are labelled with it in place of the automatic
+                azimuth classifier until a user edits the view. Only valid
+                with ``rotations_per_min=0``.
 
         Returns:
             The data_id for this stream.
+
+        Raises:
+            ValueError: If ``azimuth`` is given for a rotating stream.
         """
     def run(
         self,

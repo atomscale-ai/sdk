@@ -235,18 +235,22 @@ impl RHEEDStreamer {
     ///         to link the physical sample to the project for growth monitoring.
     ///     tags (Optional[List[str]]): List of tag names or UUIDs to attach to the data item. Names are matched
     ///         case-insensitively against existing org tags; unknown names are created. UUIDs must reference
-    ///         existing tags.
+    ///         existing tags. Tags do not set the stream's azimuth; use `azimuth`.
+    ///     azimuth (Optional[str]): The azimuth a parked stream is recorded at, e.g. `"100"`. Its views are
+    ///         labelled with it in place of the automatic azimuth classifier until a user edits the view.
+    ///         Only valid with `rotations_per_min == 0`; a rotating stream carries several azimuths.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
+    ///     ValueError: If `azimuth` is given for a rotating stream.
     ///     RuntimeError: If the stream cannot be created or linked. The physical sample and tags
     ///         are resolved before the stream is created, so a bad one creates nothing. If linking
     ///         fails after creation, the stream is ended and the error names its `data_id`.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None))]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None))]
     #[pyo3(
-        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None)"
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None)"
     )]
     fn initialize(
         &self,
@@ -258,6 +262,7 @@ impl RHEEDStreamer {
         physical_sample: Option<String>,
         project_id: Option<String>,
         tags: Option<Vec<String>>,
+        azimuth: Option<String>,
     ) -> PyResult<String> {
         // Measure the lab clock before the first chunk is stamped; a failure streams uncorrected.
         if let Some(clock) = &self.clock {
@@ -288,6 +293,15 @@ impl RHEEDStreamer {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
+        let azimuth_label = azimuth
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+        if azimuth_label.is_some() && rotations_per_min > 0.0 {
+            return Err(PyValueError::new_err(
+                "azimuth is for parked streams (rotations_per_min=0); a rotating stream carries several azimuths",
+            ));
+        }
+
         let fpr = (fps * 60.0) / rotations_per_min;
 
         #[allow(clippy::redundant_field_names)]
@@ -297,6 +311,7 @@ impl RHEEDStreamer {
             rotations_per_min,
             fps_capture_rate: fps,
             project_id,
+            azimuth_label,
         };
 
         let links_fut = resolve_stream_links(

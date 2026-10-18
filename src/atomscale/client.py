@@ -780,6 +780,59 @@ class Client(BaseClient):
             payload.extend(self._get(sub_url=f"rheed/{data_id}/azimuths") or [])
         return rheed_azimuths_to_dataframe(payload)
 
+    def set_rheed_azimuth(
+        self,
+        data_id: str,
+        azimuth: str | None,
+        view_id: str | None = None,
+    ) -> DataFrame:
+        """Set the operator's azimuth on a RHEED recording's views.
+
+        The label overrides the automatic azimuth classifier and is kept when the
+        recording is reprocessed. Azimuth tags are not read for RHEED; this and
+        ``RHEEDStreamer.initialize(azimuth=...)`` are how an azimuth is declared.
+
+        Args:
+            data_id: Data ID of the RHEED recording.
+            azimuth: The azimuth, e.g. ``"100"``. ``None`` removes the override and
+                returns the views to the classifier's label.
+            view_id: The view to label. Required when the recording has rotating
+                views, which carry different azimuths; when omitted, every parked
+                view of the recording is labelled.
+
+        Returns:
+            DataFrame: The recording's views after the change, as
+            :meth:`get_rheed_azimuths` returns them.
+
+        Raises:
+            ValueError: If no view_id is given and the recording has no parked views
+                yet, or has rotating views.
+        """
+        if view_id is not None:
+            view_ids = [view_id]
+        else:
+            views = self.get_rheed_azimuths(data_id)
+            if (views["rpm"] != 0).any():
+                raise ValueError(
+                    f"RHEED recording {data_id} has rotating views; pass the view_id to label"
+                )
+            view_ids = views["view_id"].astype(str).tolist()
+            if not view_ids:
+                raise ValueError(
+                    f"RHEED recording {data_id} has no views yet; label it once analysis has "
+                    "produced them, or declare a stream's azimuth with "
+                    "RHEEDStreamer.initialize(azimuth=...)"
+                )
+        for target in view_ids:
+            updated = self._post_or_put(
+                "PATCH",
+                sub_url=f"rheed/{data_id}/azimuths/{target}",
+                body={"enabled": azimuth is not None, "label": azimuth},
+            )
+            if updated is None:
+                raise ValueError(f"RHEED view {target} not found on recording {data_id}")
+        return self.get_rheed_azimuths(data_id)
+
     def get_frame(
         self,
         data_id: str,

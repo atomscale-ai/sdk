@@ -158,7 +158,7 @@ class BaseClient:
 
     def _post_or_put(
         self,
-        method: Literal["POST", "PUT"],
+        method: Literal["POST", "PUT", "PATCH"],
         sub_url: str,
         params: dict[str, Any] | None = None,
         body: dict[str, Any] | bytes | None = None,
@@ -170,7 +170,7 @@ class BaseClient:
         """Method for issuing a POST or PUT request
 
         Args:
-            method (Literal["POST", "PUT"]): Method to use
+            method (Literal["POST", "PUT", "PATCH"]): Method to use
             sub_url (str): API sub-url to use.
             params (dict[str, Any] | None): Params to pass in the GET request. Defaults to None.
             body (dict[str, Any] | bytes): Body data to send in the POST request.
@@ -187,7 +187,11 @@ class BaseClient:
             (list[dict] | dict | bytes | None): Deserialized JSON data or raw bytes. Returns None if response is a 404.
         """
         base_url = base_override or self.endpoint
-        method_func = self.session.put if method == "PUT" else self.session.post
+        method_func = {
+            "POST": self.session.post,
+            "PUT": self.session.put,
+            "PATCH": self.session.patch,
+        }[method]
 
         # decide whether to use data= (bytes/streams) or json=
         if body is None:

@@ -11,6 +11,8 @@ pub struct RHEEDStreamSettings {
     pub fps_capture_rate: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub project_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub azimuth_label: Option<String>,
 }
 
 /// POST request to initialize a RHEED stream

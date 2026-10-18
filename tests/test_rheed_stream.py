@@ -294,6 +294,41 @@ class TestRHEEDStreamerInitialize:
         assert body is not None
         assert "project_id" not in body
 
+    def test_initialize_sends_azimuth_label_for_parked_stream(self, mock_server_factory):
+        """The operator's azimuth travels as azimuth_label, trimmed."""
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        server = mock_server_factory('"data-id-parked"')
+        streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+
+        streamer.initialize(fps=30.0, rotations_per_min=0.0, chunk_size=60, azimuth=" 110 ")
+
+        body = server.get_captured_body()
+        assert body is not None
+        assert body.get("azimuth_label") == "110"
+
+    @pytest.mark.parametrize("azimuth", [None, "", "  "])
+    def test_initialize_omits_azimuth_label_when_unset(self, mock_server_factory, azimuth):
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        server = mock_server_factory('"data-id-no-azimuth"')
+        streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+
+        streamer.initialize(fps=30.0, rotations_per_min=0.0, chunk_size=60, azimuth=azimuth)
+
+        body = server.get_captured_body()
+        assert body is not None
+        assert "azimuth_label" not in body
+
+    def test_initialize_rejects_azimuth_for_rotating_stream(self):
+        """A rotating stream carries several azimuths; nothing is sent."""
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        streamer = RHEEDStreamer(api_key="k", endpoint="http://localhost:9999")
+
+        with pytest.raises(ValueError, match="azimuth is for parked streams"):
+            streamer.initialize(fps=30.0, rotations_per_min=10.0, chunk_size=60, azimuth="100")
+
     def test_initialize_returns_data_id(self, mock_server_factory):
         """Verify initialize() returns the data_id from the server."""
         from atomscale.streaming.rheed_stream import RHEEDStreamer
@@ -535,14 +570,13 @@ class TestRHEEDStreamerTags:
 
         assert data_id == "data-id-combined"
 
-    def test_initialize_attaches_azimuth_tags(self, mock_server_factory):
-        """Primary use case: attach RHEED azimuth tags ("100", "210", "110").
+    def test_initialize_attaches_existing_tags_in_order(self, mock_server_factory):
+        """Tags that already exist in the org are attached in input order.
 
         The general resolver behavior (find-or-create, dedupe, whitespace) is
-        exercised in test_initialize_resolves_dedupes_and_creates_tags. This
-        test pins the concrete azimuth-tag scenario the feature was built for:
-        all three azimuth tags already exist in the org, and the streamer
-        attaches them in input order.
+        exercised in test_initialize_resolves_dedupes_and_creates_tags. Tags
+        named like azimuths are ordinary tags: a stream's azimuth is declared
+        with ``azimuth=``, not with tags.
         """
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
