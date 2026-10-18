@@ -33,6 +33,14 @@ pub struct FrameChunkMetadata {
     pub dims: String,
     pub start_unix_ms_utc: i64,
     pub end_unix_ms_utc: i64,
+    /// The clock correction already applied to the two stamps above: reference UTC minus the
+    /// host clock, in ms, so `host time = start_unix_ms_utc - clock_offset_ms`. Absent when the
+    /// stamps are the host clock as read (correction off, or the clock never measured).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clock_offset_ms: Option<i64>,
+    /// Bound on the error of `clock_offset_ms`, in ms.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub clock_uncertainty_ms: Option<f64>,
 }
 
 /// Accept (H,W) or (N,H,W) frames (casts to uint8) → (flat bytes, N,H,W).

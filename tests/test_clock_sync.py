@@ -58,6 +58,14 @@ def _expected_offset_bounds(server, before_ms: float, after_ms: float) -> tuple[
     return skew_at(after_ms) - TOLERANCE_MS, skew_at(before_ms) + TOLERANCE_MS
 
 
+def _presigned_metadata(requests) -> list[dict]:
+    return [
+        json.loads(b)
+        for m, p, b in requests
+        if p.startswith("/data_entries/raw_data/staged/")
+    ]
+
+
 def _presigned_starts(requests) -> list[tuple[int, int]]:
     return [
         (int(json.loads(b)["start_unix_ms_utc"]), int(json.loads(b)["end_unix_ms_utc"]))
@@ -90,6 +98,22 @@ class TestRHEEDClockCorrection:
         assert abs(start - (host_capture + status["offset_ms"])) < 2  # the offset slews, never jumps
         assert end - start == 2_000
 
+    def test_the_shard_records_the_correction_applied_to_its_stamps(self):
+        server = _server({})
+        try:
+            streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
+            data_id = streamer.initialize(fps=1.0, rotations_per_min=0.0, chunk_size=2)
+            host_capture = int(time.time() * 1000) - 10_000
+            streamer.push(data_id, 0, np.full((2, 8, 8), 7, dtype=np.uint8), capture_start_ms_utc=host_capture)
+            streamer.finalize(data_id)
+            requests = _logged_requests(server)
+        finally:
+            server.stop()
+        ((meta,),) = [_presigned_metadata(requests)]
+        # The mock stringifies metadata; the stamp is exactly the host time plus the recorded offset.
+        assert int(meta["start_unix_ms_utc"]) == host_capture + int(meta["clock_offset_ms"])
+        assert 0 <= float(meta["clock_uncertainty_ms"]) < TOLERANCE_MS
+
     def test_default_capture_time_is_corrected_too(self):
         server = _server({})
         try:
@@ -121,6 +145,9 @@ class TestRHEEDClockCorrection:
             server.stop()
         assert status is None
         assert _presigned_starts(requests) == [(host_capture, host_capture + 2_000)]
+        ((meta,),) = [_presigned_metadata(requests)]
+        assert "clock_offset_ms" not in meta
+        assert "clock_uncertainty_ms" not in meta
 
     def test_the_skip_switch_sends_host_time(self, monkeypatch):
         monkeypatch.setenv("ATOMSCALE_SKIP_CLOCK_SYNC", "1")
@@ -136,6 +163,9 @@ class TestRHEEDClockCorrection:
         assert streamer.clock_status() is None
         assert not any(p == "/gateway/time" for _, p, _ in requests)
         assert _presigned_starts(requests) == [(1_700_000_000_000, 1_700_000_002_000)]
+        ((meta,),) = [_presigned_metadata(requests)]
+        assert "clock_offset_ms" not in meta
+        assert "clock_uncertainty_ms" not in meta
 
 
 class TestTimeseriesClockCorrection:

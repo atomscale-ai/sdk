@@ -145,6 +145,15 @@ struct TimeResponse {
     transmitted_at_unix_ms: f64,
 }
 
+/// The correction applied to one timestamp: reference UTC minus the host clock, and the bound on
+/// its error (half the round trip of the sample it came from). Recorded beside every stamp so a
+/// consumer can undo or refine it later.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Correction {
+    pub offset_ms: i64,
+    pub uncertainty_ms: f64,
+}
+
 pub struct LabClock {
     state: Mutex<ClockState>,
     attempted: Condvar,
@@ -164,9 +173,23 @@ impl LabClock {
         state.current_offset(host_now_ms()).unwrap_or(0.0)
     }
 
-    /// Host-clock milliseconds as reference UTC; unchanged until the first measurement.
-    pub fn to_utc_ms(&self, host_ms: i64) -> i64 {
-        host_ms + self.offset_ms().round() as i64
+    /// A host-clock time as reference UTC, with the correction that was applied so the caller
+    /// can record it beside the stamp. Unchanged, with no correction, until the first
+    /// measurement. The offset is applied in whole milliseconds, so `host + offset == utc`.
+    pub fn correct_ms(&self, host_ms: i64) -> (i64, Option<Correction>) {
+        let mut state = self.state.lock().expect("lab clock mutex poisoned");
+        let (Some(offset), Some(best)) = (state.current_offset(host_now_ms()), state.best) else {
+            return (host_ms, None);
+        };
+        let offset_ms = offset.round() as i64;
+        let uncertainty_ms = (best.delay_ms / 2.0 * 10.0).round() / 10.0;
+        (
+            host_ms + offset_ms,
+            Some(Correction {
+                offset_ms,
+                uncertainty_ms,
+            }),
+        )
     }
 
     pub fn status(&self) -> Option<ClockStatus> {
@@ -459,5 +482,32 @@ mod tests {
         );
         assert_eq!(state.samples.len(), 1);
         assert_eq!(state.current_offset(1.0), Some(65_000.0));
+    }
+
+    #[test]
+    fn a_corrected_stamp_reports_the_correction_that_produced_it() {
+        let clock = LabClock::new();
+        assert_eq!(
+            clock.correct_ms(1_000),
+            (1_000, None),
+            "unmeasured passes through"
+        );
+        clock.state.lock().unwrap().record(
+            Sample {
+                offset_ms: 5_000.4,
+                delay_ms: 20.0,
+                measured_at_ms: 0.0,
+            },
+            host_now_ms(),
+        );
+        let (utc, correction) = clock.correct_ms(1_000);
+        let correction = correction.expect("measured");
+        assert_eq!(correction.offset_ms, 5_000);
+        assert_eq!(correction.uncertainty_ms, 10.0);
+        assert_eq!(
+            utc,
+            1_000 + correction.offset_ms,
+            "host + offset == stamp, exactly"
+        );
     }
 }

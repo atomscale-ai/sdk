@@ -14,7 +14,7 @@ use tokio::task::JoinHandle;
 use tracing::debug;
 
 mod clock;
-use clock::{clock_status_dict, lab_clock_for, LabClock};
+use clock::{clock_status_dict, lab_clock_for, Correction, LabClock};
 
 mod utils;
 use utils::{generic_post, init_tracing_once};
@@ -468,7 +468,7 @@ impl RHEEDStreamer {
                 t0.elapsed(), flat_len
             );
 
-            let start_unix_ms_utc = self.reference_utc_ms(
+            let (start_unix_ms_utc, correction) = self.reference_utc_ms(
                 caller_start_ms
                     .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps)),
             );
@@ -485,6 +485,8 @@ impl RHEEDStreamer {
                 dims: format!("{n},{h},{w}"),
                 start_unix_ms_utc,
                 end_unix_ms_utc,
+                clock_offset_ms: correction.map(|c| c.offset_ms),
+                clock_uncertainty_ms: correction.map(|c| c.uncertainty_ms),
             };
 
             // Spawn via private helper
@@ -580,7 +582,7 @@ impl RHEEDStreamer {
         let py = frames.py();
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
-        let start_unix_ms_utc = self.reference_utc_ms(
+        let (start_unix_ms_utc, correction) = self.reference_utc_ms(
             capture_start_ms_utc
                 .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps)),
         );
@@ -597,6 +599,8 @@ impl RHEEDStreamer {
             dims: format!("{n},{h},{w}"),
             start_unix_ms_utc,
             end_unix_ms_utc,
+            clock_offset_ms: correction.map(|c| c.offset_ms),
+            clock_uncertainty_ms: correction.map(|c| c.uncertainty_ms),
         };
 
         let ledger = self.upload_ledger(&data_id)?;
@@ -710,11 +714,12 @@ impl RHEEDStreamer {
         format!("{}/rheed/stream/{data_id}/end", self.endpoint)
     }
 
-    /// A host-clock time as reference UTC (unchanged when correction is off or not yet measured).
-    fn reference_utc_ms(&self, host_ms: i64) -> i64 {
+    /// A host-clock time as reference UTC, with the correction applied (none when correction is off
+    /// or the clock is not yet measured).
+    fn reference_utc_ms(&self, host_ms: i64) -> (i64, Option<Correction>) {
         self.clock
             .as_ref()
-            .map_or(host_ms, |clock| clock.to_utc_ms(host_ms))
+            .map_or((host_ms, None), |clock| clock.correct_ms(host_ms))
     }
 
     fn upload_ledger(&self, data_id: &str) -> PyResult<Arc<UploadLedger>> {
