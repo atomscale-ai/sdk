@@ -1,5 +1,11 @@
 pytest_plugins = ["pytest_order"]
 
+import os
+
+# Streamers measure the clock against AtomCloud's /gateway/time on creation. The mock servers the
+# suite uses count and order requests, so switch that off; tests/test_clock_sync.py turns it on.
+os.environ.setdefault("ATOMSCALE_SKIP_CLOCK_SYNC", "1")
+
 # Force the headless backend so plot tests never touch Tk/Cocoa on CI runners
 import matplotlib
 

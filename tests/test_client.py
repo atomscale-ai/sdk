@@ -1,8 +1,10 @@
+import json
 from datetime import datetime
 from unittest import mock
 
 import pytest
 from pandas import DataFrame
+from requests.exceptions import ConnectionError as RequestsConnectionError
 
 from atomscale import Client
 from atomscale.client import _RETRYABLE_STATUSES, _retry_client_call
@@ -447,6 +449,98 @@ def test_upload_surfaces_url_fetch_failure_after_retry_exhaustion(
     assert exc_info.value.status_code == 502
     # Default attempts=4 in _retry_client_call.
     assert call_count["n"] == 4
+
+
+WINNER_SAMPLE_ID = "55555555-5555-5555-5555-555555555555"
+
+
+def _sample_resolver(monkeypatch, listings, create):
+    """A client whose sample list returns each of ``listings`` in turn and whose sample
+    create calls ``create``; returns it with the log of the calls it made."""
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    listings = list(listings)
+    calls: list[str] = []
+
+    def fake_get(sub_url, params=None):
+        assert sub_url == "physical_samples/"
+        calls.append("GET")
+        return listings.pop(0)
+
+    def fake_post_or_put(method, sub_url, body=None, **kwargs):
+        assert (method, sub_url) == ("POST", "physical_samples/")
+        calls.append("POST")
+        return create(body)
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    monkeypatch.setattr(client, "_post_or_put", fake_post_or_put)
+    return client, calls
+
+
+def _create_fails(error):
+    def create(body):
+        raise error
+
+    return create
+
+
+def test_resolve_physical_sample_reuses_sample_named_in_409(monkeypatch):
+    """Losing the create race to a parallel upload/stream reuses the winner the 409 names."""
+    taken = ClientError(
+        "HTTP Error 409",
+        status_code=409,
+        response_text=json.dumps(
+            {"detail": {"message": "taken", "physical_sample_id": WINNER_SAMPLE_ID}}
+        ),
+    )
+    client, calls = _sample_resolver(monkeypatch, [[]], _create_fails(taken))
+
+    assert client._resolve_physical_sample("Shared-Run") == (WINNER_SAMPLE_ID, "Shared-Run")
+    assert calls == ["GET", "POST"]
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        ClientError("HTTP Error 500", status_code=500, response_text="boom"),
+        ClientError(
+            "HTTP Error 409",
+            status_code=409,
+            response_text='{"detail": "Physical sample name already exists"}',
+        ),
+        RequestsConnectionError("connection dropped"),
+    ],
+)
+def test_resolve_physical_sample_failed_create_reuses_sample_found_on_relist(
+    monkeypatch, error
+):
+    """Any other failed create re-lists and matches the winner case-insensitively, ignoring
+    its surrounding whitespace, the way the server keys uniqueness."""
+    winner = [{"id": WINNER_SAMPLE_ID, "name": "shared-run "}]
+    client, calls = _sample_resolver(monkeypatch, [[], winner], _create_fails(error))
+
+    assert client._resolve_physical_sample("Shared-Run") == (WINNER_SAMPLE_ID, "shared-run ")
+    assert calls == ["GET", "POST", "GET"]
+
+
+def test_resolve_physical_sample_still_missing_after_failed_create_raises(monkeypatch):
+    error = ClientError("HTTP Error 500", status_code=500, response_text="boom")
+    client, calls = _sample_resolver(monkeypatch, [[], []], _create_fails(error))
+
+    with pytest.raises(ClientError) as exc_info:
+        client._resolve_physical_sample("new-sample")
+
+    assert exc_info.value is error
+    assert calls == ["GET", "POST", "GET"]
+
+
+def test_resolve_physical_sample_creates_first_sample_in_empty_org(monkeypatch):
+    """An org with no samples yet lists as a DataFrame without columns."""
+    client, calls = _sample_resolver(
+        monkeypatch, [[]], lambda body: {"id": "new-id", "name": body["name"]}
+    )
+
+    assert client._resolve_physical_sample(" first ") == ("new-id", "first")
+    assert calls == ["GET", "POST"]
 
 
 def test_download_videos_missing_metadata(client: Client, tmp_path):

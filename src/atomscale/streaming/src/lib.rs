@@ -1,16 +1,18 @@
-use anyhow::{anyhow, Context};
 use chrono::{Local, Utc};
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::exceptions::{PyRuntimeError, PyRuntimeWarning, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyIterator, PyModule, PyTuple};
+use pyo3::types::{PyAny, PyDict, PyIterator, PyModule, PyTuple};
 use reqwest::Client;
 use std::collections::HashMap;
+use std::ffi::CString;
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
-use tokio::sync::Semaphore;
-use tokio::task::JoinHandle;
-use tracing::debug;
+use tracing::{debug, warn};
+
+mod clock;
+use clock::{clock_status_dict, lab_clock_for, Correction, LabClock};
 
 mod utils;
 use utils::{generic_post, init_tracing_once};
@@ -20,18 +22,17 @@ use timeseries::TimeseriesStreamer;
 
 mod initialize;
 use initialize::{
-    add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached,
-    post_for_initialization, RHEEDStreamSettings,
+    link_new_stream, post_for_initialization, resolve_stream_links, RHEEDStreamSettings,
 };
 
 mod retry;
 use retry::with_retries;
 
 mod upload;
-use upload::{
-    numpy_frames_to_flat, package_to_zarr_bytes, post_for_presigned, put_bytes_presigned,
-    FrameChunkMetadata,
-};
+use upload::{numpy_frames_to_flat, FrameChunkMetadata, PutTimeout, ShardUploader};
+
+mod spool;
+use spool::{CloseReason, Enqueued, Spool, SpoolConfig, SpoolStatus, StreamReport};
 
 /// Compute the `end_unix_ms_utc` for a chunk of `n` frames starting at `start_ms`
 /// at declared fps. Lifted into a free function so it can be unit-tested
@@ -39,6 +40,17 @@ use upload::{
 #[inline]
 fn chunk_end(start_ms: i64, n: usize, fps: f64) -> i64 {
     start_ms + ((n as f64 / fps) * 1000.0) as i64
+}
+
+/// The capture start of a chunk the caller handed over at `completed_ms`.
+///
+/// A chunk is pushed once its frames exist, so the moment it arrives here is when it finished
+/// being captured, not when it started: its first frame was captured one chunk span earlier.
+/// Stamping the arrival as the start would put every chunk, and the stream's alignment with
+/// other wall-clock data, a chunk span late.
+#[inline]
+fn capture_start_for_completed_chunk(completed_ms: i64, n: usize, fps: f64) -> i64 {
+    completed_ms - (chunk_end(0, n, fps))
 }
 
 /// RHEEDStreamer(api_key: str, endpoint: Optional[str] = None)
@@ -59,13 +71,22 @@ fn chunk_end(start_ms: i64, n: usize, fps: f64) -> i64 {
 /// Notes
 /// -----
 /// - Frame dtype is coerced to `uint8`. Shapes `(H, W)` or `(N, H, W)` are accepted; `(N,H,W)` is preferred for chunks.
-/// - Packaging happens concurrently for throughput; network PUTs are async.
+/// - `push(...)` and `run(...)` write each chunk's encoded shard to a disk spool and return; upload
+///   workers send the spool oldest first in the background, so a slow or failing network never
+///   stalls (and so never delays the timestamps of) your acquisition loop. See `spool_status()`.
 /// - This class is safe to call from Python; heavy work is offloaded to multithreaded async workers.
 /// - See also: `finalize(...)`.
 ///
 /// Args:
 ///     api_key (str): Your Atomscale API key.
 ///     endpoint (Optional[str]): Base API URL. Defaults to `"https://api.atomscale.ai"`.
+///     spool_dir (Optional[str]): Where chunks wait to upload, one subfolder per stream. Defaults
+///         to `$ATOMSCALE_SPOOL_DIR`, else `<user cache dir>/atomscale/rheed-spool`.
+///     spool_max_bytes (Optional[int]): Cap on spooled data; past it, new chunks are dropped (and
+///         counted) instead of blocking. Defaults to min(20 GB, 10% of the disk's free space).
+///     spool_min_free_bytes (Optional[int]): Free disk space the spool always leaves. Default 1 GB.
+///     spool_retention_s (Optional[float]): Age past which a chunk that still has not uploaded is
+///         discarded. Default 24 h.
 ///
 /// Raises:
 ///     RuntimeError: If the HTTP client or async runtime cannot be constructed.
@@ -81,9 +102,12 @@ pub struct RHEEDStreamer {
     /// share fps/rotating/chunk_size — each stream has its own entry.
     streams: Mutex<HashMap<String, PerStreamState>>,
 
-    /// Bytes of chunk data (in MiB permits) that uploads may hold at once; see
-    /// [`UPLOAD_BUDGET_MIB`].
-    upload_budget: Arc<Semaphore>,
+    /// Chunks waiting to upload, on disk; its workers upload them in the background.
+    spool: Arc<Spool>,
+
+    /// This computer's clock against AtomCloud's; every stamp leaves as reference UTC.
+    /// `None` when correction is switched off.
+    clock: Option<Arc<LabClock>>,
 }
 
 /// Per-`data_id` runtime config. One `RHEEDStreamer` instance can service
@@ -105,21 +129,41 @@ impl RHEEDStreamer {
     /// Args:
     ///     api_key (str): Your AtomScale API key.
     ///     endpoint (Optional[str]): Base API URL. Defaults to `"https://api.atomscale.ai"`.
+    ///     verbosity (Optional[int]): Logging verbosity (0-4).
+    ///     spool_dir, spool_max_bytes, spool_min_free_bytes, spool_retention_s: Disk spool
+    ///         settings; see the class docstring.
+    ///
+    /// Chunks an earlier run of this endpoint left in the spool (after a crash, say) are
+    /// uploaded in the background if their stream is still open, and discarded otherwise.
     ///
     /// Returns:
     ///     RHEEDStreamer: A configured streamer ready to be initialized and used.
     ///
     /// Raises:
-    ///     RuntimeError: If the HTTP client or async runtime cannot be constructed.
+    ///     RuntimeError: If the HTTP client, async runtime or spool directory cannot be set up.
     #[new]
-    #[pyo3(signature = (api_key, endpoint=None, verbosity=None))]
-    #[pyo3(text_signature = "(api_key, endpoint=None, verbosity=None)")]
-    fn new(api_key: String, endpoint: Option<String>, verbosity: Option<u8>) -> PyResult<Self> {
+    #[pyo3(signature = (api_key, endpoint=None, verbosity=None, spool_dir=None, spool_max_bytes=None, spool_min_free_bytes=None, spool_retention_s=None))]
+    #[pyo3(
+        text_signature = "(api_key, endpoint=None, verbosity=None, spool_dir=None, spool_max_bytes=None, spool_min_free_bytes=None, spool_retention_s=None)"
+    )]
+    fn new(
+        api_key: String,
+        endpoint: Option<String>,
+        verbosity: Option<u8>,
+        spool_dir: Option<PathBuf>,
+        spool_max_bytes: Option<u64>,
+        spool_min_free_bytes: Option<u64>,
+        spool_retention_s: Option<f64>,
+    ) -> PyResult<Self> {
         let verbosity = verbosity.unwrap_or(0);
         init_tracing_once(verbosity);
 
+        // Shard PUTs set their own, size-scaled timeout (`PutTimeout`); the 60 s covers the
+        // small API calls. Connecting is bounded on its own so an unreachable host fails fast
+        // even under a long PUT timeout.
         let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
+            .timeout(Duration::from_secs(60))
+            .connect_timeout(Duration::from_secs(10))
             .build()
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
@@ -132,13 +176,62 @@ impl RHEEDStreamer {
 
         debug!("[rheed_stream] init: base_url={}", endpoint);
 
+        let clock = lab_clock_for(&endpoint);
+
+        let retention = spool_retention_s
+            .map(|seconds| {
+                Duration::try_from_secs_f64(seconds)
+                    .ok()
+                    .filter(|retention| !retention.is_zero())
+                    .ok_or_else(|| PyValueError::new_err("spool_retention_s must be positive"))
+            })
+            .transpose()?;
+        let configure = |root: Option<PathBuf>| {
+            let mut config = SpoolConfig::new(&endpoint, root);
+            config.max_bytes = spool_max_bytes;
+            if let Some(min_free_bytes) = spool_min_free_bytes {
+                config.min_free_bytes = min_free_bytes;
+            }
+            if let Some(retention) = retention {
+                config.retention = retention;
+            }
+            config
+        };
+        let spool = Spool::open(configure(spool_dir.clone()))
+            .or_else(|error| {
+                // Only the default location falls back; a directory the caller chose must work.
+                let explicit =
+                    spool_dir.is_some() || std::env::var_os(spool::SPOOL_DIR_ENV).is_some();
+                if explicit {
+                    return Err(error);
+                }
+                let fallback = std::env::temp_dir().join("atomscale-rheed-spool");
+                warn!(
+                    "[rheed_stream] {error:#}; spooling to {} instead",
+                    fallback.display()
+                );
+                Spool::open(configure(Some(fallback)))
+            })
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
+        spool.start(
+            rt.handle(),
+            Arc::new(ShardUploader {
+                client: client.clone(),
+                api_key: api_key.clone(),
+                presign_url: format!("{endpoint}/data_entries/raw_data/staged/upload_urls/"),
+                put_timeout: PutTimeout::default(),
+            }),
+        );
+        debug!("[rheed_stream] spool: {}", spool.root().display());
+
         Ok(Self {
             api_key,
             endpoint,
             client,
             rt,
             streams: Mutex::new(HashMap::new()),
-            upload_budget: Arc::new(Semaphore::new(UPLOAD_BUDGET_MIB as usize)),
+            spool,
+            clock,
         })
     }
 
@@ -168,19 +261,26 @@ impl RHEEDStreamer {
     ///         to link the physical sample to the project for growth monitoring.
     ///     tags (Optional[List[str]]): List of tag names or UUIDs to attach to the data item. Names are matched
     ///         case-insensitively against existing org tags; unknown names are created. UUIDs must reference
-    ///         existing tags.
+    ///         existing tags. Tags do not set the stream's azimuth; use `azimuth`.
+    ///     azimuth (Optional[str]): The azimuth a parked stream is recorded at, e.g. `"100"`. Its views are
+    ///         labelled with it in place of the automatic azimuth classifier until a user edits the view.
+    ///         Only valid with `rotations_per_min == 0`; a rotating stream carries several azimuths.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
-    ///     RuntimeError: If the initialization POST fails.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None))]
+    ///     ValueError: If `azimuth` is given for a rotating stream.
+    ///     RuntimeError: If the stream cannot be created or linked. The physical sample and tags
+    ///         are resolved before the stream is created, so a bad one creates nothing. If linking
+    ///         fails after creation, the stream is ended and the error names its `data_id`.
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None))]
     #[pyo3(
-        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None)"
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None)"
     )]
     fn initialize(
         &self,
+        py: Python<'_>,
         fps: f64,
         rotations_per_min: f64,
         chunk_size: usize,
@@ -188,7 +288,13 @@ impl RHEEDStreamer {
         physical_sample: Option<String>,
         project_id: Option<String>,
         tags: Option<Vec<String>>,
+        azimuth: Option<String>,
     ) -> PyResult<String> {
+        // Measure the lab clock before the first chunk is stamped; a failure streams uncorrected.
+        if let Some(clock) = &self.clock {
+            py.detach(|| clock.wait_for_first_attempt());
+        }
+
         // Guard: chunk_size must be >= ceil(2 * fps)
         let min_chunk = (2.0 * fps).ceil() as usize;
         if chunk_size < min_chunk {
@@ -213,6 +319,15 @@ impl RHEEDStreamer {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
+        let azimuth_label = azimuth
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+        if azimuth_label.is_some() && rotations_per_min > 0.0 {
+            return Err(PyValueError::new_err(
+                "azimuth is for parked streams (rotations_per_min=0); a rotating stream carries several azimuths",
+            ));
+        }
+
         let fpr = (fps * 60.0) / rotations_per_min;
 
         #[allow(clippy::redundant_field_names)]
@@ -222,10 +337,23 @@ impl RHEEDStreamer {
             rotations_per_min,
             fps_capture_rate: fps,
             project_id,
+            azimuth_label,
         };
 
-        let base_endpoint = self.endpoint.clone();
-        let post_url = format!("{base_endpoint}/rheed/stream/");
+        let links_fut = resolve_stream_links(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            physical_sample.as_deref(),
+            settings.project_id.clone(),
+            tags.as_deref().unwrap_or_default(),
+        );
+        let links = self
+            .rt
+            .block_on(links_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
+
+        let post_url = format!("{}/rheed/stream/", self.endpoint);
         let init_fut = post_for_initialization(&self.client, &post_url, &settings, &self.api_key);
 
         let data_id = self
@@ -233,51 +361,24 @@ impl RHEEDStreamer {
             .block_on(init_fut)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
-        if let Some(sample_name) = physical_sample {
-            let physical_sample_fut = ensure_physical_sample_link(
-                &self.client,
-                &base_endpoint,
-                &self.api_key,
-                &data_id,
-                &sample_name,
-            );
-            let sample_id = self
-                .rt
-                .block_on(physical_sample_fut)
-                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        let end_url = self.end_url(&data_id);
+        let link_fut = link_new_stream(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            &data_id,
+            &links,
+            &end_url,
+        );
+        self.rt
+            .block_on(link_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
-            // If project_id was provided, add the sample to the project's membership.
-            // We deliberately do NOT touch growth-monitoring tracking config here —
-            // that endpoint blindly re-validates the project's full configuration
-            // and is fragile (see add_sample_to_project for details).
-            if let Some(ref proj_id) = settings.project_id {
-                let add_to_project_fut = add_sample_to_project(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    proj_id,
-                    &sample_id,
-                );
-                self.rt
-                    .block_on(add_to_project_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
-
-        if let Some(tag_inputs) = tags {
-            if !tag_inputs.is_empty() {
-                let tags_fut = ensure_tags_attached(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    &data_id,
-                    &tag_inputs,
-                );
-                self.rt
-                    .block_on(tags_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
+        self.spool.open_stream(&data_id).map_err(|e| {
+            PyRuntimeError::new_err(format!(
+                "stream {data_id} was created but cannot be spooled: {e:#}"
+            ))
+        })?;
 
         // Insert per-stream state keyed by the new data_id. State is not
         // shared with any other concurrent stream on this streamer instance.
@@ -285,10 +386,7 @@ impl RHEEDStreamer {
         // intended order: if the platform call fails we never create state for
         // a phantom data_id.
         {
-            let mut streams = self
-                .streams
-                .lock()
-                .expect("streams mutex poisoned");
+            let mut streams = self.streams.lock().expect("streams mutex poisoned");
             streams.insert(
                 data_id.clone(),
                 PerStreamState {
@@ -313,24 +411,21 @@ impl RHEEDStreamer {
     ///   this when you have hardware/OS-level timestamps for each chunk
     ///   (camera trigger time, OS monotonic-to-utc conversion, etc.).
     ///
-    /// For each yielded item, the method:
-    /// 1) Converts to flat `uint8` bytes,
-    /// 2) Packages frames on a blocking worker thread,
-    /// 3) Uploads the shard,
-    /// 4) Proceeds concurrently for high throughput.
-    ///
-    /// This method **blocks until all spawned tasks complete**. After `run(...)` returns,
-    /// call `finalize(data_id)` to mark the stream complete on the server.
+    /// For each yielded item, the method stamps it, encodes its shard and writes it to the disk
+    /// spool, then asks the iterator for the next one. It never waits on uploads, which run in
+    /// the background, oldest first. Once the iterator is exhausted, it waits for this stream's
+    /// spool to drain (up to 10 minutes). After `run(...)` returns, call `finalize(data_id)` to
+    /// mark the stream complete on the server.
     ///
     /// Timestamps
     /// ----------
-    /// When the caller does not supply a `capture_start_ms_utc`, this method
-    /// stamps each chunk with `Utc::now()` sampled the moment the iterator
-    /// yields, before any GIL-held packaging work. The chunk's
-    /// `end_unix_ms_utc` is then `start + (n / fps) * 1000`. Inter-chunk
-    /// gaps therefore reflect real arrival jitter; intra-chunk span follows
-    /// declared fps. Pass an explicit timestamp when you have a hardware
-    /// clock (camera trigger, OS monotonic-to-utc conversion).
+    /// Every chunk is stamped with when its first frame was **captured**, so the stream
+    /// aligns with other lab wall-clock data. The chunk's `end_unix_ms_utc` is
+    /// `start + (n / fps) * 1000`. Yield `(frames, capture_start_ms_utc)` whenever you have a
+    /// real capture clock (camera trigger, OS monotonic-to-utc conversion). When you yield
+    /// bare frames, each chunk is taken to have just finished capturing: `Utc::now()` is
+    /// sampled the moment the iterator yields, before any GIL-held packaging work, and the
+    /// start is that minus the chunk's span (`n / fps`).
     ///
     /// Args:
     ///     data_id (str): The stream data ID returned by `initialize(...)`.
@@ -341,7 +436,10 @@ impl RHEEDStreamer {
     ///     None
     ///
     /// Raises:
-    ///     RuntimeError: If any packaging/join/upload step fails.
+    ///     RuntimeError: If a chunk cannot be packaged, or if any chunk of this run was lost
+    ///         (dropped because the spool was full or the disk low, or refused by the backend).
+    ///         Chunks still uploading when the drain wait ends only warn; `finalize` keeps
+    ///         draining them.
     ///     ValueError: If a yielded tuple's second element is not an int.
     ///
     /// See also:
@@ -355,7 +453,8 @@ impl RHEEDStreamer {
 
         let py = frames_iter.py();
         let iter = PyIterator::from_object(&frames_iter)?;
-        let mut handles = Vec::new();
+        let lost_before = self.lost_chunks(&data_id);
+        let mut spooled = 0_usize;
 
         let t_total0 = Instant::now();
 
@@ -394,11 +493,14 @@ impl RHEEDStreamer {
             let flat_len = flat.len();
 
             debug!(
-                "[rheed_stream] item#{idx}: prepared in {:.2?} → N,H,W=({n},{h},{w}), flat_len={}; spawning task…",
+                "[rheed_stream] item#{idx}: prepared in {:.2?} → N,H,W=({n},{h},{w}), flat_len={}; spooling…",
                 t0.elapsed(), flat_len
             );
 
-            let start_unix_ms_utc = caller_start_ms.unwrap_or(arrival_ms);
+            let (start_unix_ms_utc, correction) = self.reference_utc_ms(
+                caller_start_ms
+                    .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps)),
+            );
             let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
 
             let metadata = FrameChunkMetadata {
@@ -412,39 +514,38 @@ impl RHEEDStreamer {
                 dims: format!("{n},{h},{w}"),
                 start_unix_ms_utc,
                 end_unix_ms_utc,
+                clock_offset_ms: correction.map(|c| c.offset_ms),
+                clock_uncertainty_ms: correction.map(|c| c.uncertainty_ms),
             };
 
-            // Spawn via private helper
-            let handle = self.spawn_chunk_upload(py, idx, flat, n, h, w, metadata);
-            handles.push(handle);
+            self.spool_chunk(py, &data_id, idx, metadata, flat, n, h, w)?;
+            spooled += 1;
         }
 
-        debug!(
-            "[rheed_stream] run: spawned {} packaging task(s); awaiting…",
-            handles.len()
-        );
-
-        // Wait for all tasks to finish; print errors if any
-        let res = self.rt.block_on(async {
-            for (i, h) in handles.into_iter().enumerate() {
-                match h.await {
-                    Ok(Ok(())) => debug!("[rheed_stream] task#{i}: completed"),
-                    Ok(Err(e)) => {
-                        debug!("[rheed_stream] task#{i}: ERROR: {e}");
-                        return Err(e);
-                    }
-                    Err(e) => {
-                        debug!("[rheed_stream] task#{i}: JOIN ERROR: {e}");
-                        return Err(anyhow::anyhow!(e));
-                    }
-                }
-            }
-            Ok::<(), anyhow::Error>(())
+        debug!("[rheed_stream] run: spooled {spooled} chunk(s); waiting for uploads…");
+        let drained = py.detach(|| {
+            self.rt
+                .block_on(self.spool.drain(&data_id, DEFAULT_DRAIN_TIMEOUT))
         });
 
-        if let Err(e) = res {
-            // Alternate form carries the cause chain, e.g. the HTTP status behind a failed upload.
-            return Err(PyRuntimeError::new_err(format!("{e:#}")));
+        let lost = self.lost_chunks(&data_id) - lost_before;
+        if lost > 0 {
+            let report = self.spool.report(&data_id).unwrap_or_default();
+            return Err(PyRuntimeError::new_err(format!(
+                "{lost} of the {spooled} chunk(s) of this run of stream {data_id} will not be uploaded: {}",
+                describe_losses(&report)
+            )));
+        }
+        if !drained {
+            let pending = self.spool.report(&data_id).map_or(0, |r| r.pending);
+            warn_py(
+                py,
+                &format!(
+                    "{pending} chunk(s) of stream {data_id} are still uploading after {} s; \
+                     they stay spooled and finalize() waits for them",
+                    DEFAULT_DRAIN_TIMEOUT.as_secs()
+                ),
+            )?;
         }
 
         let total_dur = t_total0.elapsed();
@@ -457,19 +558,25 @@ impl RHEEDStreamer {
     /// **Callback mode.** Push a single chunk of frames that you produced externally (e.g., from a
     /// camera callback). Call repeatedly for subsequent chunks.
     ///
+    /// The chunk is stamped, encoded and written to the disk spool before this returns; it never
+    /// waits on uploads. If the spool is at its byte cap or the disk at its free-space floor, the
+    /// chunk is dropped instead (logged, and counted in `spool_status()` and `finalize()`), so the
+    /// backend sees a missing shard rather than your loop stalling.
+    ///
     /// The `frames` argument may be `(N,H,W)` or `(H,W)`; dtype is coerced to `uint8`.
     ///
     /// After your last `push(...)`, call **`finalize(data_id)`** to mark the stream as complete on the server.
     ///
     /// Timestamps
     /// ----------
-    /// When `capture_start_ms_utc` is not provided, this method stamps each
-    /// chunk with `Utc::now()` sampled the moment `push()` is entered, before
-    /// any GIL-held packaging work. The chunk's `end_unix_ms_utc` is then
-    /// `start + (n / fps) * 1000`. Inter-chunk gaps therefore reflect real
-    /// arrival jitter; intra-chunk span follows declared fps. Pass an explicit
-    /// timestamp when you have a hardware clock (camera trigger, OS
-    /// monotonic-to-utc conversion).
+    /// Every chunk is stamped with when its first frame was **captured**, so the stream
+    /// aligns with other lab wall-clock data. The chunk's `end_unix_ms_utc` is
+    /// `start + (n / fps) * 1000`. Pass `capture_start_ms_utc` whenever you have a real
+    /// capture clock (camera trigger, OS monotonic-to-utc conversion). When you do not, the
+    /// chunk is taken to have just finished being captured: `push()` samples `Utc::now()` on
+    /// entry, before any GIL-held packaging work, and the start is that minus the chunk's
+    /// span (`n / fps`). That estimate is only as good as how promptly you push; a chunk
+    /// pushed late is stamped late.
     ///
     /// Args:
     ///     data_id (str): The remote data identifier returned by `initialize(...)`.
@@ -477,14 +584,14 @@ impl RHEEDStreamer {
     ///     frames (numpy.ndarray): `(N,H,W)` or `(H,W)` grayscale frames as `uint8`.
     ///     capture_start_ms_utc (Optional[int]): Capture-start timestamp in milliseconds
     ///         since UNIX epoch (UTC). Pass when you have a real capture-time clock
-    ///         (camera trigger, OS monotonic-to-utc conversion). When None, sampled
-    ///         from `Utc::now()` on entry.
+    ///         (camera trigger, OS monotonic-to-utc conversion). When None, the chunk is
+    ///         taken to have just finished capturing: `Utc::now()` on entry minus `n / fps`.
     ///
     /// Returns:
     ///     None
     ///
     /// Raises:
-    ///     RuntimeError: If packaging or upload fails internally.
+    ///     RuntimeError: If the chunk cannot be packaged.
     ///
     /// See also:
     ///     finalize(data_id)
@@ -506,7 +613,10 @@ impl RHEEDStreamer {
         let py = frames.py();
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
-        let start_unix_ms_utc = capture_start_ms_utc.unwrap_or(arrival_ms);
+        let (start_unix_ms_utc, correction) = self.reference_utc_ms(
+            capture_start_ms_utc
+                .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps)),
+        );
         let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
 
         let metadata = FrameChunkMetadata {
@@ -520,11 +630,35 @@ impl RHEEDStreamer {
             dims: format!("{n},{h},{w}"),
             start_unix_ms_utc,
             end_unix_ms_utc,
+            clock_offset_ms: correction.map(|c| c.offset_ms),
+            clock_uncertainty_ms: correction.map(|c| c.uncertainty_ms),
         };
 
-        // Spawn via private helper; detach by dropping the handle
-        self.spawn_chunk_upload(py, chunk_idx, flat, n, h, w, metadata);
-        Ok(())
+        self.spool_chunk(py, &data_id, chunk_idx, metadata, flat, n, h, w)
+    }
+
+    /// clock_status(self) -> Optional[dict]
+    ///
+    /// This computer's clock measured against AtomCloud's reference clock, or `None` when
+    /// correction is off (`ATOMSCALE_SKIP_CLOCK_SYNC`) or no measurement has succeeded yet.
+    /// Every chunk is stamped in reference UTC, so `offset_ms` (reference minus host) is the
+    /// correction in effect, `uncertainty_ms` bounds its error (half the best round trip) and
+    /// `measured_at_unix_ms` is the reference time of the sample it came from.
+    fn clock_status<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyDict>>> {
+        clock_status_dict(py, self.clock.as_deref())
+    }
+
+    /// spool_status(self) -> dict
+    ///
+    /// The disk spool chunks wait in before uploading. Keys: `dir`, `bytes` (spooled now),
+    /// `max_bytes`, `min_free_bytes`, `free_bytes` (on its disk; `None` if unknown),
+    /// `chunks_pending`, the cumulative `chunks_spooled`, `chunks_uploaded`, `chunks_dropped`
+    /// (spool full, disk low or write failed), `chunks_failed` (refused by the backend) and
+    /// `chunks_purged` (discarded unsent: stream finalized or abandoned, or past retention), and
+    /// `streams`, the same counts per `data_id` with `closed`.
+    fn spool_status<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let status = py.detach(|| self.spool.status());
+        spool_status_dict(py, &status)
     }
 
     /// finalize(self, data_id: str) -> None
@@ -533,63 +667,199 @@ impl RHEEDStreamer {
     /// server that no further chunks will be uploaded and allows any downstream jobs
     /// (e.g., indexing, aggregation, or post-processing) to begin.
     ///
-    /// Typical use:
-    /// - After `run(...)` returns (it waits for all chunk tasks), call `finalize(data_id)`.
-    /// - In `push(...)` mode, call `finalize(data_id)` only after you have pushed your last
-    ///   chunk **and** ensured any in-flight uploads have finished (since `push(...)`
-    ///   detaches tasks).
+    /// Call it after your last `push(...)`, or after `run(...)` returns.
     ///
     /// Notes
     /// -----
-    /// - The operation performs a single HTTP POST to the `.../end` endpoint.
+    /// - First waits, up to `drain_timeout_s`, for this stream's spooled chunks to upload, so a
+    ///   shard still waiting is not cut off. Then it discards whatever is left and closes the
+    ///   stream. If any chunk was never uploaded (dropped, refused, or still spooled at the
+    ///   timeout), it emits one `RuntimeWarning` with the count; the stream is still closed.
+    /// - Also accepts a stream an earlier run left in the spool (after a crash), to close it.
+    /// - The server answers 503 while the stream's first analysis is still running; the POST to
+    ///   the `.../end` endpoint is retried with backoff for about three minutes before it fails.
     /// - It is safe to call more than once; the server may treat it as idempotent,
     ///   but repeated calls are unnecessary.
     ///
     /// Args:
     ///     data_id (str): The stream identifier returned by `initialize(...)`.
+    ///     drain_timeout_s (Optional[float]): How long to wait for spooled chunks to upload.
+    ///         Default 600 (10 minutes).
     ///
     /// Returns:
-    ///     None
+    ///     dict: What became of the stream's chunks: `chunks_spooled`, `chunks_uploaded`,
+    ///     `chunks_dropped`, `chunks_failed`, `chunks_purged`, `chunks_not_uploaded` (the last
+    ///     three plus dropped), `drained` (whether the wait finished in time) and `lost`, a list
+    ///     of `(chunk_idx, reason)` for chunks not uploaded.
     ///
     /// Raises:
     ///     RuntimeError: If the finalization POST fails.
     ///
     /// See also:
     ///     run(data_id, frames_iter), push(data_id, chunk_idx, frames)
-    #[pyo3(signature = (data_id))]
-    #[pyo3(text_signature = "(data_id)")]
-    fn finalize(&self, data_id: String) -> PyResult<()> {
-        let base_endpoint = self.endpoint.clone();
-        let post_url = format!("{base_endpoint}/rheed/stream/{data_id}/end");
-        let final_fut = generic_post(&self.client, &post_url, &self.api_key);
+    #[pyo3(signature = (data_id, drain_timeout_s=None))]
+    #[pyo3(text_signature = "(data_id, drain_timeout_s=None)")]
+    fn finalize<'py>(
+        &self,
+        py: Python<'py>,
+        data_id: String,
+        drain_timeout_s: Option<f64>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        if self.cfg(&data_id).is_err() && !self.spool.has_stream(&data_id) {
+            return Err(PyRuntimeError::new_err(format!(
+                "no stream initialized for data_id={data_id}; call initialize(...) first."
+            )));
+        }
+        let timeout = drain_timeout_s
+            .map(|seconds| {
+                Duration::try_from_secs_f64(seconds)
+                    .map_err(|_| PyValueError::new_err("drain_timeout_s must be non-negative"))
+            })
+            .transpose()?
+            .unwrap_or(DEFAULT_DRAIN_TIMEOUT);
+        let (drained, report) = py.detach(|| {
+            let drained = self.rt.block_on(self.spool.drain(&data_id, timeout));
+            let report = self
+                .spool
+                .close_stream(&data_id, CloseReason::Finalized)
+                .unwrap_or_default();
+            (drained, report)
+        });
+        let lost = report.counts.not_uploaded();
+        if lost > 0 {
+            warn_py(
+                py,
+                &format!(
+                    "{lost} of the {} chunk(s) of stream {data_id} were not uploaded: {}",
+                    report.counts.spooled + report.counts.dropped,
+                    describe_losses(&report)
+                ),
+            )?;
+        }
 
-        self.rt
-            .block_on(final_fut)
-            .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
+        let post_url = self.end_url(&data_id);
+        let final_fut = with_retries("[rheed_stream] finalize", FINALIZE_ATTEMPTS, || {
+            generic_post(&self.client, &post_url, &self.api_key)
+        });
+
+        py.detach(|| self.rt.block_on(final_fut))
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         // Drop the per-stream entry so the data_id is no longer addressable
         // from this streamer. Other streams' entries are untouched.
-        let mut streams = self
-            .streams
+        self.streams
             .lock()
-            .expect("streams mutex poisoned");
-        streams.remove(&data_id);
+            .expect("streams mutex poisoned")
+            .remove(&data_id);
+        self.spool.forget_stream(&data_id);
 
-        Ok(())
+        let dict = stream_report_dict(py, &report)?;
+        dict.set_item("drained", drained)?;
+        Ok(dict)
     }
 }
 
-/// Presign + PUT attempts per shard: 0.5, 1, 2 and 4 s apart, about 8 s in all.
-const SHARD_UPLOAD_ATTEMPTS: u32 = 5;
+/// Attempts at closing a stream. The server answers 503 until the stream's first analysis has
+/// written its processed video, which can take a minute or more: 0.5, 1, 2, 4, 8, 16, then 30 s
+/// apart, about three minutes in all.
+const FINALIZE_ATTEMPTS: u32 = 12;
 
-/// Chunk data uploads may hold at once, in MiB. A chunk's raw frames stay in memory until
-/// its upload finishes, retries included, so an outage would otherwise buffer without
-/// limit; past the budget, `push`/`run` wait for an upload to finish (backpressure). A
-/// chunk larger than the whole budget still goes through, alone.
-const UPLOAD_BUDGET_MIB: u32 = 1024;
+/// How long `finalize` (and the end of `run`) waits for a stream's spool to drain by default.
+const DEFAULT_DRAIN_TIMEOUT: Duration = Duration::from_secs(600);
+
+fn warn_py(py: Python<'_>, message: &str) -> PyResult<()> {
+    warn!("[rheed_stream] {message}");
+    PyErr::warn(
+        py,
+        &py.get_type::<PyRuntimeWarning>(),
+        &CString::new(message.replace('\0', " ")).expect("NUL bytes were replaced"),
+        1,
+    )
+}
+
+/// The counts behind a stream's lost chunks, and the first few of them.
+fn describe_losses(report: &StreamReport) -> String {
+    const LISTED: usize = 5;
+    let c = &report.counts;
+    let mut text = format!(
+        "{} dropped (spool full, disk low or write failed), {} refused by the backend, \
+         {} discarded unsent",
+        c.dropped, c.failed, c.purged
+    );
+    for loss in report.losses.iter().take(LISTED) {
+        text.push_str(&format!("; chunk {}: {}", loss.chunk_idx, loss.reason));
+    }
+    if report.losses.len() > LISTED {
+        text.push_str("; …");
+    }
+    text
+}
+
+fn stream_report_dict<'py>(py: Python<'py>, report: &StreamReport) -> PyResult<Bound<'py, PyDict>> {
+    let c = &report.counts;
+    let dict = PyDict::new(py);
+    dict.set_item("chunks_spooled", c.spooled)?;
+    dict.set_item("chunks_uploaded", c.uploaded)?;
+    dict.set_item("chunks_dropped", c.dropped)?;
+    dict.set_item("chunks_failed", c.failed)?;
+    dict.set_item("chunks_purged", c.purged)?;
+    dict.set_item("chunks_pending", report.pending)?;
+    dict.set_item("chunks_not_uploaded", c.not_uploaded())?;
+    dict.set_item(
+        "lost",
+        report
+            .losses
+            .iter()
+            .map(|loss| (loss.chunk_idx, loss.reason.clone()))
+            .collect::<Vec<_>>(),
+    )?;
+    dict.set_item("closed", report.closed.map(|reason| reason.to_string()))?;
+    Ok(dict)
+}
+
+fn spool_status_dict<'py>(py: Python<'py>, status: &SpoolStatus) -> PyResult<Bound<'py, PyDict>> {
+    let t = &status.totals;
+    let dict = PyDict::new(py);
+    dict.set_item("dir", status.root.to_string_lossy())?;
+    dict.set_item("bytes", status.bytes)?;
+    dict.set_item("max_bytes", status.max_bytes)?;
+    dict.set_item("min_free_bytes", status.min_free_bytes)?;
+    dict.set_item("free_bytes", status.free_bytes)?;
+    dict.set_item("chunks_pending", status.pending)?;
+    dict.set_item("chunks_spooled", t.spooled)?;
+    dict.set_item("chunks_uploaded", t.uploaded)?;
+    dict.set_item("chunks_dropped", t.dropped)?;
+    dict.set_item("chunks_failed", t.failed)?;
+    dict.set_item("chunks_purged", t.purged)?;
+    let streams = PyDict::new(py);
+    for (data_id, report) in &status.streams {
+        streams.set_item(data_id, stream_report_dict(py, report)?)?;
+    }
+    dict.set_item("streams", streams)?;
+    Ok(dict)
+}
 
 // Private and rust only access
 impl RHEEDStreamer {
+    fn end_url(&self, data_id: &str) -> String {
+        format!("{}/rheed/stream/{data_id}/end", self.endpoint)
+    }
+
+    /// A host-clock time as reference UTC, with the correction applied (none when correction is off
+    /// or the clock is not yet measured).
+    fn reference_utc_ms(&self, host_ms: i64) -> (i64, Option<Correction>) {
+        self.clock
+            .as_ref()
+            .map_or((host_ms, None), |clock| clock.correct_ms(host_ms))
+    }
+
+    /// Chunks of the stream that will not be uploaded so far.
+    fn lost_chunks(&self, data_id: &str) -> u64 {
+        self.spool
+            .report(data_id)
+            .map_or(0, |report| report.counts.not_uploaded())
+    }
+
     /// cfg(self, data_id) -> Tuple[bool, float, int]
     ///
     /// Internal helper: looks up per-stream config for `data_id`. Returns the
@@ -605,76 +875,36 @@ impl RHEEDStreamer {
         Ok((s.rotating, s.fps, s.chunk_size))
     }
 
-    /// spawn_chunk_upload(self, chunk_idx: int, flat: bytes, n: int, h: int, w: int, metadata: FrameChunkMetadata) -> asyncio.Task
-    ///
-    /// Internal helper: packages a prepared chunk to Zarr and uploads via a presigned URL.
-    /// Not exposed to Python.
-    fn spawn_chunk_upload(
+    /// Encodes a chunk and writes it to the spool, with the GIL released. A chunk the spool
+    /// drops is logged and counted there; only bad input is an error.
+    #[allow(clippy::too_many_arguments)]
+    fn spool_chunk(
         &self,
         py: Python<'_>,
+        data_id: &str,
         chunk_idx: usize,
+        metadata: FrameChunkMetadata,
         flat: Vec<u8>,
         n: usize,
         h: usize,
         w: usize,
-        metadata: FrameChunkMetadata,
-    ) -> JoinHandle<anyhow::Result<()>> {
-        let client = self.client.clone();
-        let api_key = self.api_key.clone();
-        let post_url = format!(
-            "{}/data_entries/raw_data/staged/upload_urls/",
-            self.endpoint
-        );
-        let zarr_shard_key = format!("frames.zarr/frames/c/{chunk_idx}/0/0");
-
-        // Reserve this chunk's share of the upload budget; the GIL is released while
-        // waiting so other Python threads keep running.
-        let mib = (flat.len().div_ceil(1 << 20) as u32).clamp(1, UPLOAD_BUDGET_MIB);
-        let budget = self.upload_budget.clone();
-        let permit = py
-            .detach(|| self.rt.block_on(budget.acquire_many_owned(mib)))
-            .expect("upload budget semaphore is never closed");
-
+    ) -> PyResult<()> {
+        let t0 = Instant::now();
+        let outcome = py
+            .detach(|| {
+                self.spool
+                    .enqueue(data_id, chunk_idx, metadata, flat, n, h, w)
+            })
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
         debug!(
-            "[rheed_stream] spawn#{chunk_idx}: queued (flat={} bytes, dims={n}x{h}x{w})",
-            flat.len()
+            "[rheed_stream] chunk {chunk_idx}: {} in {:.2?}",
+            match outcome {
+                Enqueued::Spooled => "spooled",
+                Enqueued::Dropped(_) => "dropped",
+            },
+            t0.elapsed()
         );
-
-        self.rt.spawn(async move {
-            let _permit = permit; // released when this upload finishes, however it ends
-            let shard = tokio::task::spawn_blocking(move || package_to_zarr_bytes(&flat, n, h, w))
-                .await
-                .map_err(|e| anyhow!("shard join error: {e}"))?
-                .context("shard worker failed")?;
-            debug!(
-                "[rheed_stream] spawn#{chunk_idx}: packaging OK ({} bytes)",
-                shard.len()
-            );
-
-            // A lost shard is a hole in the recording, so a failed presign or PUT is retried
-            // (fresh URL each attempt); the shard's key is fixed, so a repeat overwrites it.
-            with_retries(
-                &format!("[rheed_stream] shard {chunk_idx} upload"),
-                SHARD_UPLOAD_ATTEMPTS,
-                || async {
-                    let url = post_for_presigned(
-                        &client,
-                        &post_url,
-                        &zarr_shard_key,
-                        &metadata,
-                        &api_key,
-                    )
-                    .await
-                    .context("presigned URL request failed")?;
-                    put_bytes_presigned(&client, &url, &shard)
-                        .await
-                        .context("PUT bytes failed")
-                },
-            )
-            .await?;
-            debug!("[rheed_stream] spawn#{chunk_idx}: PUT done");
-            Ok(())
-        })
+        Ok(())
     }
 }
 
@@ -687,7 +917,17 @@ fn rheed_stream(m: &Bound<PyModule>) -> PyResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::chunk_end;
+    use super::{capture_start_for_completed_chunk, chunk_end};
+
+    /// A chunk pushed the moment it finished capturing started one span earlier.
+    #[test]
+    fn a_completed_chunk_started_one_span_earlier() {
+        let completed = 1_700_000_010_000;
+        // 240 frames at 120 fps span 2000 ms.
+        let start = capture_start_for_completed_chunk(completed, 240, 120.0);
+        assert_eq!(start, completed - 2_000);
+        assert_eq!(chunk_end(start, 240, 120.0), completed);
+    }
 
     /// `end_unix_ms_utc - start_unix_ms_utc` is the chunk's intra-chunk span,
     /// scaled by declared fps. This is what the streamer writes alongside each

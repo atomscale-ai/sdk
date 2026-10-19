@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import re
 import threading
@@ -778,6 +779,61 @@ class Client(BaseClient):
         for data_id in data_ids:
             payload.extend(self._get(sub_url=f"rheed/{data_id}/azimuths") or [])
         return rheed_azimuths_to_dataframe(payload)
+
+    def set_rheed_azimuth(
+        self,
+        data_id: str,
+        azimuth: str | None,
+        view_id: str | None = None,
+    ) -> DataFrame:
+        """Set the operator's azimuth on a RHEED recording's views.
+
+        The label overrides the automatic azimuth classifier and is kept when the
+        recording is reprocessed. Azimuth tags are not read for RHEED; this and
+        ``RHEEDStreamer.initialize(azimuth=...)`` are how an azimuth is declared.
+
+        Args:
+            data_id: Data ID of the RHEED recording.
+            azimuth: The azimuth, e.g. ``"100"``. ``None`` removes the override and
+                returns the views to the classifier's label.
+            view_id: The view to label. Required when the recording has rotating
+                views, which carry different azimuths; when omitted, every parked
+                view of the recording is labelled.
+
+        Returns:
+            DataFrame: The recording's views after the change, as
+            :meth:`get_rheed_azimuths` returns them.
+
+        Raises:
+            ValueError: If no view_id is given and the recording has no parked views
+                yet, or has rotating views.
+        """
+        if view_id is not None:
+            view_ids = [view_id]
+        else:
+            views = self.get_rheed_azimuths(data_id)
+            if (views["rpm"] != 0).any():
+                raise ValueError(
+                    f"RHEED recording {data_id} has rotating views; pass the view_id to label"
+                )
+            view_ids = views["view_id"].astype(str).tolist()
+            if not view_ids:
+                raise ValueError(
+                    f"RHEED recording {data_id} has no views yet; label it once analysis has "
+                    "produced them, or declare a stream's azimuth with "
+                    "RHEEDStreamer.initialize(azimuth=...)"
+                )
+        for target in view_ids:
+            updated = self._post_or_put(
+                "PATCH",
+                sub_url=f"rheed/{data_id}/azimuths/{target}",
+                body={"enabled": azimuth is not None, "label": azimuth},
+            )
+            if updated is None:
+                raise ValueError(
+                    f"RHEED view {target} not found on recording {data_id}"
+                )
+        return self.get_rheed_azimuths(data_id)
 
     def get_frame(
         self,
@@ -1643,11 +1699,46 @@ class Client(BaseClient):
         r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
     )
 
+    @staticmethod
+    def _find_physical_sample_named(
+        samples_df: DataFrame, name: str
+    ) -> tuple[str, str] | None:
+        """(id, name) of the sample whose trimmed name matches ``name``, ignoring case."""
+        # An org with no samples lists as a DataFrame without columns.
+        if samples_df.empty:
+            return None
+        names_lower = samples_df["Physical Sample Name"].str.strip().str.lower()
+        match = samples_df[names_lower == name.lower()]
+        if match.empty:
+            return None
+        return match.iloc[0]["Physical Sample ID"], match.iloc[0][
+            "Physical Sample Name"
+        ]
+
+    @staticmethod
+    def _taken_physical_sample_id(error: Exception) -> str | None:
+        """The existing sample's id when ``error`` is the server's 409 for a name already
+        taken in the org."""
+        if not isinstance(error, ClientError) or error.status_code != 409:
+            return None
+        try:
+            body = json.loads(error.response_text or "")
+        except ValueError:
+            return None
+        detail = body.get("detail") if isinstance(body, dict) else None
+        return detail.get("physical_sample_id") if isinstance(detail, dict) else None
+
     def _resolve_physical_sample(self, physical_sample: str) -> tuple[str, str]:
         """Resolve a physical sample name or UUID to (id, name).
 
         If UUID: look up existing sample, error if not found.
         If name: case-insensitive match, auto-create if not found.
+
+        Creating a sample races when several uploads or streams start at once with the
+        same new name: every caller sees it missing and POSTs it. The server lets the
+        first through and answers the rest with 409 and the winner's id. Any other failed
+        create re-lists the samples and takes the one that now exists, failing only if it
+        is still missing.
 
         Returns:
             Tuple of (physical_sample_id, physical_sample_name).
@@ -1666,22 +1757,29 @@ class Client(BaseClient):
                 )
             return physical_sample, match.iloc[0]["Physical Sample Name"]
 
-        # Name lookup: case-insensitive exact match
-        names_lower = samples_df["Physical Sample Name"].str.strip().str.lower()
-        mask = names_lower == physical_sample.lower()
-        match = samples_df[mask]
+        existing = self._find_physical_sample_named(samples_df, physical_sample)
+        if existing is not None:
+            return existing
 
-        if not match.empty:
-            return match.iloc[0]["Physical Sample ID"], match.iloc[0][
-                "Physical Sample Name"
-            ]
-
-        # Not found — create a new physical sample
-        resp: dict = self._post_or_put(  # type: ignore  # noqa: PGH003
-            method="POST",
-            sub_url="physical_samples/",
-            body={"name": physical_sample},
-        )
+        try:
+            resp: dict = self._post_or_put(  # type: ignore  # noqa: PGH003
+                method="POST",
+                sub_url="physical_samples/",
+                body={"name": physical_sample},
+            )
+        except (ClientError, RequestException) as create_err:
+            taken_id = self._taken_physical_sample_id(create_err)
+            if taken_id is not None:
+                return taken_id, physical_sample
+            try:
+                existing = self._find_physical_sample_named(
+                    self.list_physical_samples(), physical_sample
+                )
+            except (ClientError, RequestException):
+                existing = None
+            if existing is None:
+                raise create_err
+            return existing
         return resp["id"], physical_sample
 
     def _resolve_project(self, project: str) -> tuple[str, str]:

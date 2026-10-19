@@ -5,12 +5,14 @@ use pyo3::types::{PyDict, PyIterator};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 use std::time::Instant;
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::initialize::{add_sample_to_project, ensure_physical_sample_link, ensure_tags_attached};
+use crate::clock::{clock_status_dict, lab_clock_for, LabClock};
+use crate::initialize::{link_new_stream, resolve_stream_links};
 use crate::retry::{with_retries, HttpStatusError};
 use crate::utils::init_tracing_once;
 
@@ -92,6 +94,9 @@ pub struct TimeseriesStreamer {
     client: Client,
     rt: Runtime,
     points_per_chunk: usize,
+    /// This computer's clock against AtomCloud's; every timestamp leaves as reference UTC.
+    /// `None` when correction is switched off.
+    clock: Option<Arc<LabClock>>,
 }
 
 #[pymethods]
@@ -122,12 +127,15 @@ impl TimeseriesStreamer {
 
         debug!("[timeseries_stream] init: base_url={}", endpoint);
 
+        let clock = lab_clock_for(&endpoint);
+
         Ok(Self {
             api_key,
             endpoint,
             client,
             rt,
             points_per_chunk,
+            clock,
         })
     }
 
@@ -158,19 +166,28 @@ impl TimeseriesStreamer {
     ///     str: The data_id for this stream.
     ///
     /// Raises:
-    ///     RuntimeError: If the initialization request fails or instrument not found.
+    ///     RuntimeError: If the stream cannot be created or linked, or the instrument is not
+    ///         found. The physical sample and tags are resolved before the stream is created, so
+    ///         a bad one creates nothing. If linking fails after creation, the stream is
+    ///         finalized and the error names its `data_id`.
     #[pyo3(signature = (stream_name=None, synth_source_id=None, physical_sample=None, project_id=None, tags=None))]
     #[pyo3(
         text_signature = "(stream_name=None, synth_source_id=None, physical_sample=None, project_id=None, tags=None)"
     )]
     fn initialize(
         &self,
+        py: Python<'_>,
         stream_name: Option<String>,
         synth_source_id: Option<i64>,
         physical_sample: Option<String>,
         project_id: Option<String>,
         tags: Option<Vec<String>>,
     ) -> PyResult<String> {
+        // Measure the lab clock before the first point is stamped; a failure streams uncorrected.
+        if let Some(clock) = &self.clock {
+            py.detach(|| clock.wait_for_first_attempt());
+        }
+
         let physical_sample = physical_sample
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
@@ -179,11 +196,24 @@ impl TimeseriesStreamer {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
+        let links_fut = resolve_stream_links(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            physical_sample.as_deref(),
+            project_id.clone(),
+            tags.as_deref().unwrap_or_default(),
+        );
+        let links = self
+            .rt
+            .block_on(links_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
+
         let request = InitializeRequest {
             stream_name,
             synth_source_id,
             points_per_chunk: self.points_per_chunk,
-            project_id: project_id.clone(),
+            project_id,
         };
 
         let url = format!("{}/tool-state/stream/initialize", self.endpoint);
@@ -219,55 +249,30 @@ impl TimeseriesStreamer {
             Err(e) => return Err(PyRuntimeError::new_err(e.to_string())),
         };
 
-        // Handle physical sample linking (same flow as RHEEDStreamer)
-        let base_endpoint = self.endpoint.clone();
-        if let Some(sample_name) = physical_sample {
-            let physical_sample_fut = ensure_physical_sample_link(
-                &self.client,
-                &base_endpoint,
-                &self.api_key,
-                &data_id,
-                &sample_name,
-            );
-            let sample_id = self
-                .rt
-                .block_on(physical_sample_fut)
-                .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-
-            // If project_id was provided, add the sample to the project's membership.
-            // We deliberately do NOT touch growth-monitoring tracking config here —
-            // that endpoint blindly re-validates the project's full configuration
-            // and is fragile (see add_sample_to_project for details).
-            if let Some(ref proj_id) = project_id {
-                let add_to_project_fut = add_sample_to_project(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    proj_id,
-                    &sample_id,
-                );
-                self.rt
-                    .block_on(add_to_project_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
-
-        if let Some(tag_inputs) = tags {
-            if !tag_inputs.is_empty() {
-                let tags_fut = ensure_tags_attached(
-                    &self.client,
-                    &base_endpoint,
-                    &self.api_key,
-                    &data_id,
-                    &tag_inputs,
-                );
-                self.rt
-                    .block_on(tags_fut)
-                    .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-            }
-        }
+        let end_url = self.finalize_url(&data_id);
+        let link_fut = link_new_stream(
+            &self.client,
+            &self.endpoint,
+            &self.api_key,
+            &data_id,
+            &links,
+            &end_url,
+        );
+        self.rt
+            .block_on(link_fut)
+            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         Ok(data_id)
+    }
+
+    /// clock_status(self) -> Optional[dict]
+    ///
+    /// This computer's clock measured against AtomCloud's reference clock, or `None` when
+    /// correction is off (`ATOMSCALE_SKIP_CLOCK_SYNC`) or no measurement has succeeded yet.
+    /// Pushed timestamps are read as this computer's clock and sent as reference UTC:
+    /// `offset_ms` (reference minus host) is the correction in effect.
+    fn clock_status<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyDict>>> {
+        clock_status_dict(py, self.clock.as_deref())
     }
 
     /// push(self, data_id: str, chunk_index: int, channel_name: str, timestamps: list[float], values: list[float], ...) -> None
@@ -309,7 +314,7 @@ impl TimeseriesStreamer {
             data_id,
             chunk_index,
             channel_name,
-            timestamps,
+            timestamps: self.reference_utc_secs(timestamps),
             values,
             units,
         };
@@ -422,7 +427,7 @@ impl TimeseriesStreamer {
             payload_channels.insert(
                 channel_name,
                 ChannelPayload {
-                    timestamps,
+                    timestamps: self.reference_utc_secs(timestamps),
                     values,
                     units,
                 },
@@ -489,7 +494,7 @@ impl TimeseriesStreamer {
     #[pyo3(signature = (data_id))]
     #[pyo3(text_signature = "(data_id)")]
     fn finalize(&self, data_id: String) -> PyResult<()> {
-        let url = format!("{}/tool-state/stream/{}/finalize", self.endpoint, data_id);
+        let url = self.finalize_url(&data_id);
 
         let result = self.rt.block_on(async {
             let resp = self
@@ -519,6 +524,20 @@ impl TimeseriesStreamer {
 }
 
 impl TimeseriesStreamer {
+    fn finalize_url(&self, data_id: &str) -> String {
+        format!("{}/tool-state/stream/{data_id}/finalize", self.endpoint)
+    }
+
+    /// Host-clock Unix seconds as reference UTC (unchanged when correction is off or not yet
+    /// measured). One offset is read per call, so a chunk's points shift together.
+    fn reference_utc_secs(&self, mut timestamps: Vec<f64>) -> Vec<f64> {
+        if let Some(clock) = &self.clock {
+            let offset_s = clock.offset_ms() / 1_000.0;
+            timestamps.iter_mut().for_each(|t| *t += offset_s);
+        }
+        timestamps
+    }
+
     /// Internal implementation of run() that handles iteration and task management.
     fn run_internal(
         &self,
@@ -567,7 +586,7 @@ impl TimeseriesStreamer {
                 data_id: data_id.clone(),
                 chunk_index,
                 channel_name: channel_name.clone(),
-                timestamps,
+                timestamps: self.reference_utc_secs(timestamps),
                 values,
                 units: units.clone(),
             };

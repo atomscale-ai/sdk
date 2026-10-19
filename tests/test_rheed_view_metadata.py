@@ -149,3 +149,72 @@ def test_views_win_over_the_deprecated_flag():
         rotating=True,
     )
     assert result.rotating is False
+
+
+def _stub_views(monkeypatch, client, views):
+    patches = []
+
+    def fake_get(*_, sub_url, **__):
+        assert sub_url == "rheed/rec/azimuths"
+        return views
+
+    def fake_patch(method, sub_url, body=None, **_):
+        patches.append((method, sub_url, body))
+        return {"override": body}
+
+    monkeypatch.setattr(client, "_get", fake_get)
+    monkeypatch.setattr(client, "_post_or_put", fake_patch)
+    return patches
+
+
+def _parked(view_id, rpm=0):
+    view = dict.fromkeys(RHEED_AZIMUTH_COLUMNS)
+    return {**view, "data_id": "rec", "view_id": view_id, "seed_frame": 0, "rpm": rpm}
+
+
+def test_set_rheed_azimuth_labels_every_parked_view(monkeypatch):
+    from atomscale import Client
+
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    patches = _stub_views(monkeypatch, client, [_parked("a"), _parked("b")])
+
+    client.set_rheed_azimuth("rec", "110")
+
+    assert patches == [
+        ("PATCH", "rheed/rec/azimuths/a", {"enabled": True, "label": "110"}),
+        ("PATCH", "rheed/rec/azimuths/b", {"enabled": True, "label": "110"}),
+    ]
+
+
+def test_set_rheed_azimuth_none_returns_views_to_the_classifier(monkeypatch):
+    from atomscale import Client
+
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    patches = _stub_views(monkeypatch, client, [_parked("a")])
+
+    client.set_rheed_azimuth("rec", None)
+
+    assert patches == [("PATCH", "rheed/rec/azimuths/a", {"enabled": False, "label": None})]
+
+
+def test_set_rheed_azimuth_requires_view_id_on_rotating_recordings(monkeypatch):
+    from atomscale import Client
+
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    patches = _stub_views(monkeypatch, client, [_parked("a"), _parked("b", rpm=12)])
+
+    with pytest.raises(ValueError, match="rotating views"):
+        client.set_rheed_azimuth("rec", "100")
+    client.set_rheed_azimuth("rec", "100", view_id="b")
+
+    assert patches == [("PATCH", "rheed/rec/azimuths/b", {"enabled": True, "label": "100"})]
+
+
+def test_set_rheed_azimuth_without_views_says_how_to_declare_one(monkeypatch):
+    from atomscale import Client
+
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    _stub_views(monkeypatch, client, [])
+
+    with pytest.raises(ValueError, match=r"initialize\(azimuth=...\)"):
+        client.set_rheed_azimuth("rec", "100")
