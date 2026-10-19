@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from os import PathLike
+from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
@@ -10,6 +12,11 @@ class RHEEDStreamer:
 
     Bridges Python to a Rust/PyO3 backend for efficient, concurrent packaging
     and upload of uint8 grayscale frames to the Atomscale platform.
+
+    ``push()`` and ``run()`` write each chunk's encoded shard to a disk spool
+    and return; background workers upload the spool oldest first. A slow or
+    failing network never stalls the caller, so it never delays chunk
+    timestamps. See ``spool_status()``.
     """
 
     def __init__(
@@ -17,7 +24,35 @@ class RHEEDStreamer:
         api_key: str,
         endpoint: str | None = None,
         verbosity: int | None = None,
-    ) -> None: ...
+        spool_dir: str | PathLike[str] | None = None,
+        spool_max_bytes: int | None = None,
+        spool_min_free_bytes: int | None = None,
+        spool_retention_s: float | None = None,
+    ) -> None:
+        """Create a streaming client.
+
+        Chunks an earlier run of this endpoint left in the spool (after a
+        crash, say) are uploaded in the background if their stream is still
+        open, and discarded otherwise.
+
+        Args:
+            api_key: Your Atomscale API key.
+            endpoint: Base API URL. Defaults to production.
+            verbosity: Logging verbosity (0-4). Higher = more detail.
+            spool_dir: Where chunks wait to upload, one subfolder per stream.
+                Defaults to ``$ATOMSCALE_SPOOL_DIR``, else
+                ``<user cache dir>/atomscale/rheed-spool``.
+            spool_max_bytes: Cap on spooled data. Past it, new chunks are
+                dropped (and counted) instead of blocking. Defaults to
+                min(20 GB, 10% of the disk's free space).
+            spool_min_free_bytes: Free disk space the spool always leaves.
+                Defaults to 1 GB.
+            spool_retention_s: Age past which a chunk that still has not
+                uploaded is discarded. Defaults to 24 hours.
+
+        Raises:
+            RuntimeError: If the spool directory cannot be created.
+        """
     def initialize(
         self,
         fps: float,
@@ -72,7 +107,19 @@ class RHEEDStreamer:
         self,
         data_id: str,
         frames_iter: Iterable[NDArray[np.uint8]],
-    ) -> None: ...
+    ) -> None:
+        """Spool every chunk an iterator yields, then wait for the uploads.
+
+        Each item is spooled as it is yielded; the iterator is never held up
+        by uploads. Once it is exhausted, waits up to 10 minutes for this
+        stream's spool to drain.
+
+        Raises:
+            RuntimeError: If a chunk cannot be packaged, or if any chunk of
+                this run was lost (dropped because the spool was full or the
+                disk low, or refused by the backend). Chunks still uploading
+                when the wait ends only warn; ``finalize()`` keeps draining.
+        """
     def push(
         self,
         data_id: str,
@@ -80,7 +127,13 @@ class RHEEDStreamer:
         frames: NDArray[np.uint8],
         capture_start_ms_utc: int | None = None,
     ) -> None:
-        """Package and upload one chunk of frames.
+        """Stamp, package and spool one chunk of frames for upload.
+
+        Returns once the chunk is on disk; never waits on uploads. If the
+        spool is at its byte cap or the disk at its free-space floor, the
+        chunk is dropped instead (logged, and counted in ``spool_status()``
+        and ``finalize()``), so the backend sees a missing shard rather than
+        your loop stalling.
 
         Args:
             data_id: Stream identifier from initialize().
@@ -94,7 +147,37 @@ class RHEEDStreamer:
                 chunk's span (``N / fps``). Chunks are always stamped with
                 capture time, never push time.
         """
-    def finalize(self, data_id: str) -> None: ...
+    def finalize(
+        self, data_id: str, drain_timeout_s: float | None = None
+    ) -> dict[str, Any]:
+        """Wait for the stream's spool to drain, then close the stream.
+
+        Whatever is still spooled after ``drain_timeout_s`` (default 600) is
+        discarded. If any chunk was never uploaded, one ``RuntimeWarning``
+        gives the count; the stream is still closed. Also accepts a stream an
+        earlier run left in the spool.
+
+        Returns:
+            ``chunks_spooled``, ``chunks_uploaded``, ``chunks_dropped`` (spool
+            full, disk low or write failed), ``chunks_failed`` (refused by the
+            backend), ``chunks_purged`` (discarded unsent),
+            ``chunks_not_uploaded`` (the last three summed), ``chunks_pending``,
+            ``drained`` (whether the wait finished in time), ``closed`` and
+            ``lost``, a list of ``(chunk_idx, reason)``.
+
+        Raises:
+            RuntimeError: If the finalization POST fails.
+        """
+    def spool_status(self) -> dict[str, Any]:
+        """The disk spool chunks wait in before uploading.
+
+        Returns:
+            ``dir``, ``bytes`` (spooled now), ``max_bytes``, ``min_free_bytes``,
+            ``free_bytes`` (``None`` if unknown), ``chunks_pending``, the
+            cumulative ``chunks_spooled``, ``chunks_uploaded``,
+            ``chunks_dropped``, ``chunks_failed`` and ``chunks_purged``, and
+            ``streams``: the same counts per ``data_id``.
+        """
     def clock_status(self) -> dict[str, float] | None:
         """This computer's clock measured against AtomCloud's reference clock.
 
