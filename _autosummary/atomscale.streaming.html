@@ -165,7 +165,9 @@ programmatically.</p>
 <p class="rubric">Notes</p>
 <ul class="simple">
 <li><p>Frame dtype is coerced to <cite>uint8</cite>. Shapes <cite>(H, W)</cite> or <cite>(N, H, W)</cite> are accepted; <cite>(N,H,W)</cite> is preferred for chunks.</p></li>
-<li><p>Packaging happens concurrently for throughput; network PUTs are async.</p></li>
+<li><p><cite>push(…)</cite> and <cite>run(…)</cite> write each chunk’s encoded shard to a disk spool and return; upload
+workers send the spool oldest first in the background, so a slow or failing network never
+stalls (and so never delays the timestamps of) your acquisition loop. See <cite>spool_status()</cite>.</p></li>
 <li><p>This class is safe to call from Python; heavy work is offloaded to multithreaded async workers.</p></li>
 <li><p>See also: <cite>finalize(…)</cite>.</p></li>
 </ul>
@@ -174,6 +176,13 @@ programmatically.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>api_key</strong> (<em>str</em>) – Your Atomscale API key.</p></li>
 <li><p><strong>endpoint</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Base API URL. Defaults to <cite>“https://api.atomscale.ai”</cite>.</p></li>
+<li><p><strong>spool_dir</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Where chunks wait to upload, one subfolder per stream. Defaults
+to <cite>$ATOMSCALE_SPOOL_DIR</cite>, else <cite>&lt;user cache dir&gt;/atomscale/rheed-spool</cite>.</p></li>
+<li><p><strong>spool_max_bytes</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Cap on spooled data; past it, new chunks are dropped (and
+counted) instead of blocking. Defaults to min(20 GB, 10% of the disk’s free space).</p></li>
+<li><p><strong>spool_min_free_bytes</strong> (<em>Optional</em><em>[</em><em>int</em><em>]</em>) – Free disk space the spool always leaves. Default 1 GB.</p></li>
+<li><p><strong>spool_retention_s</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – Age past which a chunk that still has not uploaded is
+discarded. Default 24 h.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
@@ -182,32 +191,51 @@ programmatically.</p>
 </dl>
 <dl class="py method">
 <dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">clock_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span></dt>
+<dd><p>This computer’s clock measured against AtomCloud’s reference clock, or <cite>None</cite> when
+correction is off (<cite>ATOMSCALE_SKIP_CLOCK_SYNC</cite>) or no measurement has succeeded yet.
+Every chunk is stamped in reference UTC, so <cite>offset_ms</cite> (reference minus host) is the
+correction in effect, <cite>uncertainty_ms</cite> bounds its error (half the best round trip) and
+<cite>measured_at_unix_ms</cite> is the reference time of the sample it came from.</p>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
 <dd><p>Explicitly <strong>closes</strong> the remote stream for the given <cite>data_id</cite>. This signals to the
 server that no further chunks will be uploaded and allows any downstream jobs
 (e.g., indexing, aggregation, or post-processing) to begin.</p>
-<p>Typical use:
-- After <cite>run(…)</cite> returns (it waits for all chunk tasks), call <cite>finalize(data_id)</cite>.
-- In <cite>push(…)</cite> mode, call <cite>finalize(data_id)</cite> only after you have pushed your last</p>
-<blockquote>
-<div><p>chunk <strong>and</strong> ensured any in-flight uploads have finished (since <cite>push(…)</cite>
-detaches tasks).</p>
-</div></blockquote>
+<p>Call it after your last <cite>push(…)</cite>, or after <cite>run(…)</cite> returns.</p>
 <p class="rubric">Notes</p>
 <ul class="simple">
-<li><p>The operation performs a single HTTP POST to the <cite>…/end</cite> endpoint.</p></li>
+<li><p>First waits, up to <cite>drain_timeout_s</cite>, for this stream’s spooled chunks to upload, so a
+shard still waiting is not cut off. Then it discards whatever is left and closes the
+stream. If any chunk was never uploaded (dropped, refused, or still spooled at the
+timeout), it emits one <cite>RuntimeWarning</cite> with the count; the stream is still closed.</p></li>
+<li><p>Also accepts a stream an earlier run left in the spool (after a crash), to close it.</p></li>
+<li><p>The server answers 503 while the stream’s first analysis is still running; the POST to
+the <cite>…/end</cite> endpoint is retried with backoff for about three minutes before it fails.</p></li>
 <li><p>It is safe to call more than once; the server may treat it as idempotent,
 but repeated calls are unnecessary.</p></li>
 </ul>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data_id</strong> (<em>str</em>) – The stream identifier returned by <cite>initialize(…)</cite>.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_id</strong> (<em>str</em>) – The stream identifier returned by <cite>initialize(…)</cite>.</p></li>
+<li><p><strong>drain_timeout_s</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – How long to wait for spooled chunks to upload.
+Default 600 (10 minutes).</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p>What became of the stream’s chunks: <cite>chunks_spooled</cite>, <cite>chunks_uploaded</cite>,
+<cite>chunks_dropped</cite>, <cite>chunks_failed</cite>, <cite>chunks_purged</cite>, <cite>chunks_not_uploaded</cite> (the last
+three plus dropped), <cite>drained</cite> (whether the wait finished in time) and <cite>lost</cite>, a list
+of <cite>(chunk_idx, reason)</cite> for chunks not uploaded.</p>
 </dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>RuntimeError</strong> – If the finalization POST fails.</p>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If the finalization POST fails.</p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -240,7 +268,10 @@ case-insensitively against existing samples, or a new sample is created if no ma
 to link the physical sample to the project for growth monitoring.</p></li>
 <li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of tag names or UUIDs to attach to the data item. Names are matched
 case-insensitively against existing org tags; unknown names are created. UUIDs must reference
-existing tags.</p></li>
+existing tags. Tags do not set the stream’s azimuth; use <cite>azimuth</cite>.</p></li>
+<li><p><strong>azimuth</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – The azimuth a parked stream is recorded at, e.g. <cite>“100”</cite>. Its views are
+labelled with it in place of the automatic azimuth classifier until a user edits the view.
+Only valid with <cite>rotations_per_min == 0</cite>; a rotating stream carries several azimuths.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -250,7 +281,12 @@ existing tags.</p></li>
 <dd class="field-odd"><p>str</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>RuntimeError</strong> – If the initialization POST fails.</p>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If <cite>azimuth</cite> is given for a rotating stream.</p></li>
+<li><p><strong>RuntimeError</strong> – If the stream cannot be created or linked. The physical sample and tags
+    are resolved before the stream is created, so a bad one creates nothing. If linking
+    fails after creation, the stream is ended and the error names its <cite>data_id</cite>.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -259,17 +295,22 @@ existing tags.</p></li>
 <span class="sig-name descname"><span class="pre">push</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frames</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">numpy.ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">capture_start_ms_utc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
 <dd><p><strong>Callback mode.</strong> Push a single chunk of frames that you produced externally (e.g., from a
 camera callback). Call repeatedly for subsequent chunks.</p>
+<p>The chunk is stamped, encoded and written to the disk spool before this returns; it never
+waits on uploads. If the spool is at its byte cap or the disk at its free-space floor, the
+chunk is dropped instead (logged, and counted in <cite>spool_status()</cite> and <cite>finalize()</cite>), so the
+backend sees a missing shard rather than your loop stalling.</p>
 <p>The <cite>frames</cite> argument may be <cite>(N,H,W)</cite> or <cite>(H,W)</cite>; dtype is coerced to <cite>uint8</cite>.</p>
 <p>After your last <cite>push(…)</cite>, call <strong>`finalize(data_id)`</strong> to mark the stream as complete on the server.</p>
 <section id="timestamps">
 <h2>Timestamps<a class="headerlink" href="#timestamps" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#timestamps'"><span>#</span></a></h2>
-<p>When <cite>capture_start_ms_utc</cite> is not provided, this method stamps each
-chunk with <cite>Utc::now()</cite> sampled the moment <cite>push()</cite> is entered, before
-any GIL-held packaging work. The chunk’s <cite>end_unix_ms_utc</cite> is then
-<cite>start + (n / fps) * 1000</cite>. Inter-chunk gaps therefore reflect real
-arrival jitter; intra-chunk span follows declared fps. Pass an explicit
-timestamp when you have a hardware clock (camera trigger, OS
-monotonic-to-utc conversion).</p>
+<p>Every chunk is stamped with when its first frame was <strong>captured</strong>, so the stream
+aligns with other lab wall-clock data. The chunk’s <cite>end_unix_ms_utc</cite> is
+<cite>start + (n / fps) * 1000</cite>. Pass <cite>capture_start_ms_utc</cite> whenever you have a real
+capture clock (camera trigger, OS monotonic-to-utc conversion). When you do not, the
+chunk is taken to have just finished being captured: <cite>push()</cite> samples <cite>Utc::now()</cite> on
+entry, before any GIL-held packaging work, and the start is that minus the chunk’s
+span (<cite>n / fps</cite>). That estimate is only as good as how promptly you push; a chunk
+pushed late is stamped late.</p>
 <dl class="field-list simple">
 <dt class="field-odd">type data_id<span class="colon">:</span></dt>
 <dd class="field-odd"><p>str</p>
@@ -304,8 +345,8 @@ monotonic-to-utc conversion).</p>
 <dt class="field-odd">param capture_start_ms_utc<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Capture-start timestamp in milliseconds
 since UNIX epoch (UTC). Pass when you have a real capture-time clock
-(camera trigger, OS monotonic-to-utc conversion). When None, sampled
-from <cite>Utc::now()</cite> on entry.</p>
+(camera trigger, OS monotonic-to-utc conversion). When None, the chunk is
+taken to have just finished capturing: <cite>Utc::now()</cite> on entry minus <cite>n / fps</cite>.</p>
 </dd>
 <dt class="field-even">type capture_start_ms_utc<span class="colon">:</span></dt>
 <dd class="field-even"><p>Optional[int]</p>
@@ -314,7 +355,7 @@ from <cite>Utc::now()</cite> on entry.</p>
 <dd class="field-odd"><p>None</p>
 </dd>
 <dt class="field-even">raises RuntimeError<span class="colon">:</span></dt>
-<dd class="field-even"><p>If packaging or upload fails internally.</p>
+<dd class="field-even"><p>If the chunk cannot be packaged.</p>
 </dd>
 </dl>
 <div class="admonition seealso">
@@ -335,22 +376,20 @@ capture-start timestamp (int milliseconds since UNIX epoch, UTC). Use
 this when you have hardware/OS-level timestamps for each chunk
 (camera trigger time, OS monotonic-to-utc conversion, etc.).</p></li>
 </ul>
-<p>For each yielded item, the method:
-1) Converts to flat <cite>uint8</cite> bytes,
-2) Packages frames on a blocking worker thread,
-3) Uploads the shard,
-4) Proceeds concurrently for high throughput.</p>
-<p>This method <strong>blocks until all spawned tasks complete</strong>. After <cite>run(…)</cite> returns,
-call <cite>finalize(data_id)</cite> to mark the stream complete on the server.</p>
+<p>For each yielded item, the method stamps it, encodes its shard and writes it to the disk
+spool, then asks the iterator for the next one. It never waits on uploads, which run in
+the background, oldest first. Once the iterator is exhausted, it waits for this stream’s
+spool to drain (up to 10 minutes). After <cite>run(…)</cite> returns, call <cite>finalize(data_id)</cite> to
+mark the stream complete on the server.</p>
 <section id="id1">
 <h2>Timestamps<a class="headerlink" href="#id1" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#id1'"><span>#</span></a></h2>
-<p>When the caller does not supply a <cite>capture_start_ms_utc</cite>, this method
-stamps each chunk with <cite>Utc::now()</cite> sampled the moment the iterator
-yields, before any GIL-held packaging work. The chunk’s
-<cite>end_unix_ms_utc</cite> is then <cite>start + (n / fps) * 1000</cite>. Inter-chunk
-gaps therefore reflect real arrival jitter; intra-chunk span follows
-declared fps. Pass an explicit timestamp when you have a hardware
-clock (camera trigger, OS monotonic-to-utc conversion).</p>
+<p>Every chunk is stamped with when its first frame was <strong>captured</strong>, so the stream
+aligns with other lab wall-clock data. The chunk’s <cite>end_unix_ms_utc</cite> is
+<cite>start + (n / fps) * 1000</cite>. Yield <cite>(frames, capture_start_ms_utc)</cite> whenever you have a
+real capture clock (camera trigger, OS monotonic-to-utc conversion). When you yield
+bare frames, each chunk is taken to have just finished capturing: <cite>Utc::now()</cite> is
+sampled the moment the iterator yields, before any GIL-held packaging work, and the
+start is that minus the chunk’s span (<cite>n / fps</cite>).</p>
 <dl class="field-list simple">
 <dt class="field-odd">type data_id<span class="colon">:</span></dt>
 <dd class="field-odd"><p>str</p>
@@ -375,7 +414,10 @@ uint8 arrays, or <cite>(frames, capture_start_ms_utc)</cite> tuples.</p>
 <dd class="field-odd"><p>None</p>
 </dd>
 <dt class="field-even">raises RuntimeError<span class="colon">:</span></dt>
-<dd class="field-even"><p>If any packaging/join/upload step fails.</p>
+<dd class="field-even"><p>If a chunk cannot be packaged, or if any chunk of this run was lost
+    (dropped because the spool was full or the disk low, or refused by the backend).
+    Chunks still uploading when the drain wait ends only warn; <cite>finalize</cite> keeps
+    draining them.</p>
 </dd>
 <dt class="field-odd">raises ValueError<span class="colon">:</span></dt>
 <dd class="field-odd"><p>If a yielded tuple’s second element is not an int.</p>
@@ -386,6 +428,16 @@ uint8 arrays, or <cite>(frames, capture_start_ms_utc)</cite> tuples.</p>
 <p>finalize(data_id)</p>
 </div>
 </section>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">spool_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span></dt>
+<dd><p>The disk spool chunks wait in before uploading. Keys: <cite>dir</cite>, <cite>bytes</cite> (spooled now),
+<cite>max_bytes</cite>, <cite>min_free_bytes</cite>, <cite>free_bytes</cite> (on its disk; <cite>None</cite> if unknown),
+<cite>chunks_pending</cite>, the cumulative <cite>chunks_spooled</cite>, <cite>chunks_uploaded</cite>, <cite>chunks_dropped</cite>
+(spool full, disk low or write failed), <cite>chunks_failed</cite> (refused by the backend) and
+<cite>chunks_purged</cite> (discarded unsent: stream finalized or abandoned, or past retention), and
+<cite>streams</cite>, the same counts per <cite>data_id</cite> with <cite>closed</cite>.</p>
 </dd></dl>
 </dd></dl>
 <dl class="py class">
@@ -419,6 +471,14 @@ and uploads them asynchronously for storage and analysis.</p>
 <dd class="field-even"><p><strong>RuntimeError</strong> – If the HTTP client or async runtime cannot be constructed.</p>
 </dd>
 </dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">clock_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span></dt>
+<dd><p>This computer’s clock measured against AtomCloud’s reference clock, or <cite>None</cite> when
+correction is off (<cite>ATOMSCALE_SKIP_CLOCK_SYNC</cite>) or no measurement has succeeded yet.
+Pushed timestamps are read as this computer’s clock and sent as reference UTC:
+<cite>offset_ms</cite> (reference minus host) is the correction in effect.</p>
+</dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
@@ -468,7 +528,10 @@ UUIDs must reference existing tags.</p></li>
 <dd class="field-odd"><p>str</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>RuntimeError</strong> – If the initialization request fails or instrument not found.</p>
+<dd class="field-even"><p><strong>RuntimeError</strong> – If the stream cannot be created or linked, or the instrument is not
+    found. The physical sample and tags are resolved before the stream is created, so
+    a bad one creates nothing. If linking fails after creation, the stream is
+    finalized and the error names its <cite>data_id</cite>.</p>
 </dd>
 </dl>
 </dd></dl>

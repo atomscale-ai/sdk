@@ -285,18 +285,27 @@ k-nearest-neighbour query over the embedding index with
 </section>
 <section id="extracted-frames">
 <h2>Extracted Frames<a class="headerlink" href="#extracted-frames" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#extracted-frames'"><span>#</span></a></h2>
-<p>Access snapshots extracted during analysis:</p>
+<p><code class="docutils literal notranslate"><span class="pre">video.snapshot_image_data</span></code> holds the video’s frames in frame order: each
+view’s seed frame and any pattern saved from the video. Each is a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">RHEEDImageResult</span></code> with the frame image and
+its segmentation mask; <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_frame()</span></code> fetches the frame
+at the same index without fetching the whole list. A frame the video kept no image
+of is left out of both. It is <code class="docutils literal notranslate"><span class="pre">None</span></code> when the video has none:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">snapshot</span> <span class="o">=</span> <span class="n">video</span><span class="o">.</span><span class="n">snapshot_image_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-</span><span id="line-2">
-</span><span id="line-3"><span class="c1"># Get matplotlib figure</span>
-</span><span id="line-4"><span class="n">fig</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">get_plot</span><span class="p">()</span>
-</span><span id="line-5"><span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">"snapshot.png"</span><span class="p">)</span>
-</span><span id="line-6">
-</span><span id="line-7"><span class="c1"># Get diffraction pattern as DataFrame</span>
-</span><span id="line-8"><span class="n">pattern_df</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">get_pattern_dataframe</span><span class="p">()</span>
-</span><span id="line-9">
-</span><span id="line-10"><span class="c1"># Get pattern as NetworkX graph</span>
-</span><span id="line-11"><span class="n">graph</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">pattern_graph</span>
+</span><span id="line-2"><span class="nb">print</span><span class="p">(</span><span class="n">snapshot</span><span class="o">.</span><span class="n">metadata</span><span class="p">)</span>  <span class="c1"># frame_number, plus view_id / azimuth_label for a view's frame</span>
+</span><span id="line-3">
+</span><span id="line-4"><span class="c1"># Get the frame as a PIL image with its mask (and the pattern graph, when it has one)</span>
+</span><span id="line-5"><span class="n">image</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">get_plot</span><span class="p">()</span>
+</span><span id="line-6"><span class="n">image</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s2">"snapshot.png"</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+<p>A view’s frame from a newer analysis is read from the video itself and has no
+<code class="docutils literal notranslate"><span class="pre">pattern_graph</span></code>, so <code class="docutils literal notranslate"><span class="pre">get_pattern_dataframe()</span></code> raises for it. The per-slot
+measurements of every analysed frame are in the low-level timeseries features
+(see <a class="reference internal" href="#low-level-features">Low-Level Features</a>). Frames extracted by older analyses, and saved
+patterns, keep their pattern graph:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="k">if</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">pattern_graph</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-2">    <span class="n">pattern_df</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">get_pattern_dataframe</span><span class="p">()</span>
 </span></code></pre></div>
 </div>
 </section>

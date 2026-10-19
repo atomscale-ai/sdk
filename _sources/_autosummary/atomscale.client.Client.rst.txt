@@ -43,6 +43,7 @@ atomscale.client.Client
       ~Client.list_projects
       ~Client.query_rheed_embeddings
       ~Client.search
+      ~Client.set_rheed_azimuth
       ~Client.start_polling_similarity_trajectory_task
       ~Client.start_polling_similarity_trajectory_thread
       ~Client.upload

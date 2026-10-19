@@ -132,6 +132,46 @@ Use when frames are already in memory:
    streamer.run(data_id, frame_generator(frames, chunk_size=240, fps=120.0))
    streamer.finalize(data_id)
 
+Uploads and the Disk Spool
+--------------------------
+
+``push()`` and ``run()`` never wait on the network. Each chunk is stamped,
+encoded and written to a spool directory on disk, and background workers
+upload the spool oldest first. A slow or failing connection never stalls your
+acquisition loop, so it never delays your chunks' timestamps either. A failed
+upload is retried with backoff (up to 30 s apart, with a fresh upload URL each
+time) until it succeeds, the stream closes, or the chunk is older than the
+retention limit.
+
+.. code-block:: python
+
+   streamer = RHEEDStreamer(
+       api_key="YOUR_API_KEY",
+       spool_dir="D:/rheed-spool",          # default: your user cache directory
+       spool_max_bytes=50_000_000_000,      # default: min(20 GB, 10% of free disk)
+       spool_min_free_bytes=2_000_000_000,  # default: 1 GB
+   )
+
+   ...
+   report = streamer.finalize(data_id)
+   print(report["chunks_uploaded"], report["chunks_not_uploaded"])
+
+- **Bounds.** When the spool reaches ``spool_max_bytes``, or the disk would fall
+  below ``spool_min_free_bytes`` free, the incoming chunk is **dropped** rather
+  than blocking. It is logged and counted in ``spool_status()`` and in the
+  ``finalize()`` report, and the platform sees a missing chunk.
+- **Finalize.** ``finalize()`` first waits (up to ``drain_timeout_s``, default
+  10 minutes) for the stream's spool to upload. It then returns a report of
+  what became of every chunk and warns if any was never uploaded.
+- **Crashes.** Spooled chunks survive a crash. The next ``RHEEDStreamer`` for
+  the same endpoint uploads them in the background if their stream is still
+  open, and deletes them if the stream was finalized, has had no upload for
+  2 hours (the platform has closed it by then), or they are older than
+  ``spool_retention_s`` (default 24 hours).
+- **Location.** One subfolder per stream under ``spool_dir``, or the
+  ``ATOMSCALE_SPOOL_DIR`` environment variable, or
+  ``<user cache dir>/atomscale/rheed-spool``.
+
 Frame Requirements
 ------------------
 

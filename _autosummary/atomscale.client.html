@@ -423,20 +423,57 @@ labels remain separate rows; view_id identifies each time series.</p>
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">set_rheed_azimuth</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">azimuth</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">view_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.set_rheed_azimuth"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Set the operator’s azimuth on a RHEED recording’s views.</p>
+<p>The label overrides the automatic azimuth classifier and is kept when the
+recording is reprocessed. Azimuth tags are not read for RHEED; this and
+<code class="docutils literal notranslate"><span class="pre">RHEEDStreamer.initialize(azimuth=...)</span></code> are how an azimuth is declared.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Data ID of the RHEED recording.</p></li>
+<li><p><strong>azimuth</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – The azimuth, e.g. <code class="docutils literal notranslate"><span class="pre">"100"</span></code>. <code class="docutils literal notranslate"><span class="pre">None</span></code> removes the override and
+returns the views to the classifier’s label.</p></li>
+<li><p><strong>view_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – The view to label. Required when the recording has rotating
+views, which carry different azimuths; when omitted, every parked
+view of the recording is labelled.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The recording’s views after the change, as
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">get_rheed_azimuths()</span></code> returns them.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If no view_id is given and the recording has no parked views
+    yet, or has rotating views.</p>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">get_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame_index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">RHEEDImageResult</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.get_frame"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Fetch a single extracted RHEED frame as a <code class="xref py py-class docutils literal notranslate"><span class="pre">RHEEDImageResult</span></code>.</p>
+<dd><p>Fetch one RHEED frame of a video as a <code class="xref py py-class docutils literal notranslate"><span class="pre">RHEEDImageResult</span></code>.</p>
+<p>Frames are the video’s snapshots, the same ones
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">RHEEDVideoResult.snapshot_image_data</span></code> holds: each view’s seed frame
+and any saved pattern, in frame order. A view’s frame from a newer analysis
+is read from the video and has no <code class="docutils literal notranslate"><span class="pre">pattern_graph</span></code>; its per-slot
+measurements are in <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_rheed_timeseries()</span></code> with
+<code class="docutils literal notranslate"><span class="pre">include_low_level_features=True</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Data ID of the RHEED video.</p></li>
-<li><p><strong>frame_index</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Index into the video’s extracted-frame list (supports
-negative indexing). Defaults to <code class="docutils literal notranslate"><span class="pre">0</span></code> (first extracted frame).</p></li>
+<li><p><strong>frame_index</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – Index into the video’s snapshots (supports negative
+indexing), counting only frames that have an image, as
+<code class="docutils literal notranslate"><span class="pre">snapshot_image_data</span></code> does. Defaults to <code class="docutils literal notranslate"><span class="pre">0</span></code> (the first).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>The frame’s image result, or <code class="docutils literal notranslate"><span class="pre">None</span></code> if the
-video has no extracted frames, <code class="docutils literal notranslate"><span class="pre">frame_index</span></code> is out of range, or the
-selected frame has no image.</p>
+video has no snapshots or <code class="docutils literal notranslate"><span class="pre">frame_index</span></code> is out of range.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>RHEEDImageResult | None</p>
@@ -466,8 +503,9 @@ video / timeseries).</p></li>
 <li><p><strong>from_frame</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></span>) – First absolute frame number to fetch, inclusive. Must be
 <code class="docutils literal notranslate"><span class="pre">&gt;=</span> <span class="pre">0</span></code>. Defaults to <code class="docutils literal notranslate"><span class="pre">0</span></code>.</p></li>
 <li><p><strong>to_frame</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Last absolute frame number to fetch, inclusive. <code class="docutils literal notranslate"><span class="pre">None</span></code>
-(default) fetches through the end of the video (every featurized
-frame from <code class="docutils literal notranslate"><span class="pre">from_frame</span></code> onward).</p></li>
+(default) fetches through the video’s last analysed frame (every
+featurized frame from <code class="docutils literal notranslate"><span class="pre">from_frame</span></code> onward). Spans longer than the
+server’s per-request window are fetched window by window.</p></li>
 <li><p><strong>decode</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></span>) – When <code class="docutils literal notranslate"><span class="pre">True</span></code>, decode each RLE mask into an <code class="docutils literal notranslate"><span class="pre">(H,</span> <span class="pre">W)</span></code> uint8
 (0/1) NumPy array and return a dict keyed by frame number. When
 <code class="docutils literal notranslate"><span class="pre">False</span></code> (default), return the raw rows with the RLE string intact.</p></li>

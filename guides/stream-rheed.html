@@ -261,6 +261,45 @@ configuration is automatically updated to link the sample for growth monitoring:
 </span></code></pre></div>
 </div>
 </section>
+<section id="uploads-and-the-disk-spool">
+<h2>Uploads and the Disk Spool<a class="headerlink" href="#uploads-and-the-disk-spool" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#uploads-and-the-disk-spool'"><span>#</span></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">push()</span></code> and <code class="docutils literal notranslate"><span class="pre">run()</span></code> never wait on the network. Each chunk is stamped,
+encoded and written to a spool directory on disk, and background workers
+upload the spool oldest first. A slow or failing connection never stalls your
+acquisition loop, so it never delays your chunks’ timestamps either. A failed
+upload is retried with backoff (up to 30 s apart, with a fresh upload URL each
+time) until it succeeds, the stream closes, or the chunk is older than the
+retention limit.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">streamer</span> <span class="o">=</span> <span class="n">RHEEDStreamer</span><span class="p">(</span>
+</span><span id="line-2">    <span class="n">api_key</span><span class="o">=</span><span class="s2">"YOUR_API_KEY"</span><span class="p">,</span>
+</span><span id="line-3">    <span class="n">spool_dir</span><span class="o">=</span><span class="s2">"D:/rheed-spool"</span><span class="p">,</span>          <span class="c1"># default: your user cache directory</span>
+</span><span id="line-4">    <span class="n">spool_max_bytes</span><span class="o">=</span><span class="mi">50_000_000_000</span><span class="p">,</span>      <span class="c1"># default: min(20 GB, 10% of free disk)</span>
+</span><span id="line-5">    <span class="n">spool_min_free_bytes</span><span class="o">=</span><span class="mi">2_000_000_000</span><span class="p">,</span>  <span class="c1"># default: 1 GB</span>
+</span><span id="line-6"><span class="p">)</span>
+</span><span id="line-7">
+</span><span id="line-8"><span class="o">...</span>
+</span><span id="line-9"><span class="n">report</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">finalize</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
+</span><span id="line-10"><span class="nb">print</span><span class="p">(</span><span class="n">report</span><span class="p">[</span><span class="s2">"chunks_uploaded"</span><span class="p">],</span> <span class="n">report</span><span class="p">[</span><span class="s2">"chunks_not_uploaded"</span><span class="p">])</span>
+</span></code></pre></div>
+</div>
+<ul class="simple">
+<li><p><strong>Bounds.</strong> When the spool reaches <code class="docutils literal notranslate"><span class="pre">spool_max_bytes</span></code>, or the disk would fall
+below <code class="docutils literal notranslate"><span class="pre">spool_min_free_bytes</span></code> free, the incoming chunk is <strong>dropped</strong> rather
+than blocking. It is logged and counted in <code class="docutils literal notranslate"><span class="pre">spool_status()</span></code> and in the
+<code class="docutils literal notranslate"><span class="pre">finalize()</span></code> report, and the platform sees a missing chunk.</p></li>
+<li><p><strong>Finalize.</strong> <code class="docutils literal notranslate"><span class="pre">finalize()</span></code> first waits (up to <code class="docutils literal notranslate"><span class="pre">drain_timeout_s</span></code>, default
+10 minutes) for the stream’s spool to upload. It then returns a report of
+what became of every chunk and warns if any was never uploaded.</p></li>
+<li><p><strong>Crashes.</strong> Spooled chunks survive a crash. The next <code class="docutils literal notranslate"><span class="pre">RHEEDStreamer</span></code> for
+the same endpoint uploads them in the background if their stream is still
+open, and deletes them if the stream was finalized, has had no upload for
+2 hours (the platform has closed it by then), or they are older than
+<code class="docutils literal notranslate"><span class="pre">spool_retention_s</span></code> (default 24 hours).</p></li>
+<li><p><strong>Location.</strong> One subfolder per stream under <code class="docutils literal notranslate"><span class="pre">spool_dir</span></code>, or the
+<code class="docutils literal notranslate"><span class="pre">ATOMSCALE_SPOOL_DIR</span></code> environment variable, or
+<code class="docutils literal notranslate"><span class="pre">&lt;user</span> <span class="pre">cache</span> <span class="pre">dir&gt;/atomscale/rheed-spool</span></code>.</p></li>
+</ul>
+</section>
 <section id="frame-requirements">
 <h2>Frame Requirements<a class="headerlink" href="#frame-requirements" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#frame-requirements'"><span>#</span></a></h2>
 <ul class="simple">
@@ -329,6 +368,7 @@ analysis from completing.</p>
 <li><a :data-current="activeSection === '#link-to-a-physical-sample'" class="reference internal" href="#link-to-a-physical-sample">Link to a Physical Sample</a></li>
 <li><a :data-current="activeSection === '#push-mode-live-capture'" class="reference internal" href="#push-mode-live-capture">Push Mode (Live Capture)</a></li>
 <li><a :data-current="activeSection === '#run-mode-buffered-data'" class="reference internal" href="#run-mode-buffered-data">Run Mode (Buffered Data)</a></li>
+<li><a :data-current="activeSection === '#uploads-and-the-disk-spool'" class="reference internal" href="#uploads-and-the-disk-spool">Uploads and the Disk Spool</a></li>
 <li><a :data-current="activeSection === '#frame-requirements'" class="reference internal" href="#frame-requirements">Frame Requirements</a></li>
 <li><a :data-current="activeSection === '#best-practices'" class="reference internal" href="#best-practices">Best Practices</a></li>
 </ul>
