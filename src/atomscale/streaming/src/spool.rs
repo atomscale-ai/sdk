@@ -147,12 +147,12 @@ pub struct EntryMeta {
     pub metadata: FrameChunkMetadata,
 }
 
-type EntryKey = (i64, u64);
+type EntryKey = (i64, u64, String);
 
 impl EntryMeta {
-    /// Oldest first; `seq` breaks ties and is unique within a spool.
+    /// Oldest first; stream identity also distinguishes entries from independent streamers.
     fn key(&self) -> EntryKey {
-        (self.spooled_at_ms, self.seq)
+        (self.spooled_at_ms, self.seq, self.data_id.clone())
     }
 
     fn stem(&self) -> String {
@@ -303,6 +303,8 @@ struct StreamState {
     counts: Counts,
     losses: Vec<Loss>,
     pending: watch::Sender<u64>,
+    /// Cancels claimed uploads, including retry sleeps, when the stream closes.
+    cancel: watch::Sender<bool>,
 }
 
 impl StreamState {
@@ -317,6 +319,7 @@ impl StreamState {
             counts: Counts::default(),
             losses: Vec::new(),
             pending: watch::channel(0).0,
+            cancel: watch::channel(false).0,
         }
     }
 
@@ -600,11 +603,12 @@ impl Spool {
                 return Some(stream.report());
             }
             stream.closed = Some(reason);
+            stream.cancel.send_replace(true);
             let keys: Vec<EntryKey> = state
                 .entries
                 .iter()
                 .filter(|(_, entry)| entry.meta.data_id == data_id)
-                .map(|(key, _)| *key)
+                .map(|(key, _)| key.clone())
                 .collect();
             for key in keys {
                 let entry = state.entries.remove(&key).expect("key was just listed");
@@ -691,7 +695,7 @@ impl Spool {
                     .entries
                     .iter()
                     .filter(|(_, e)| !e.in_flight && now - e.meta.spooled_at_ms > retention)
-                    .map(|(key, _)| *key)
+                    .map(|(key, _)| key.clone())
                     .collect(),
             )
         };
@@ -765,18 +769,20 @@ impl Spool {
     }
 
     /// Takes the oldest entry no worker is uploading.
-    fn claim(&self) -> Option<Job> {
+    fn claim(&self) -> Option<(Job, watch::Receiver<bool>)> {
         let mut state = self.lock_state();
         let (key, entry) = state
             .entries
             .iter_mut()
             .find(|(_, entry)| !entry.in_flight)?;
         entry.in_flight = true;
-        Some(Job {
-            key: *key,
+        let job = Job {
+            key: key.clone(),
             meta: entry.meta.clone(),
             shard_path: entry_path(&entry.dir, &entry.meta, SHARD_EXT),
-        })
+        };
+        let cancel = state.streams.get(&job.meta.data_id)?.cancel.subscribe();
+        Some((job, cancel))
     }
 
     /// Returns a claimed entry to the queue untouched.
@@ -789,7 +795,13 @@ impl Spool {
     async fn work(self: Arc<Self>, uploader: Arc<dyn Uploader>) {
         loop {
             match self.claim() {
-                Some(job) => self.upload(job, uploader.as_ref()).await,
+                Some((job, mut cancel)) => {
+                    tokio::select! {
+                        biased;
+                        _ = cancel.wait_for(|closed| *closed) => {}
+                        _ = self.upload(job, uploader.as_ref()) => {}
+                    }
+                }
                 None => self.work.notified().await,
             }
         }
@@ -987,6 +999,10 @@ impl Spool {
             remove_dir(dir);
             return Ok(());
         };
+        if marker.endpoint != self.config.endpoint {
+            // Leave all cleanup to a streamer of this endpoint.
+            return Ok(());
+        }
         let data_id = marker.data_id.clone();
         if marker.finalized {
             drop(lock);
@@ -1028,12 +1044,6 @@ impl Spool {
             counts.purged = counts.spooled;
             drop(lock);
             remove_dir(dir);
-            self.lock_state().totals.add(&counts);
-            return Ok(());
-        }
-
-        if marker.endpoint != self.config.endpoint {
-            // Left for a streamer of its own endpoint.
             self.lock_state().totals.add(&counts);
             return Ok(());
         }

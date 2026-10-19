@@ -943,3 +943,103 @@ fn a_frozen_put_times_out_and_is_retried() {
     assert_eq!(backend.puts.load(Ordering::SeqCst), 2);
     assert_eq!(backend.presigns.load(Ordering::SeqCst), 2);
 }
+
+// Independent producers can generate identical (time, sequence) keys.
+#[test]
+fn recovery_keeps_entries_from_independent_streamers() {
+    let fx = Fixture::new();
+    let a = fx.open();
+    a.open_stream("a").unwrap();
+    push(&a, "a", 0);
+    let b = fx.open();
+    b.open_stream("b").unwrap();
+    push(&b, "b", 0);
+    drop(a);
+    drop(b);
+    let recovered = fx.open();
+    assert_eq!(recovered.report("a").unwrap().pending, 1);
+    assert_eq!(recovered.report("b").unwrap().pending, 1);
+    assert_eq!(
+        recovered.status().pending,
+        2,
+        "both stream entries must be in the upload queue"
+    );
+    let rt = runtime();
+    let recorder = Arc::new(Recorder::default());
+    recovered.start(rt.handle(), recorder.clone());
+    for id in ["a", "b"] {
+        assert!(rt.block_on(recovered.drain(id, Duration::from_secs(10))));
+        assert_eq!(recorder.chunks(id), vec![0]);
+        assert_eq!(fx.entries_on_disk(id), 0);
+    }
+    assert_eq!(recovered.status().bytes, 0);
+}
+
+#[test]
+fn another_endpoint_leaves_spooled_entries_untouched() {
+    let fx = Fixture::new();
+    {
+        let spool = fx.open();
+        spool.open_stream("production").unwrap();
+        push(&spool, "production", 0);
+    }
+    fx.advance(2_000);
+    let mut other = fx.config();
+    other.endpoint = "https://dev.test".into();
+    other.retention = Duration::from_secs(1);
+    let _dev = Spool::open(other).unwrap();
+    assert_eq!(
+        fx.entries_on_disk("production"),
+        1,
+        "dev startup must not delete prod shards"
+    );
+}
+
+struct OldStreamStalls {
+    calls: AtomicUsize,
+}
+
+impl Uploader for OldStreamStalls {
+    fn upload<'a>(&'a self, entry: &'a EntryMeta, _: Bytes) -> UploadFuture<'a> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async move {
+            if entry.data_id == "old" {
+                std::future::pending().await
+            } else {
+                Ok(())
+            }
+        })
+    }
+}
+
+#[test]
+fn closing_stream_frees_its_workers() {
+    for reason in [CloseReason::Finalized, CloseReason::Abandoned] {
+        let fx = Fixture::new();
+        let rt = runtime();
+        let mut config = fx.config();
+        config.workers = 2;
+        let spool = Spool::open(config).unwrap();
+        let uploader = Arc::new(OldStreamStalls {
+            calls: AtomicUsize::new(0),
+        });
+        spool.start(rt.handle(), uploader.clone());
+        spool.open_stream("old").unwrap();
+        for idx in 0..2 {
+            push(&spool, "old", idx);
+        }
+        wait_until("old uploads to start", || {
+            uploader.calls.load(Ordering::SeqCst) == 2
+        });
+        let report = spool.close_stream("old", reason).unwrap();
+        assert_eq!(report.counts.purged, 2);
+        spool.forget_stream("old");
+        spool.open_stream("new").unwrap();
+        push(&spool, "new", 0);
+        assert!(
+            rt.block_on(spool.drain("new", Duration::from_secs(1))),
+            "closed stream still consumes the workers"
+        );
+        assert_eq!(spool.report("new").unwrap().counts.uploaded, 1);
+    }
+}
