@@ -29,6 +29,23 @@ def pytest_pyfunc_call(pyfuncitem):
     # return None to let pytest handle non-async tests as usual
 
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _isolated_rheed_spool(tmp_path, monkeypatch):
+    """Give every test its own RHEED spool directory.
+
+    By default a streamer spools under the user cache directory, keyed by data_id
+    and locked per stream. The mock-server tests reuse data_ids such as
+    ``stream-data-id``, so a streamer an earlier test left alive (e.g. through an
+    exception held in a reference cycle) kept that stream's lock, and the next
+    test's initialize() failed with "another streamer is already spooling".
+    It also left test streams in the real cache for later runs to resume.
+    """
+    monkeypatch.setenv("ATOMSCALE_SPOOL_DIR", str(tmp_path / "rheed-spool"))
+
+
 class ResultIDs:
     rheed_image = ""
     rheed_stationary = ""

@@ -1221,7 +1221,7 @@ class TestFinalizeResilience:
         server, streamer, data_id, frames = self._stream(presign_statuses=[403])
         try:
             streamer.push(data_id, 4, frames, capture_start_ms_utc=1_700_000_000_000)
-            with pytest.warns(RuntimeWarning, match="shard 4 .* was not uploaded"):
+            with pytest.warns(RuntimeWarning, match="chunk 4: refused by the backend"):
                 streamer.finalize(data_id)
             requests = _logged_requests(server)
         finally:
