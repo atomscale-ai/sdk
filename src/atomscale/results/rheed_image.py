@@ -21,6 +21,36 @@ from atomscale.core import BaseClient, boxes_overlap, generate_graph_from_nodes
 
 tp.quiet()
 
+NODE_FEATURE_COLUMNS = [
+    "spot_area",
+    "streak_area",
+    "relative_centroid_0",
+    "relative_centroid_1",
+    "intensity_centroid_0",
+    "intensity_centroid_1",
+    "specular_origin_0",
+    "specular_origin_1",
+    "fwhm_0",
+    "fwhm_1",
+    "area",
+    "eccentricity",
+    "center_distance",
+    "axis_major_length",
+    "axis_minor_length",
+    "roughness_metric",
+    "bbox_intensity",
+    "coherent_intensity",
+    "diffuse_intensity",
+    "skew_0",
+    "kurtosis_0",
+    "n_peaks",
+    "intensity_axis_major_length",
+    "intensity_axis_minor_length",
+    "intensity_orientation",
+    "participation_ratio",
+    "peak_snr",
+]
+
 
 def decode_mask_rle(
     mask_rle: str | bytes, mask_height: int, mask_width: int
@@ -182,14 +212,24 @@ class RHEEDImageResult(MSONable):
             node_df.loc[node_df["node_id"] == node_df["node_id"].min()][
                 ["intensity_centroid_0", "intensity_centroid_1"]
             ]
-            .to_numpy()
+            .to_numpy(dtype=float)
             .squeeze()
             + node_df.loc[node_df["node_id"] == node_df["node_id"].min()][
                 ["specular_origin_0", "specular_origin_1"]
             ]
-            .to_numpy()
+            .to_numpy(dtype=float)
             .squeeze()
         )
+
+        if not np.isfinite(np.asarray(intersection_point, dtype=float)).all():
+            intersection_point = (
+                node_df.loc[
+                    node_df["node_id"] == node_df["node_id"].min(),
+                    ["centroid_0", "centroid_1"],
+                ]
+                .to_numpy(dtype=float)
+                .squeeze()
+            )
 
         result_matrix = []
 
@@ -236,24 +276,7 @@ class RHEEDImageResult(MSONable):
 
         extra_data = extra_data or {}
 
-        node_feature_cols = [
-            "spot_area",
-            "streak_area",
-            "relative_centroid_0",
-            "relative_centroid_1",
-            "intensity_centroid_0",
-            "intensity_centroid_1",
-            "specular_origin_0",
-            "specular_origin_1",
-            "fwhm_0",
-            "fwhm_1",
-            "area",
-            "eccentricity",
-            "center_distance",
-            "axis_major_length",
-            "axis_minor_length",
-            "roughness_metric",
-        ]
+        node_feature_cols = NODE_FEATURE_COLUMNS
 
         # TODO: add edge features
         # edge_feature_cols = ["weight", "horizontal_weight", "vertical_weight", "horizontal_overlap"]
@@ -285,8 +308,12 @@ class RHEEDImageResult(MSONable):
         )
 
         node_df["data_id"] = self.data_id
+        for column in node_feature_cols:
+            node_df[column] = pd.to_numeric(
+                node_df.get(column, np.nan), errors="coerce"
+            )
         feature_df: pd.DataFrame = node_df.pivot_table(
-            index="data_id", columns="node_id", values=node_feature_cols
+            index="data_id", columns="node_id", values=node_feature_cols, dropna=False
         )
 
         feature_df.columns = feature_df.columns.to_flat_index()
@@ -309,6 +336,14 @@ class RHEEDImageResult(MSONable):
     @staticmethod
     def _symmetrize(node_df: pd.DataFrame):
         """Symmetrize a DataFrame object containing RHEED image node data"""
+        node_df = node_df.copy()
+        for column in [
+            *NODE_FEATURE_COLUMNS,
+            "relative_intensity_centroid_0",
+            "relative_intensity_centroid_1",
+        ]:
+            if column in node_df.columns:
+                node_df[column] = pd.to_numeric(node_df[column], errors="coerce")
 
         if node_df.empty:
             raise ValueError(
@@ -386,6 +421,21 @@ class RHEEDImageResult(MSONable):
                 "streak_area": "mean",
                 "roughness_metric": "mean",
                 "distances": "mean",
+                **{
+                    column: "mean"
+                    for column in NODE_FEATURE_COLUMNS
+                    if column in node_df.columns
+                },
+                **(
+                    {"order_label": lambda values: values.iloc[0]}
+                    if "order_label" in node_df.columns
+                    else {}
+                ),
+                **(
+                    {"slot_generation": lambda values: values.iloc[0]}
+                    if "slot_generation" in node_df.columns
+                    else {}
+                ),
             }
 
             new_df = pd.DataFrame()
@@ -658,24 +708,7 @@ class RHEEDImageCollection(MSONable):
             (DataFrame): Pandas DataFrame of per-node features across all images.
         """
 
-        node_feature_cols = [
-            "spot_area",
-            "streak_area",
-            "relative_centroid_0",
-            "relative_centroid_1",
-            "intensity_centroid_0",
-            "intensity_centroid_1",
-            "specular_origin_0",
-            "specular_origin_1",
-            "fwhm_0",
-            "fwhm_1",
-            "area",
-            "eccentricity",
-            "center_distance",
-            "axis_major_length",
-            "axis_minor_length",
-            "roughness_metric",
-        ]
+        node_feature_cols = NODE_FEATURE_COLUMNS
 
         # TODO: add edge features
         # edge_feature_cols = ["weight", "horizontal_weight", "vertical_weight", "horizontal_overlap"]
@@ -709,6 +742,8 @@ class RHEEDImageCollection(MSONable):
 
             if normalize:
                 for col in node_feature_cols:
+                    if col not in data_df.columns.get_level_values(0):
+                        continue
                     data_df[col] = (data_df[col] - data_df[col].mean()) / (
                         data_df[col].std() + 1e-6
                     )
@@ -759,10 +794,15 @@ def _get_rheed_image_result(
             source="start_id",  # type: ignore #noqa: PGH003
             target="end_id",  # type: ignore #noqa: PGH003
             edges="horizontal_distances",  # type: ignore #noqa: PGH003
+            name="node_id",
         )
         if graph_data
         else None
     )
+    if graph is not None:
+        nx.set_node_attributes(
+            graph, {node_id: node_id for node_id in graph}, "node_id"
+        )
     processed_data_id = (
         graph_data.get("processed_data_id") if graph_data is not None else data_id  # type: ignore #noqa: PGH003
     )
@@ -801,7 +841,7 @@ def _get_rheed_image_result(
         processed_image=image_data,
         mask=mask_array,
         pattern_graph=graph,
-        metadata=metadata,
+        metadata={**metadata, **(image_download.get("metadata") or {})},
     )
 
 
