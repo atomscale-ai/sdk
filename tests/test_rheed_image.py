@@ -126,6 +126,10 @@ def test_get_dataframe(result: RHEEDImageResult):
         "intensity_orientation",
         "participation_ratio",
         "peak_snr",
+        "coherent_intensity",
+        "diffuse_intensity",
+        "order_label",
+        "slot_generation",
         "data_id",
         "test",
     }
