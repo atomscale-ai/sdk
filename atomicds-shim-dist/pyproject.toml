@@ -11,7 +11,6 @@ license = { text = "GPL-3.0-only" }
 authors = [{ name = "Atomscale", email = "info@atomscale.ai" }]
 classifiers = [
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
@@ -19,7 +18,7 @@ classifiers = [
   "Operating System :: Unix",
   "Operating System :: MacOS",
 ]
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.11, <3.14"
 dependencies = ["atomscale>=0"]
 
 [project.urls]

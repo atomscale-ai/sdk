@@ -9,7 +9,7 @@ Atomscale Python SDK
 .. |tag-badge| image:: https://img.shields.io/github/tag/atomscale-ai/sdk?include_prereleases=&sort=semver&color=blue
    :target: https://github.com/atomscale-ai/sdk/releases/
    :alt: Latest tag
-.. |python-badge| image:: https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python&logoColor=white
+.. |python-badge| image:: https://img.shields.io/badge/Python-3.11+-blue.svg?logo=python&logoColor=white
    :alt: Supported Python versions
 .. |license-badge| image:: https://img.shields.io/badge/License-MPL_2.0-blue
    :target: https://github.com/atomscale-ai/sdk/blob/main/LICENSE
