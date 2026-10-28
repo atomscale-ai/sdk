@@ -725,3 +725,182 @@ class TestTimeseriesStreamerFinalize:
         requests = server.get_all_requests()
         assert len(requests) == 2
         assert "/finalize" in requests[1]
+
+    def test_finalize_waits_for_uploads_in_flight(self, mock_server_factory):
+        """The server refuses a chunk that lands after finalize, so finalize waits for it."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(_routes(3, delays={"/tool-state/stream/chunk": [1.0]}))
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push_multi(data_id, 0, {"temperature": {"timestamps": [0.0], "values": [25.0]}})
+
+        report = streamer.finalize(data_id)
+
+        # The mock logs each request as it answers it, so this is the order they completed in.
+        assert _paths(server.get_all_requests()) == [
+            "/tool-state/stream/initialize",
+            "/tool-state/stream/chunk/multi",
+            "/tool-state/stream/test-data-id/finalize",
+        ]
+        assert report == {
+            "chunks_uploaded": 1,
+            "chunks_failed": 0,
+            "chunks_pending": 0,
+            "drained": True,
+            "lost": [],
+        }
+
+    def test_finalize_warns_about_chunks_not_uploaded(self, mock_server_factory):
+        """A chunk the server refused is named in one warning; the stream is still finalized."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(_routes(3, statuses={"/tool-state/stream/chunk": [400]}))
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push_multi(data_id, 5, {"temperature": {"timestamps": [0.0], "values": [25.0]}})
+
+        with pytest.warns(RuntimeWarning, match="1 chunk.*not uploaded.*chunk 5: HTTP 400"):
+            report = streamer.finalize(data_id)
+
+        assert report["chunks_failed"] == 1
+        assert _paths(server.get_all_requests())[-1] == "/tool-state/stream/test-data-id/finalize"
+
+
+def _routes(max_requests: int, delays=None, statuses=None) -> str:
+    """Routes for one stream, `test-data-id`: initialize, chunk uploads and finalize."""
+    routes = {
+        "__routes__": True,
+        "__max_requests__": max_requests,
+        "/tool-state/stream/initialize": json.dumps({
+            "data_id": "test-data-id",
+            "processed_data_id": "test-processed-id",
+        }),
+        "/tool-state/stream/chunk": json.dumps([]),
+        "/tool-state/stream/test-data-id/finalize": json.dumps({
+            "data_id": "test-data-id",
+            "processed_data_id": "test-processed-id",
+        }),
+    }
+    if delays:
+        routes["__delay_sequence__"] = delays
+    if statuses:
+        routes["__status_sequence__"] = statuses
+    return json.dumps(routes)
+
+
+def _paths(requests: list[str]) -> list[str]:
+    return [request.removeprefix("REQUEST:").split(":", 2)[1] for request in requests]
+
+
+class TestTimeseriesStreamerFlush:
+    """flush() waits for the uploads push() and push_multi() started, and says what became of them."""
+
+    def test_flush_waits_for_uploads_in_flight(self, mock_server_factory):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(_routes(3, delays={"/tool-state/stream/chunk": [1.0]}))
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push_multi(data_id, 0, {"temperature": {"timestamps": [0.0], "values": [25.0]}})
+        streamer.push(data_id, 1, "pressure", [0.0], [1.0])
+
+        started = time.monotonic()
+        report = streamer.flush(data_id)
+
+        assert time.monotonic() - started >= 0.9
+        assert report == {
+            "chunks_uploaded": 2,
+            "chunks_failed": 0,
+            "chunks_pending": 0,
+            "drained": True,
+            "lost": [],
+        }
+
+    def test_flush_that_times_out_reports_chunks_still_uploading(self, mock_server_factory):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(_routes(2, delays={"/tool-state/stream/chunk": [1.5]}))
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push_multi(data_id, 0, {"temperature": {"timestamps": [0.0], "values": [25.0]}})
+
+        report = streamer.flush(data_id, timeout_s=0.2)
+        assert (report["chunks_pending"], report["drained"], report["chunks_uploaded"]) == (1, False, 0)
+
+        # The next flush reports the chunk once it lands.
+        report = streamer.flush(data_id)
+        assert (report["chunks_pending"], report["chunks_uploaded"]) == (0, 1)
+
+    def test_flush_reports_chunks_the_server_refused(self, mock_server_factory):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(_routes(3, statuses={"/tool-state/stream/chunk": [400]}))
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push(data_id, 7, "temperature", [0.0], [25.0])
+        streamer.push(data_id, 7, "pressure", [0.0], [1.0])
+
+        report = streamer.flush(data_id)
+
+        assert (report["chunks_failed"], report["chunks_uploaded"]) == (1, 1)
+        [(chunk_index, reason)] = report["lost"]
+        assert chunk_index == 7
+        assert "HTTP 400" in reason
+        assert reason.startswith(("channel 'temperature'", "channel 'pressure'"))
+
+    def test_flush_with_nothing_pushed_returns_at_once(self):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint="http://localhost:9999")
+
+        assert streamer.flush("no-such-stream")["drained"] is True
+
+    def test_flush_rejects_a_negative_timeout(self):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint="http://localhost:9999")
+
+        with pytest.raises(ValueError, match="timeout_s must be non-negative"):
+            streamer.flush("test-data-id", timeout_s=-1)
+
+
+class TestTimeseriesStreamerReleasesGil:
+    """Network round trips run with the GIL released, so the caller's other threads keep running."""
+
+    def test_initialize(self, mock_server_factory, python_ticks_during):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(_routes(1, delays={"/tool-state/stream/initialize": [1.0]}))
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+
+        ticks, data_id = python_ticks_during(streamer.initialize)
+
+        assert data_id == "test-data-id"
+        assert ticks >= 50
+
+    def test_finalize(self, mock_server_factory, python_ticks_during):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(
+            _routes(2, delays={"/tool-state/stream/test-data-id/finalize": [1.0]})
+        )
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+
+        ticks, _ = python_ticks_during(lambda: streamer.finalize(data_id))
+
+        assert ticks >= 50
+
+    def test_run(self, mock_server_factory, python_ticks_during):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(_routes(2, delays={"/tool-state/stream/chunk": [1.0]}))
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+
+        ticks, _ = python_ticks_during(
+            lambda: streamer.run(data_id, "temperature", iter([([0.0], [25.0])]))
+        )
+
+        assert ticks >= 50

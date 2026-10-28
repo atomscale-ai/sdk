@@ -14,12 +14,14 @@ The server:
 - For routes mode: handles multiple requests based on path matching
 - Responds with the provided JSON response
 - Routes mode accepts ``__status_sequence__``: {route: [status, ...]} returned in order
-  for that route's requests, then 200; and ``__body_sequence__``: {route: [body, ...]}
-  likewise, then the route's own body
+  for that route's requests, then 200; ``__body_sequence__``: {route: [body, ...]}
+  likewise, then the route's own body; and ``__delay_sequence__``: {route: [seconds, ...]}
+  waited in order before each of that route's requests is logged and answered, then none
 """
 import json
 import sys
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 
 
@@ -75,6 +77,9 @@ class CaptureHandler(BaseHTTPRequestHandler):
                     if path.startswith(route_key):
                         response_data, matched_key = route_response, route_key
                         break
+            delay = self.server.next_delay(matched_key)
+            if delay:
+                time.sleep(delay)
             status = self.server.next_status(matched_key)
             response_data = self.server.next_body(matched_key, response_data)
 
@@ -146,7 +151,13 @@ class MultiRequestServer(ThreadingHTTPServer):
     request_queue_size = 256
 
     def __init__(
-        self, *args, max_requests: int = 1, status_sequences=None, body_sequences=None, **kwargs
+        self,
+        *args,
+        max_requests: int = 1,
+        status_sequences=None,
+        body_sequences=None,
+        delay_sequences=None,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.max_requests = max_requests
@@ -154,6 +165,8 @@ class MultiRequestServer(ThreadingHTTPServer):
         self.status_sequences = {k: list(v) for k, v in (status_sequences or {}).items()}
         # route key -> response bodies returned in order; the route's own once exhausted.
         self.body_sequences = {k: list(v) for k, v in (body_sequences or {}).items()}
+        # route key -> seconds to wait before answering, in order; no wait once exhausted.
+        self.delay_sequences = {k: list(v) for k, v in (delay_sequences or {}).items()}
         self._count_lock = threading.Lock()
         self.request_count = 0
         self._done = threading.Event()
@@ -178,6 +191,11 @@ class MultiRequestServer(ThreadingHTTPServer):
             queue = self.body_sequences.get(route_key)
             return queue.pop(0) if queue else default
 
+    def next_delay(self, route_key) -> float:
+        with self._count_lock:
+            queue = self.delay_sequences.get(route_key)
+            return queue.pop(0) if queue else 0.0
+
     def process_request_thread(self, request, client_address):
         """Override to count handled requests and signal completion."""
         try:
@@ -200,12 +218,14 @@ def run_server(port: int, response_data: str) -> None:
             max_requests = routes.pop("__max_requests__", 10)
             status_sequences = routes.pop("__status_sequence__", None)
             body_sequences = routes.pop("__body_sequence__", None)
+            delay_sequences = routes.pop("__delay_sequence__", None)
             server = MultiRequestServer(
                 ("127.0.0.1", port),
                 CaptureHandler,
                 max_requests=max_requests,
                 status_sequences=status_sequences,
                 body_sequences=body_sequences,
+                delay_sequences=delay_sequences,
             )
             server.routes = routes
             print(f"READY:{port}", flush=True)

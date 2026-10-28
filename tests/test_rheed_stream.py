@@ -329,6 +329,27 @@ class TestRHEEDStreamerInitialize:
         with pytest.raises(ValueError, match="azimuth is for parked streams"):
             streamer.initialize(fps=30.0, rotations_per_min=10.0, chunk_size=60, azimuth="100")
 
+    def test_initialize_lets_other_python_threads_run(
+        self, mock_server_factory, python_ticks_during
+    ):
+        """The round trips run with the GIL released, so e.g. a camera loop keeps reading."""
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        server = mock_server_factory(json.dumps({
+            "__routes__": True,
+            "__max_requests__": 1,
+            "__delay_sequence__": {"/rheed/stream/": [1.0]},
+            "/rheed/stream/": '"data-id-gil"',
+        }))
+        streamer = RHEEDStreamer(api_key="test-api-key", endpoint=server.endpoint)
+
+        ticks, data_id = python_ticks_during(
+            lambda: streamer.initialize(fps=30.0, rotations_per_min=0.0, chunk_size=60)
+        )
+
+        assert data_id == "data-id-gil"
+        assert ticks >= 50
+
     def test_initialize_returns_data_id(self, mock_server_factory):
         """Verify initialize() returns the data_id from the server."""
         from atomscale.streaming.rheed_stream import RHEEDStreamer

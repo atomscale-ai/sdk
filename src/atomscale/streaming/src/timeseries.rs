@@ -1,12 +1,12 @@
 use anyhow::Result;
-use pyo3::exceptions::PyRuntimeError;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyIterator};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
-use std::sync::Arc;
-use std::time::Instant;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, Condvar, Mutex};
+use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tracing::debug;
@@ -15,6 +15,7 @@ use crate::clock::{clock_status_dict, lab_clock_for, LabClock};
 use crate::initialize::{link_new_stream, resolve_stream_links};
 use crate::retry::{with_retries, HttpStatusError};
 use crate::utils::init_tracing_once;
+use crate::warn_py;
 
 /// Request body for stream initialization.
 #[derive(Serialize, Debug)]
@@ -76,7 +77,7 @@ struct MultiChunkPayload {
 ///
 /// Notes
 /// -----
-/// - Each push() spawns an async upload task and returns immediately.
+/// - Each push() spawns an async upload task and returns immediately; flush() waits for them.
 /// - Chunks are ordered server-side by chunk_index, so out-of-order arrival is handled.
 /// - Multiple channels can be streamed for the same data_id.
 ///
@@ -97,6 +98,7 @@ pub struct TimeseriesStreamer {
     /// This computer's clock against AtomCloud's; every timestamp leaves as reference UTC.
     /// `None` when correction is switched off.
     clock: Option<Arc<LabClock>>,
+    uploads: Arc<UploadTracker>,
 }
 
 #[pymethods]
@@ -136,6 +138,7 @@ impl TimeseriesStreamer {
             rt,
             points_per_chunk,
             clock,
+            uploads: Arc::default(),
         })
     }
 
@@ -196,17 +199,19 @@ impl TimeseriesStreamer {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
-        let links_fut = resolve_stream_links(
-            &self.client,
-            &self.endpoint,
-            &self.api_key,
-            physical_sample.as_deref(),
-            project_id.clone(),
-            tags.as_deref().unwrap_or_default(),
-        );
-        let links = self
-            .rt
-            .block_on(links_fut)
+        // Every round trip below runs with the GIL released: the caller's other Python threads
+        // (a camera loop, a feed reader) keep running while it waits on the network.
+        let links = py
+            .detach(|| {
+                self.rt.block_on(resolve_stream_links(
+                    &self.client,
+                    &self.endpoint,
+                    &self.api_key,
+                    physical_sample.as_deref(),
+                    project_id.clone(),
+                    tags.as_deref().unwrap_or_default(),
+                ))
+            })
             .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         let request = InitializeRequest {
@@ -218,24 +223,26 @@ impl TimeseriesStreamer {
 
         let url = format!("{}/tool-state/stream/initialize", self.endpoint);
 
-        let result = self.rt.block_on(async {
-            let resp = self
-                .client
-                .post(&url)
-                .header("X-API-KEY", &self.api_key)
-                .header("Content-Type", "application/json")
-                .json(&request)
-                .send()
-                .await?;
+        let result = py.detach(|| {
+            self.rt.block_on(async {
+                let resp = self
+                    .client
+                    .post(&url)
+                    .header("X-API-KEY", &self.api_key)
+                    .header("Content-Type", "application/json")
+                    .json(&request)
+                    .send()
+                    .await?;
 
-            let status = resp.status();
-            if !status.is_success() {
-                let text = resp.text().await.unwrap_or_default();
-                return Err(anyhow::anyhow!("HTTP {}: {}", status, text));
-            }
+                let status = resp.status();
+                if !status.is_success() {
+                    let text = resp.text().await.unwrap_or_default();
+                    return Err(anyhow::anyhow!("HTTP {}: {}", status, text));
+                }
 
-            let response: InitializeResponse = resp.json().await?;
-            Ok(response)
+                let response: InitializeResponse = resp.json().await?;
+                Ok(response)
+            })
         });
 
         let data_id = match result {
@@ -250,17 +257,17 @@ impl TimeseriesStreamer {
         };
 
         let end_url = self.finalize_url(&data_id);
-        let link_fut = link_new_stream(
-            &self.client,
-            &self.endpoint,
-            &self.api_key,
-            &data_id,
-            &links,
-            &end_url,
-        );
-        self.rt
-            .block_on(link_fut)
-            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
+        py.detach(|| {
+            self.rt.block_on(link_new_stream(
+                &self.client,
+                &self.endpoint,
+                &self.api_key,
+                &data_id,
+                &links,
+                &end_url,
+            ))
+        })
+        .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         Ok(data_id)
     }
@@ -319,7 +326,8 @@ impl TimeseriesStreamer {
             units,
         };
 
-        self.spawn_upload(payload);
+        // Dropping the handle leaves the upload running; flush() and finalize() still wait for it.
+        drop(self.spawn_chunk_upload(payload));
         Ok(())
     }
 
@@ -356,7 +364,7 @@ impl TimeseriesStreamer {
         chunk_index: usize,
         channels: Bound<PyDict>,
     ) -> PyResult<()> {
-        let mut payload_channels = BTreeMap::new();
+        let mut host_channels = Vec::with_capacity(channels.len());
 
         for (key, value) in channels.iter() {
             let channel_name: String = key.extract().map_err(|e| {
@@ -424,24 +432,24 @@ impl TimeseriesStreamer {
                 continue;
             }
 
-            payload_channels.insert(
+            host_channels.push((
                 channel_name,
                 ChannelPayload {
-                    timestamps: self.reference_utc_secs(timestamps),
+                    timestamps,
                     values,
                     units,
                 },
-            );
+            ));
         }
 
-        if payload_channels.is_empty() {
+        if host_channels.is_empty() {
             return Ok(());
         }
-        self.spawn_multi_upload(MultiChunkPayload {
+        drop(self.spawn_multi_upload(MultiChunkPayload {
             data_id,
             chunk_index,
-            channels: payload_channels,
-        });
+            channels: channels_to_reference_utc(self.clock.as_deref(), host_channels),
+        }));
         Ok(())
     }
 
@@ -477,46 +485,103 @@ impl TimeseriesStreamer {
         self.run_internal(data_id, channel_name, data_iter, units)
     }
 
-    /// finalize(self, data_id: str) -> None
+    /// flush(self, data_id: str, timeout_s: Optional[float] = None) -> dict
     ///
-    /// Finalize the stream, marking it as complete on the server.
-    ///
-    /// Call this after all data has been pushed to signal that the stream is finished.
+    /// Wait until every chunk pushed so far for `data_id` has finished uploading: landed, or
+    /// failed after its retries. push() and push_multi() return before their upload is done;
+    /// call this to know the data arrived.
     ///
     /// Args:
     ///     data_id (str): The stream identifier returned by `initialize()`.
+    ///     timeout_s (Optional[float]): How long to wait, in seconds. Defaults to 120, longer
+    ///         than one upload's full retry budget.
     ///
     /// Returns:
-    ///     None
+    ///     dict: What became of the chunks pushed since the last flush() or finalize():
+    ///     `chunks_uploaded`, `chunks_failed`, `chunks_pending` (still uploading when the wait
+    ///     ended; they are reported by the next flush), `drained` (whether the wait finished in
+    ///     time) and `lost`, a list of `(chunk_index, reason)` for the chunks that failed.
     ///
     /// Raises:
+    ///     ValueError: If `timeout_s` is negative.
+    #[pyo3(signature = (data_id, timeout_s=None))]
+    #[pyo3(text_signature = "(data_id, timeout_s=None)")]
+    fn flush<'py>(
+        &self,
+        py: Python<'py>,
+        data_id: String,
+        timeout_s: Option<f64>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let timeout = wait_limit(timeout_s, "timeout_s")?;
+        let report = py.detach(|| self.uploads.drain(&data_id, timeout));
+        report.to_dict(py)
+    }
+
+    /// finalize(self, data_id: str, drain_timeout_s: Optional[float] = None) -> dict
+    ///
+    /// Finalize the stream, marking it as complete on the server.
+    ///
+    /// Call this after all data has been pushed to signal that the stream is finished. It first
+    /// waits for the stream's uploads still in flight (as flush() does): the server refuses a
+    /// chunk that arrives after its stream is finalized. If any chunk was not uploaded, one
+    /// `RuntimeWarning` says how many; the stream is still finalized.
+    ///
+    /// Args:
+    ///     data_id (str): The stream identifier returned by `initialize()`.
+    ///     drain_timeout_s (Optional[float]): How long to wait for uploads in flight, in
+    ///         seconds. Defaults to 120.
+    ///
+    /// Returns:
+    ///     dict: The same report as flush().
+    ///
+    /// Raises:
+    ///     ValueError: If `drain_timeout_s` is negative.
     ///     RuntimeError: If the request fails.
-    #[pyo3(signature = (data_id))]
-    #[pyo3(text_signature = "(data_id)")]
-    fn finalize(&self, data_id: String) -> PyResult<()> {
+    #[pyo3(signature = (data_id, drain_timeout_s=None))]
+    #[pyo3(text_signature = "(data_id, drain_timeout_s=None)")]
+    fn finalize<'py>(
+        &self,
+        py: Python<'py>,
+        data_id: String,
+        drain_timeout_s: Option<f64>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        let timeout = wait_limit(drain_timeout_s, "drain_timeout_s")?;
+        let report = py.detach(|| self.uploads.drain(&data_id, timeout));
+        let not_uploaded = report.lost.len() + report.pending;
+        if not_uploaded > 0 {
+            warn_py(
+                py,
+                &format!(
+                    "{not_uploaded} chunk(s) of stream {data_id} were not uploaded: {}",
+                    report.describe_losses()
+                ),
+            )?;
+        }
+
         let url = self.finalize_url(&data_id);
+        let result = py.detach(|| {
+            self.rt.block_on(async {
+                let resp = self
+                    .client
+                    .post(&url)
+                    .header("X-API-KEY", &self.api_key)
+                    .send()
+                    .await?;
 
-        let result = self.rt.block_on(async {
-            let resp = self
-                .client
-                .post(&url)
-                .header("X-API-KEY", &self.api_key)
-                .send()
-                .await?;
+                let status = resp.status();
+                if !status.is_success() {
+                    let text = resp.text().await.unwrap_or_default();
+                    return Err(anyhow::anyhow!("HTTP {}: {}", status, text));
+                }
 
-            let status = resp.status();
-            if !status.is_success() {
-                let text = resp.text().await.unwrap_or_default();
-                return Err(anyhow::anyhow!("HTTP {}: {}", status, text));
-            }
-
-            Ok(())
+                Ok(())
+            })
         });
 
         match result {
             Ok(()) => {
                 debug!("[timeseries_stream] finalized: data_id={}", data_id);
-                Ok(())
+                report.to_dict(py)
             }
             Err(e) => Err(PyRuntimeError::new_err(e.to_string())),
         }
@@ -530,12 +595,8 @@ impl TimeseriesStreamer {
 
     /// Host-clock Unix seconds as reference UTC (unchanged when correction is off or not yet
     /// measured). One offset is read per call, so a chunk's points shift together.
-    fn reference_utc_secs(&self, mut timestamps: Vec<f64>) -> Vec<f64> {
-        if let Some(clock) = &self.clock {
-            let offset_s = clock.offset_ms() / 1_000.0;
-            timestamps.iter_mut().for_each(|t| *t += offset_s);
-        }
-        timestamps
+    fn reference_utc_secs(&self, timestamps: Vec<f64>) -> Vec<f64> {
+        to_reference_utc(timestamps, clock_offset_s(self.clock.as_deref()))
     }
 
     /// Internal implementation of run() that handles iteration and task management.
@@ -551,6 +612,7 @@ impl TimeseriesStreamer {
             channel_name
         );
 
+        let py = data_iter.py();
         let iter = PyIterator::from_object(&data_iter)?;
         let mut handles = Vec::new();
 
@@ -591,7 +653,7 @@ impl TimeseriesStreamer {
                 units: units.clone(),
             };
 
-            let handle = self.spawn_upload_tracked(payload);
+            let handle = self.spawn_chunk_upload(payload);
             handles.push(handle);
         }
 
@@ -600,22 +662,24 @@ impl TimeseriesStreamer {
             handles.len()
         );
 
-        // Wait for all tasks to finish
-        let res = self.rt.block_on(async {
-            for (i, h) in handles.into_iter().enumerate() {
-                match h.await {
-                    Ok(Ok(())) => debug!("[timeseries_stream] task#{}: completed", i),
-                    Ok(Err(e)) => {
-                        debug!("[timeseries_stream] task#{}: ERROR: {}", i, e);
-                        return Err(e);
-                    }
-                    Err(e) => {
-                        debug!("[timeseries_stream] task#{}: JOIN ERROR: {}", i, e);
-                        return Err(anyhow::anyhow!(e));
+        // Wait for all tasks to finish, with the GIL released while the uploads run.
+        let res = py.detach(|| {
+            self.rt.block_on(async {
+                for (i, h) in handles.into_iter().enumerate() {
+                    match h.await {
+                        Ok(Ok(())) => debug!("[timeseries_stream] task#{}: completed", i),
+                        Ok(Err(e)) => {
+                            debug!("[timeseries_stream] task#{}: ERROR: {}", i, e);
+                            return Err(e);
+                        }
+                        Err(e) => {
+                            debug!("[timeseries_stream] task#{}: JOIN ERROR: {}", i, e);
+                            return Err(anyhow::anyhow!(e));
+                        }
                     }
                 }
-            }
-            Ok::<(), anyhow::Error>(())
+                Ok::<(), anyhow::Error>(())
+            })
         });
 
         if let Err(e) = res {
@@ -630,80 +694,260 @@ impl TimeseriesStreamer {
         Ok(())
     }
 
-    /// Spawn an async task to upload the chunk payload.
-    /// Fire-and-forget: the JoinHandle is dropped.
-    fn spawn_upload(&self, payload: ChunkPayload) {
-        // Fire-and-forget: drop the JoinHandle
-        let _ = self.spawn_upload_tracked(payload);
+    /// Spawn the upload of one channel's chunk and return its JoinHandle. flush() and finalize()
+    /// wait for it whether or not the handle is kept.
+    fn spawn_chunk_upload(&self, payload: ChunkPayload) -> JoinHandle<Result<()>> {
+        let ticket = self.uploads.start(
+            &payload.data_id,
+            payload.chunk_index,
+            Some(payload.channel_name.clone()),
+        );
+        self.spawn_upload("chunk", ticket, payload)
     }
 
-    /// Spawn a fire-and-forget upload of every channel of one chunk.
-    fn spawn_multi_upload(&self, payload: MultiChunkPayload) {
-        let client = self.client.clone();
-        let api_key = self.api_key.clone();
-        let url = format!("{}/tool-state/stream/chunk/multi", self.endpoint);
-
+    /// Spawn the upload of every channel of one chunk, in one request.
+    fn spawn_multi_upload(&self, payload: MultiChunkPayload) -> JoinHandle<Result<()>> {
         debug!(
             "[timeseries_stream] spawn: chunk {} for {} channel(s)",
             payload.chunk_index,
             payload.channels.len()
         );
+        let ticket = self
+            .uploads
+            .start(&payload.data_id, payload.chunk_index, None);
+        self.spawn_upload("chunk/multi", ticket, payload)
+    }
 
-        let _ = self.rt.spawn(async move {
+    fn spawn_upload<T: Serialize + Send + Sync + 'static>(
+        &self,
+        route: &str,
+        ticket: UploadTicket,
+        payload: T,
+    ) -> JoinHandle<Result<()>> {
+        let client = self.client.clone();
+        let api_key = self.api_key.clone();
+        let url = format!("{}/tool-state/stream/{route}", self.endpoint);
+
+        self.rt.spawn(async move {
+            debug!("[timeseries_stream] uploading {}", ticket.label());
             let result = post_chunk(&client, &url, &payload, &api_key).await;
             match &result {
-                Ok(_) => debug!(
-                    "[timeseries_stream] chunk {} ({} channels) uploaded successfully",
-                    payload.chunk_index,
-                    payload.channels.len()
+                Ok(()) => debug!(
+                    "[timeseries_stream] {} uploaded successfully",
+                    ticket.label()
                 ),
                 Err(e) => debug!(
-                    "[timeseries_stream] chunk {} ({} channels) upload failed: {}",
-                    payload.chunk_index,
-                    payload.channels.len(),
+                    "[timeseries_stream] {} upload failed: {}",
+                    ticket.label(),
                     e
                 ),
             }
-            result
-        });
-    }
-
-    /// Spawn an async task to upload the chunk payload and return the JoinHandle.
-    fn spawn_upload_tracked(&self, payload: ChunkPayload) -> JoinHandle<Result<()>> {
-        let client = self.client.clone();
-        let api_key = self.api_key.clone();
-        let url = format!("{}/tool-state/stream/chunk", self.endpoint);
-
-        debug!(
-            "[timeseries_stream] spawn: chunk {} for channel '{}'",
-            payload.chunk_index, payload.channel_name
-        );
-
-        self.rt.spawn(async move {
-            debug!(
-                "[timeseries_stream] uploading chunk {} for '{}'",
-                payload.chunk_index, payload.channel_name
-            );
-
-            let result = post_chunk(&client, &url, &payload, &api_key).await;
-
-            match &result {
-                Ok(_) => {
-                    debug!(
-                        "[timeseries_stream] chunk {} for '{}' uploaded successfully",
-                        payload.chunk_index, payload.channel_name
-                    );
-                }
-                Err(e) => {
-                    debug!(
-                        "[timeseries_stream] chunk {} for '{}' upload failed: {}",
-                        payload.chunk_index, payload.channel_name, e
-                    );
-                }
-            }
-
+            ticket.finish(&result);
             result
         })
+    }
+}
+
+/// Reference UTC minus the host clock in seconds; `None` when correction is off.
+fn clock_offset_s(clock: Option<&LabClock>) -> Option<f64> {
+    clock.map(|clock| clock.offset_ms() / 1_000.0)
+}
+
+/// Host-clock Unix seconds as reference UTC; unchanged without an offset.
+fn to_reference_utc(mut timestamps: Vec<f64>, offset_s: Option<f64>) -> Vec<f64> {
+    if let Some(offset_s) = offset_s {
+        timestamps.iter_mut().for_each(|t| *t += offset_s);
+    }
+    timestamps
+}
+
+/// The channels of one chunk moved onto reference UTC with a single reading of the clock. While
+/// the offset slews it changes between reads, so channels sent with the same timestamps would
+/// otherwise land a float step apart, and the server files those as different rows.
+fn channels_to_reference_utc(
+    clock: Option<&LabClock>,
+    channels: Vec<(String, ChannelPayload)>,
+) -> BTreeMap<String, ChannelPayload> {
+    let offset_s = clock_offset_s(clock);
+    channels
+        .into_iter()
+        .map(|(name, mut channel)| {
+            channel.timestamps = to_reference_utc(channel.timestamps, offset_s);
+            (name, channel)
+        })
+        .collect()
+}
+
+/// How long flush() and finalize() wait for uploads by default: longer than one upload's full
+/// retry budget (3 attempts of up to 30 s each, plus backoff).
+const DEFAULT_FLUSH_TIMEOUT: Duration = Duration::from_secs(120);
+
+fn wait_limit(seconds: Option<f64>, name: &str) -> PyResult<Duration> {
+    seconds
+        .map(|seconds| {
+            Duration::try_from_secs_f64(seconds)
+                .map_err(|_| PyValueError::new_err(format!("{name} must be non-negative")))
+        })
+        .transpose()
+        .map(|limit| limit.unwrap_or(DEFAULT_FLUSH_TIMEOUT))
+}
+
+/// What became of one stream's uploads since it was last flushed.
+#[derive(Default)]
+struct StreamUploads {
+    in_flight: usize,
+    uploaded: usize,
+    lost: Vec<(usize, String)>,
+}
+
+/// The uploads push(), push_multi() and run() start, per stream. Uploads are fire-and-forget, so
+/// without this a caller cannot tell a chunk that landed from one still in flight or lost.
+#[derive(Default)]
+struct UploadTracker {
+    streams: Mutex<HashMap<String, StreamUploads>>,
+    finished: Condvar,
+}
+
+impl UploadTracker {
+    /// Count an upload as in flight until its ticket is finished or dropped.
+    fn start(
+        self: &Arc<Self>,
+        data_id: &str,
+        chunk_index: usize,
+        channel: Option<String>,
+    ) -> UploadTicket {
+        self.streams
+            .lock()
+            .expect("upload tracker mutex poisoned")
+            .entry(data_id.to_string())
+            .or_default()
+            .in_flight += 1;
+        UploadTicket {
+            tracker: Arc::clone(self),
+            data_id: data_id.to_string(),
+            chunk_index,
+            channel,
+            finished: false,
+        }
+    }
+
+    fn finish(&self, data_id: &str, chunk_index: usize, outcome: Result<(), String>) {
+        {
+            let mut streams = self.streams.lock().expect("upload tracker mutex poisoned");
+            let stream = streams.entry(data_id.to_string()).or_default();
+            stream.in_flight = stream.in_flight.saturating_sub(1);
+            match outcome {
+                Ok(()) => stream.uploaded += 1,
+                Err(reason) => stream.lost.push((chunk_index, reason)),
+            }
+        }
+        self.finished.notify_all();
+    }
+
+    /// Wait up to `timeout` for `data_id`'s uploads in flight to finish, then take the record of
+    /// what its uploads did since the last drain.
+    fn drain(&self, data_id: &str, timeout: Duration) -> UploadReport {
+        let streams = self.streams.lock().expect("upload tracker mutex poisoned");
+        let (mut streams, _) = self
+            .finished
+            .wait_timeout_while(streams, timeout, |streams| {
+                streams
+                    .get(data_id)
+                    .is_some_and(|stream| stream.in_flight > 0)
+            })
+            .expect("upload tracker mutex poisoned");
+        let Some(stream) = streams.get_mut(data_id) else {
+            return UploadReport::default();
+        };
+        let report = UploadReport {
+            uploaded: std::mem::take(&mut stream.uploaded),
+            pending: stream.in_flight,
+            lost: std::mem::take(&mut stream.lost),
+        };
+        if stream.in_flight == 0 {
+            streams.remove(data_id);
+        }
+        report
+    }
+}
+
+/// One upload in flight. Finishing it records the outcome; dropping it unfinished (the task was
+/// cancelled, e.g. by the streamer shutting down) records it as lost.
+struct UploadTicket {
+    tracker: Arc<UploadTracker>,
+    data_id: String,
+    chunk_index: usize,
+    channel: Option<String>,
+    finished: bool,
+}
+
+impl UploadTicket {
+    fn label(&self) -> String {
+        match &self.channel {
+            Some(channel) => format!("chunk {} for '{channel}'", self.chunk_index),
+            None => format!("chunk {}", self.chunk_index),
+        }
+    }
+
+    fn finish(mut self, result: &Result<()>) {
+        self.finished = true;
+        let outcome = result.as_ref().map(|_| ()).map_err(|e| self.reason(e));
+        self.tracker
+            .finish(&self.data_id, self.chunk_index, outcome);
+    }
+
+    fn reason(&self, error: impl std::fmt::Display) -> String {
+        match &self.channel {
+            Some(channel) => format!("channel '{channel}': {error:#}"),
+            None => format!("{error:#}"),
+        }
+    }
+}
+
+impl Drop for UploadTicket {
+    fn drop(&mut self) {
+        if !self.finished {
+            let reason = self.reason("upload cancelled before it finished");
+            self.tracker
+                .finish(&self.data_id, self.chunk_index, Err(reason));
+        }
+    }
+}
+
+/// What flush() and finalize() report about a stream's uploads.
+#[derive(Debug, Default)]
+struct UploadReport {
+    uploaded: usize,
+    pending: usize,
+    lost: Vec<(usize, String)>,
+}
+
+impl UploadReport {
+    fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let dict = PyDict::new(py);
+        dict.set_item("chunks_uploaded", self.uploaded)?;
+        dict.set_item("chunks_failed", self.lost.len())?;
+        dict.set_item("chunks_pending", self.pending)?;
+        dict.set_item("drained", self.pending == 0)?;
+        dict.set_item("lost", self.lost.clone())?;
+        Ok(dict)
+    }
+
+    /// The counts behind the chunks not uploaded, and the first few failures.
+    fn describe_losses(&self) -> String {
+        const LISTED: usize = 5;
+        let mut text = format!(
+            "{} failed after retries, {} still uploading",
+            self.lost.len(),
+            self.pending
+        );
+        for (chunk_index, reason) in self.lost.iter().take(LISTED) {
+            text.push_str(&format!("; chunk {chunk_index}: {reason}"));
+        }
+        if self.lost.len() > LISTED {
+            text.push_str("; …");
+        }
+        text
     }
 }
 
@@ -737,4 +981,100 @@ async fn post_chunk<T: Serialize>(
         },
     )
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn channel(timestamps: &[f64]) -> ChannelPayload {
+        ChannelPayload {
+            timestamps: timestamps.to_vec(),
+            values: vec![0.0; timestamps.len()],
+            units: None,
+        }
+    }
+
+    #[test]
+    fn every_channel_of_a_chunk_shifts_by_the_same_offset_while_the_clock_slews() {
+        let clock = LabClock::slewing(5_000.0, 5_300.0);
+        // The hazard: a slewing clock reads differently from one moment to the next.
+        let first = clock.offset_ms();
+        std::thread::sleep(Duration::from_millis(2));
+        assert_ne!(first, clock.offset_ms());
+
+        // Small timestamps make any difference in offset visible after the addition.
+        let channels = (0..2_000)
+            .map(|i| (format!("channel {i}"), channel(&[1.0, 2.0])))
+            .collect();
+        let corrected = channels_to_reference_utc(Some(&clock), channels);
+
+        let expected = &corrected["channel 0"].timestamps;
+        assert!(expected[0] > 5.0, "{expected:?}");
+        assert!(corrected.values().all(|c| &c.timestamps == expected));
+    }
+
+    #[test]
+    fn without_correction_timestamps_are_sent_as_read() {
+        let corrected = channels_to_reference_utc(None, vec![("t".into(), channel(&[1.5, 2.5]))]);
+        assert_eq!(corrected["t"].timestamps, vec![1.5, 2.5]);
+    }
+
+    #[test]
+    fn drain_waits_for_uploads_in_flight() {
+        let tracker = Arc::new(UploadTracker::default());
+        let ticket = tracker.start("stream", 0, None);
+        let uploader = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(100));
+            ticket.finish(&Ok(()));
+        });
+
+        let report = tracker.drain("stream", Duration::from_secs(10));
+        uploader.join().unwrap();
+
+        assert_eq!((report.uploaded, report.pending), (1, 0));
+        assert!(report.lost.is_empty());
+    }
+
+    #[test]
+    fn drain_that_times_out_reports_uploads_still_pending_and_the_next_drain_their_outcome() {
+        let tracker = Arc::new(UploadTracker::default());
+        let ticket = tracker.start("stream", 4, None);
+
+        let report = tracker.drain("stream", Duration::from_millis(20));
+        assert_eq!((report.uploaded, report.pending), (0, 1));
+
+        ticket.finish(&Err(anyhow::anyhow!("HTTP 400: rejected")));
+        let report = tracker.drain("stream", Duration::from_millis(20));
+        assert_eq!(report.pending, 0);
+        assert_eq!(report.lost, vec![(4, "HTTP 400: rejected".to_string())]);
+    }
+
+    #[test]
+    fn a_dropped_upload_is_reported_lost() {
+        let tracker = Arc::new(UploadTracker::default());
+        drop(tracker.start("stream", 2, Some("temperature".into())));
+
+        let report = tracker.drain("stream", Duration::ZERO);
+
+        assert_eq!(
+            report.lost,
+            vec![(
+                2,
+                "channel 'temperature': upload cancelled before it finished".to_string()
+            )]
+        );
+    }
+
+    #[test]
+    fn drain_reports_each_outcome_once_and_only_for_its_stream() {
+        let tracker = Arc::new(UploadTracker::default());
+        tracker.start("a", 0, None).finish(&Ok(()));
+        let _other = tracker.start("b", 0, None);
+
+        let report = tracker.drain("a", Duration::from_secs(10));
+        assert_eq!((report.uploaded, report.pending), (1, 0));
+        let report = tracker.drain("a", Duration::ZERO);
+        assert_eq!((report.uploaded, report.pending), (0, 0));
+    }
 }

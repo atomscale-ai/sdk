@@ -340,39 +340,45 @@ impl RHEEDStreamer {
             azimuth_label,
         };
 
-        let links_fut = resolve_stream_links(
-            &self.client,
-            &self.endpoint,
-            &self.api_key,
-            physical_sample.as_deref(),
-            settings.project_id.clone(),
-            tags.as_deref().unwrap_or_default(),
-        );
-        let links = self
-            .rt
-            .block_on(links_fut)
+        // Every round trip below runs with the GIL released: the caller's other Python threads
+        // (a camera loop, a feed reader) keep running while it waits on the network.
+        let links = py
+            .detach(|| {
+                self.rt.block_on(resolve_stream_links(
+                    &self.client,
+                    &self.endpoint,
+                    &self.api_key,
+                    physical_sample.as_deref(),
+                    settings.project_id.clone(),
+                    tags.as_deref().unwrap_or_default(),
+                ))
+            })
             .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         let post_url = format!("{}/rheed/stream/", self.endpoint);
-        let init_fut = post_for_initialization(&self.client, &post_url, &settings, &self.api_key);
-
-        let data_id = self
-            .rt
-            .block_on(init_fut)
+        let data_id = py
+            .detach(|| {
+                self.rt.block_on(post_for_initialization(
+                    &self.client,
+                    &post_url,
+                    &settings,
+                    &self.api_key,
+                ))
+            })
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
         let end_url = self.end_url(&data_id);
-        let link_fut = link_new_stream(
-            &self.client,
-            &self.endpoint,
-            &self.api_key,
-            &data_id,
-            &links,
-            &end_url,
-        );
-        self.rt
-            .block_on(link_fut)
-            .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
+        py.detach(|| {
+            self.rt.block_on(link_new_stream(
+                &self.client,
+                &self.endpoint,
+                &self.api_key,
+                &data_id,
+                &links,
+                &end_url,
+            ))
+        })
+        .map_err(|e| PyRuntimeError::new_err(format!("{e:#}")))?;
 
         self.spool.open_stream(&data_id).map_err(|e| {
             PyRuntimeError::new_err(format!(

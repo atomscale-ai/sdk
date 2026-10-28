@@ -46,6 +46,39 @@ def _isolated_rheed_spool(tmp_path, monkeypatch):
     monkeypatch.setenv("ATOMSCALE_SPOOL_DIR", str(tmp_path / "rheed-spool"))
 
 
+@pytest.fixture
+def python_ticks_during():
+    """Run a call and count how often another Python thread ran while it blocked.
+
+    A call that holds the GIL while it waits on the network starves every other Python
+    thread, so the count stays near zero; one that releases it lets the thread tick every
+    few milliseconds. Returns ``(ticks, result)``.
+    """
+    import threading
+    import time
+
+    def measure(call):
+        ticks = 0
+        stop = threading.Event()
+
+        def tick():
+            nonlocal ticks
+            while not stop.is_set():
+                ticks += 1
+                time.sleep(0.005)
+
+        thread = threading.Thread(target=tick, daemon=True)
+        thread.start()
+        try:
+            result = call()
+        finally:
+            stop.set()
+            thread.join()
+        return ticks, result
+
+    return measure
+
+
 class ResultIDs:
     rheed_image = ""
     rheed_stationary = ""
