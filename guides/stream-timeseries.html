@@ -297,6 +297,18 @@ request, which is cheaper for the server than one <code class="docutils literal 
 uploads.</p>
 </div>
 </section>
+<section id="confirm-uploads">
+<h2>Confirm Uploads<a class="headerlink" href="#confirm-uploads" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#confirm-uploads'"><span>#</span></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">push()</span></code> and <code class="docutils literal notranslate"><span class="pre">push_multi()</span></code> return before their upload finishes. <code class="docutils literal notranslate"><span class="pre">flush()</span></code> waits
+for the stream’s uploads in flight and reports what became of them; <code class="docutils literal notranslate"><span class="pre">finalize()</span></code> does
+the same before it closes the stream, since the server refuses a chunk that arrives
+after that:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="n">report</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">flush</span><span class="p">(</span><span class="n">data_id</span><span class="p">)</span>
+</span><span id="line-2"><span class="k">if</span> <span class="n">report</span><span class="p">[</span><span class="s2">"lost"</span><span class="p">]:</span>
+</span><span id="line-3">    <span class="nb">print</span><span class="p">(</span><span class="s2">"not uploaded:"</span><span class="p">,</span> <span class="n">report</span><span class="p">[</span><span class="s2">"lost"</span><span class="p">])</span>  <span class="c1"># [(chunk_index, reason), ...]</span>
+</span></code></pre></div>
+</div>
+</section>
 <section id="best-practices">
 <h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#best-practices'"><span>#</span></a></h2>
 <table class="docutils align-default">
@@ -355,6 +367,7 @@ uploads.</p>
 <li><a :data-current="activeSection === '#push-single-channel'" class="reference internal" href="#push-single-channel">Push Single Channel</a></li>
 <li><a :data-current="activeSection === '#push-multiple-channels'" class="reference internal" href="#push-multiple-channels">Push Multiple Channels</a></li>
 <li><a :data-current="activeSection === '#run-mode-iterator'" class="reference internal" href="#run-mode-iterator">Run Mode (Iterator)</a></li>
+<li><a :data-current="activeSection === '#confirm-uploads'" class="reference internal" href="#confirm-uploads">Confirm Uploads</a></li>
 <li><a :data-current="activeSection === '#best-practices'" class="reference internal" href="#best-practices">Best Practices</a></li>
 </ul>
 </div>

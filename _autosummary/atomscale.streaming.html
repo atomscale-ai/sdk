@@ -455,7 +455,7 @@ and uploads them asynchronously for storage and analysis.</p>
 </ol>
 <p class="rubric">Notes</p>
 <ul class="simple">
-<li><p>Each push() spawns an async upload task and returns immediately.</p></li>
+<li><p>Each push() spawns an async upload task and returns immediately; flush() waits for them.</p></li>
 <li><p>Chunks are ordered server-side by chunk_index, so out-of-order arrival is handled.</p></li>
 <li><p>Multiple channels can be streamed for the same data_id.</p></li>
 </ul>
@@ -481,18 +481,60 @@ Pushed timestamps are read as this computer’s clock and sent as reference UTC:
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span></dt>
+<span class="sig-name descname"><span class="pre">finalize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">drain_timeout_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span></dt>
 <dd><p>Finalize the stream, marking it as complete on the server.</p>
-<p>Call this after all data has been pushed to signal that the stream is finished.</p>
+<p>Call this after all data has been pushed to signal that the stream is finished. It first
+waits for the stream’s uploads still in flight (as flush() does): the server refuses a
+chunk that arrives after its stream is finalized. If any chunk was not uploaded, one
+<cite>RuntimeWarning</cite> says how many, once the stream is finalized.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>data_id</strong> (<em>str</em>) – The stream identifier returned by <cite>initialize()</cite>.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_id</strong> (<em>str</em>) – The stream identifier returned by <cite>initialize()</cite>.</p></li>
+<li><p><strong>drain_timeout_s</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – How long to wait for uploads in flight, in
+seconds. Defaults to 120.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>None</p>
+<dd class="field-even"><p>The same report as flush().</p>
 </dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>RuntimeError</strong> – If the request fails.</p>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If <cite>drain_timeout_s</cite> is negative.</p></li>
+<li><p><strong>RuntimeError</strong> – If the request fails. The report is kept for the next flush() or
+    finalize().</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">flush</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout_s</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">dict</span></span></span></dt>
+<dd><p>Wait until every chunk pushed so far for <cite>data_id</cite> has finished uploading: landed, or
+failed after its retries. push() and push_multi() return before their upload is done;
+call this to know the data arrived.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_id</strong> (<em>str</em>) – The stream identifier returned by <cite>initialize()</cite>.</p></li>
+<li><p><strong>timeout_s</strong> (<em>Optional</em><em>[</em><em>float</em><em>]</em>) – How long to wait, in seconds. Defaults to 120, longer
+than one upload’s full retry budget.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>What became of the chunks pushed since the last flush() or finalize():
+<cite>chunks_uploaded</cite>, <cite>chunks_failed</cite>, <cite>chunks_pending</cite> (still uploading when the wait
+ended; they are reported by the next flush), <cite>drained</cite> (whether the wait finished in
+time) and <cite>lost</cite>, a list of <cite>(chunk_index, reason)</cite> for the chunks that failed.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <cite>timeout_s</cite> is negative.</p>
 </dd>
 </dl>
 </dd></dl>
