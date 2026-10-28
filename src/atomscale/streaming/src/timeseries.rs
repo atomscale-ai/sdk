@@ -524,7 +524,7 @@ impl TimeseriesStreamer {
     /// Call this after all data has been pushed to signal that the stream is finished. It first
     /// waits for the stream's uploads still in flight (as flush() does): the server refuses a
     /// chunk that arrives after its stream is finalized. If any chunk was not uploaded, one
-    /// `RuntimeWarning` says how many; the stream is still finalized.
+    /// `RuntimeWarning` says how many, once the stream is finalized.
     ///
     /// Args:
     ///     data_id (str): The stream identifier returned by `initialize()`.
@@ -536,7 +536,8 @@ impl TimeseriesStreamer {
     ///
     /// Raises:
     ///     ValueError: If `drain_timeout_s` is negative.
-    ///     RuntimeError: If the request fails.
+    ///     RuntimeError: If the request fails. The report is kept for the next flush() or
+    ///         finalize().
     #[pyo3(signature = (data_id, drain_timeout_s=None))]
     #[pyo3(text_signature = "(data_id, drain_timeout_s=None)")]
     fn finalize<'py>(
@@ -547,16 +548,6 @@ impl TimeseriesStreamer {
     ) -> PyResult<Bound<'py, PyDict>> {
         let timeout = wait_limit(drain_timeout_s, "drain_timeout_s")?;
         let report = py.detach(|| self.uploads.drain(&data_id, timeout));
-        let not_uploaded = report.lost.len() + report.pending;
-        if not_uploaded > 0 {
-            warn_py(
-                py,
-                &format!(
-                    "{not_uploaded} chunk(s) of stream {data_id} were not uploaded: {}",
-                    report.describe_losses()
-                ),
-            )?;
-        }
 
         let url = self.finalize_url(&data_id);
         let result = py.detach(|| {
@@ -578,13 +569,25 @@ impl TimeseriesStreamer {
             })
         });
 
-        match result {
-            Ok(()) => {
-                debug!("[timeseries_stream] finalized: data_id={}", data_id);
-                report.to_dict(py)
-            }
-            Err(e) => Err(PyRuntimeError::new_err(e.to_string())),
+        if let Err(e) = result {
+            self.uploads.restore(&data_id, report);
+            return Err(PyRuntimeError::new_err(e.to_string()));
         }
+        debug!("[timeseries_stream] finalized: data_id={}", data_id);
+
+        // Warn only once the stream is finalized: with warnings turned into errors, a warning
+        // raised first would leave the stream open.
+        let not_uploaded = report.lost.len() + report.pending;
+        if not_uploaded > 0 {
+            warn_py(
+                py,
+                &format!(
+                    "{not_uploaded} chunk(s) of stream {data_id} were not uploaded: {}",
+                    report.describe_losses()
+                ),
+            )?;
+        }
+        report.to_dict(py)
     }
 }
 
@@ -869,6 +872,15 @@ impl UploadTracker {
         }
         report
     }
+
+    /// Put back a drained report that could not be handed over, ahead of anything recorded
+    /// since, so the next drain reports it.
+    fn restore(&self, data_id: &str, report: UploadReport) {
+        let mut streams = self.streams.lock().expect("upload tracker mutex poisoned");
+        let stream = streams.entry(data_id.to_string()).or_default();
+        stream.uploaded += report.uploaded;
+        stream.lost.splice(0..0, report.lost);
+    }
 }
 
 /// One upload in flight. Finishing it records the outcome; dropping it unfinished (the task was
@@ -1063,6 +1075,28 @@ mod tests {
                 2,
                 "channel 'temperature': upload cancelled before it finished".to_string()
             )]
+        );
+    }
+
+    #[test]
+    fn a_restored_report_comes_back_ahead_of_later_outcomes() {
+        let tracker = Arc::new(UploadTracker::default());
+        tracker.start("stream", 0, None).finish(&Ok(()));
+        tracker
+            .start("stream", 1, None)
+            .finish(&Err(anyhow::anyhow!("first")));
+        let report = tracker.drain("stream", Duration::ZERO);
+
+        tracker
+            .start("stream", 2, None)
+            .finish(&Err(anyhow::anyhow!("second")));
+        tracker.restore("stream", report);
+        let report = tracker.drain("stream", Duration::ZERO);
+
+        assert_eq!(report.uploaded, 1);
+        assert_eq!(
+            report.lost,
+            vec![(1, "first".to_string()), (2, "second".to_string())]
         );
     }
 

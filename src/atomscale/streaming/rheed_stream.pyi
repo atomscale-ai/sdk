@@ -370,8 +370,8 @@ class TimeseriesStreamer:
         finished. This allows the platform to begin processing. The server
         refuses a chunk that arrives after its stream is finalized, so this first
         waits up to ``drain_timeout_s`` (default 120) as flush() does. If any
-        chunk was not uploaded, one ``RuntimeWarning`` gives the count; the
-        stream is still finalized.
+        chunk was not uploaded, one ``RuntimeWarning`` gives the count once the
+        stream is finalized.
 
         Args:
             data_id: Stream identifier from initialize().
@@ -382,5 +382,6 @@ class TimeseriesStreamer:
 
         Raises:
             ValueError: If ``drain_timeout_s`` is negative.
-            RuntimeError: If the finalization request fails.
+            RuntimeError: If the finalization request fails. The report is kept
+                for the next flush() or finalize().
         """

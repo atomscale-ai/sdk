@@ -766,6 +766,41 @@ class TestTimeseriesStreamerFinalize:
         assert report["chunks_failed"] == 1
         assert _paths(server.get_all_requests())[-1] == "/tool-state/stream/test-data-id/finalize"
 
+    def test_a_failed_finalize_keeps_the_report_for_the_retry(self, mock_server_factory):
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(
+            _routes(4, statuses={"/tool-state/stream/test-data-id/finalize": [503]})
+        )
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push_multi(data_id, 0, {"temperature": {"timestamps": [0.0], "values": [25.0]}})
+
+        with pytest.raises(RuntimeError, match="503"):
+            streamer.finalize(data_id)
+        report = streamer.finalize(data_id)
+
+        assert report["chunks_uploaded"] == 1
+
+    def test_finalize_closes_the_stream_when_warnings_are_errors(self, mock_server_factory):
+        """The warning about lost chunks is raised only after the stream is finalized."""
+        import warnings
+
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        server = mock_server_factory(_routes(3, statuses={"/tool-state/stream/chunk": [400]}))
+        streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
+        data_id = streamer.initialize()
+        streamer.push_multi(data_id, 5, {"temperature": {"timestamps": [0.0], "values": [25.0]}})
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            with pytest.raises(RuntimeWarning, match="1 chunk"):
+                streamer.finalize(data_id)
+
+        paths = _paths(server.stop_and_get_requests())
+        assert paths[-1] == "/tool-state/stream/test-data-id/finalize"
+
 
 def _routes(max_requests: int, delays=None, statuses=None) -> str:
     """Routes for one stream, `test-data-id`: initialize, chunk uploads and finalize."""
