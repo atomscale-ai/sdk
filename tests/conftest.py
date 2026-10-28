@@ -47,17 +47,21 @@ def _isolated_rheed_spool(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-def python_ticks_during():
-    """Run a call and count how often another Python thread ran while it blocked.
+def gil_released_during():
+    """Run a call and assert another Python thread kept running while it blocked.
 
     A call that holds the GIL while it waits on the network starves every other Python
-    thread, so the count stays near zero; one that releases it lets the thread tick every
-    few milliseconds. Returns ``(ticks, result)``.
+    thread, so a ticker thread gets about no ticks; one that releases it lets the thread tick
+    every few milliseconds. The callers block for about a second, which a quiet machine turns
+    into ~150 ticks. The floor sits well under that because macOS CI runners have managed as
+    few as ~30, and well over the ~0 of a held GIL. Returns the call's result.
     """
     import threading
     import time
 
-    def measure(call):
+    min_ticks = 10
+
+    def run(call):
         ticks = 0
         stop = threading.Event()
 
@@ -69,14 +73,17 @@ def python_ticks_during():
 
         thread = threading.Thread(target=tick, daemon=True)
         thread.start()
+        start = time.perf_counter()
         try:
             result = call()
         finally:
             stop.set()
             thread.join()
-        return ticks, result
+        elapsed = time.perf_counter() - start
+        assert ticks >= min_ticks, f"{ticks} ticks in {elapsed:.2f}s: the call held the GIL"
+        return result
 
-    return measure
+    return run
 
 
 class ResultIDs:

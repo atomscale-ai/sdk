@@ -903,18 +903,17 @@ class TestTimeseriesStreamerFlush:
 class TestTimeseriesStreamerReleasesGil:
     """Network round trips run with the GIL released, so the caller's other threads keep running."""
 
-    def test_initialize(self, mock_server_factory, python_ticks_during):
+    def test_initialize(self, mock_server_factory, gil_released_during):
         from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         server = mock_server_factory(_routes(1, delays={"/tool-state/stream/initialize": [1.0]}))
         streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
 
-        ticks, data_id = python_ticks_during(streamer.initialize)
+        data_id = gil_released_during(streamer.initialize)
 
         assert data_id == "test-data-id"
-        assert ticks >= 50
 
-    def test_finalize(self, mock_server_factory, python_ticks_during):
+    def test_finalize(self, mock_server_factory, gil_released_during):
         from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         server = mock_server_factory(
@@ -923,19 +922,15 @@ class TestTimeseriesStreamerReleasesGil:
         streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
         data_id = streamer.initialize()
 
-        ticks, _ = python_ticks_during(lambda: streamer.finalize(data_id))
+        gil_released_during(lambda: streamer.finalize(data_id))
 
-        assert ticks >= 50
-
-    def test_run(self, mock_server_factory, python_ticks_during):
+    def test_run(self, mock_server_factory, gil_released_during):
         from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         server = mock_server_factory(_routes(2, delays={"/tool-state/stream/chunk": [1.0]}))
         streamer = TimeseriesStreamer(api_key="test-api-key", endpoint=server.endpoint)
         data_id = streamer.initialize()
 
-        ticks, _ = python_ticks_during(
+        gil_released_during(
             lambda: streamer.run(data_id, "temperature", iter([([0.0], [25.0])]))
         )
-
-        assert ticks >= 50

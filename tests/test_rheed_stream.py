@@ -330,7 +330,7 @@ class TestRHEEDStreamerInitialize:
             streamer.initialize(fps=30.0, rotations_per_min=10.0, chunk_size=60, azimuth="100")
 
     def test_initialize_lets_other_python_threads_run(
-        self, mock_server_factory, python_ticks_during
+        self, mock_server_factory, gil_released_during
     ):
         """The round trips run with the GIL released, so e.g. a camera loop keeps reading."""
         from atomscale.streaming.rheed_stream import RHEEDStreamer
@@ -343,12 +343,11 @@ class TestRHEEDStreamerInitialize:
         }))
         streamer = RHEEDStreamer(api_key="test-api-key", endpoint=server.endpoint)
 
-        ticks, data_id = python_ticks_during(
+        data_id = gil_released_during(
             lambda: streamer.initialize(fps=30.0, rotations_per_min=0.0, chunk_size=60)
         )
 
         assert data_id == "data-id-gil"
-        assert ticks >= 50
 
     def test_initialize_returns_data_id(self, mock_server_factory):
         """Verify initialize() returns the data_id from the server."""
