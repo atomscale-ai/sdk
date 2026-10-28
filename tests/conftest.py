@@ -46,6 +46,46 @@ def _isolated_rheed_spool(tmp_path, monkeypatch):
     monkeypatch.setenv("ATOMSCALE_SPOOL_DIR", str(tmp_path / "rheed-spool"))
 
 
+@pytest.fixture
+def gil_released_during():
+    """Run a call and assert another Python thread kept running while it blocked.
+
+    A call that holds the GIL while it waits on the network starves every other Python
+    thread, so a ticker thread gets about no ticks; one that releases it lets the thread tick
+    every few milliseconds. The callers block for about a second, which a quiet machine turns
+    into ~150 ticks. The floor sits well under that because macOS CI runners have managed as
+    few as ~30, and well over the ~0 of a held GIL. Returns the call's result.
+    """
+    import threading
+    import time
+
+    min_ticks = 10
+
+    def run(call):
+        ticks = 0
+        stop = threading.Event()
+
+        def tick():
+            nonlocal ticks
+            while not stop.is_set():
+                ticks += 1
+                time.sleep(0.005)
+
+        thread = threading.Thread(target=tick, daemon=True)
+        thread.start()
+        start = time.perf_counter()
+        try:
+            result = call()
+        finally:
+            stop.set()
+            thread.join()
+        elapsed = time.perf_counter() - start
+        assert ticks >= min_ticks, f"{ticks} ticks in {elapsed:.2f}s: the call held the GIL"
+        return result
+
+    return run
+
+
 class ResultIDs:
     rheed_image = ""
     rheed_stationary = ""

@@ -305,8 +305,11 @@ class TimeseriesStreamer:
 
         All channels of the chunk go in one request, so the server writes the shared
         time axis once per chunk. Prefer this over one push() per channel. Channels
-        with no points are left out. Network errors, 5xx and 429 responses are retried
-        up to 3 times; a chunk that still fails is logged at warning level.
+        with no points are left out. Every channel is moved onto reference UTC by the
+        same clock reading, so channels sent with the same timestamps arrive with the
+        same timestamps. Network errors, 5xx and 429 responses are retried up to 3
+        times; a chunk that still fails is logged at warning level and reported by
+        flush() and finalize().
 
         Args:
             data_id: Stream identifier from initialize().
@@ -340,12 +343,45 @@ class TimeseriesStreamer:
             units: Optional units for the values.
         """
 
-    def finalize(self, data_id: str) -> None:
-        """Finalize the stream, marking it as complete.
+    def flush(self, data_id: str, timeout_s: float | None = None) -> dict[str, Any]:
+        """Wait for the stream's uploads in flight to finish.
+
+        push() and push_multi() return before their upload is done. This waits
+        until every chunk pushed so far for ``data_id`` has landed or failed after
+        its retries, or ``timeout_s`` (default 120) has passed.
+
+        Returns:
+            What became of the chunks pushed since the last flush() or finalize():
+            ``chunks_uploaded``, ``chunks_failed``, ``chunks_pending`` (still
+            uploading when the wait ended; the next flush reports them),
+            ``drained`` (whether the wait finished in time) and ``lost``, a list of
+            ``(chunk_index, reason)`` for the chunks that failed.
+
+        Raises:
+            ValueError: If ``timeout_s`` is negative.
+        """
+
+    def finalize(
+        self, data_id: str, drain_timeout_s: float | None = None
+    ) -> dict[str, Any]:
+        """Wait for the stream's uploads in flight, then finalize it.
 
         Call this after all data has been pushed to signal the stream is
-        finished. This allows the platform to begin processing.
+        finished. This allows the platform to begin processing. The server
+        refuses a chunk that arrives after its stream is finalized, so this first
+        waits up to ``drain_timeout_s`` (default 120) as flush() does. If any
+        chunk was not uploaded, one ``RuntimeWarning`` gives the count once the
+        stream is finalized.
 
         Args:
             data_id: Stream identifier from initialize().
+            drain_timeout_s: How long to wait for uploads in flight, in seconds.
+
+        Returns:
+            The same report as flush().
+
+        Raises:
+            ValueError: If ``drain_timeout_s`` is negative.
+            RuntimeError: If the finalization request fails. The report is kept
+                for the next flush() or finalize().
         """

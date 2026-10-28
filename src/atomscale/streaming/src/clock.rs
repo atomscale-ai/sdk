@@ -357,6 +357,22 @@ pub fn lab_clock_for(endpoint: &str) -> Option<Arc<LabClock>> {
 }
 
 #[cfg(test)]
+impl LabClock {
+    /// A clock part way through slewing from `offset_ms` toward `target_ms`, for streamer tests.
+    pub(crate) fn slewing(offset_ms: f64, target_ms: f64) -> Self {
+        let clock = Self::new();
+        {
+            let mut state = clock.state.lock().expect("lab clock mutex poisoned");
+            state.offset_ms = Some(offset_ms);
+            state.target_ms = target_ms;
+            state.adjusted_at_ms = host_now_ms();
+            state.attempted = true;
+        }
+        clock
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

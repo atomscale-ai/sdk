@@ -171,6 +171,20 @@ Stream from an iterator when data is already buffered:
    ``run()`` blocks until all chunks upload. Use ``push()`` for non-blocking
    uploads.
 
+Confirm Uploads
+---------------
+
+``push()`` and ``push_multi()`` return before their upload finishes. ``flush()`` waits
+for the stream's uploads in flight and reports what became of them; ``finalize()`` does
+the same before it closes the stream, since the server refuses a chunk that arrives
+after that:
+
+.. code-block:: python
+
+   report = streamer.flush(data_id)
+   if report["lost"]:
+       print("not uploaded:", report["lost"])  # [(chunk_index, reason), ...]
+
 Best Practices
 --------------
 
