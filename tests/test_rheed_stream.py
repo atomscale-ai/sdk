@@ -192,6 +192,78 @@ def _logged_requests(server: MockServer) -> list[tuple[str, str, str]]:
 class TestRHEEDStreamerInitialize:
     """Tests for RHEEDStreamer.initialize() method."""
 
+    def test_initialize_seed_frame_count_defaults_to_three(self):
+        import inspect
+
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        params = inspect.signature(RHEEDStreamer.initialize).parameters
+        assert params["seed_frame_count"].default == 3
+        assert list(params)[-1] == "seed_frame_count"
+
+    @pytest.mark.parametrize(
+        ("kwargs", "expected_count"),
+        [({}, 3), ({"seed_frame_count": 3}, 3), ({"seed_frame_count": 1}, 1),
+         ({"seed_frame_count": 4}, 4), ({"seed_frame_count": 8}, 8)],
+        ids=["omitted", "explicit-default", "minimum", "four", "maximum"],
+    )
+    def test_initialize_serializes_seed_frame_count(
+        self, mock_server_factory, kwargs, expected_count
+    ):
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        server = mock_server_factory('"seed-count-stream"')
+        streamer = RHEEDStreamer(api_key="test-api-key", endpoint=server.endpoint)
+
+        assert streamer.initialize(
+            fps=30.0, rotations_per_min=30.0, chunk_size=60, **kwargs
+        ) == "seed-count-stream"
+
+        body = server.get_captured_body()
+        assert body is not None
+        assert body["seed_frame_count"] == expected_count
+        assert type(body["seed_frame_count"]) is int
+        assert "seed_frames" not in body
+
+    @pytest.mark.parametrize("seed_frame_count", [-1, 0, 9, 256])
+    def test_initialize_rejects_seed_frame_count_outside_bounds(self, seed_frame_count):
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        streamer = RHEEDStreamer(api_key="test-api-key", endpoint="http://localhost:9999")
+        with pytest.raises(ValueError, match="seed_frame_count.*1 through 8"):
+            streamer.initialize(
+                fps=30.0, rotations_per_min=30.0, chunk_size=60,
+                physical_sample="must not be created", tags=["must not be created"],
+                seed_frame_count=seed_frame_count,
+            )
+
+    @pytest.mark.parametrize("seed_frame_count", [None, 4.0, 1.5, "4"])
+    def test_initialize_rejects_noninteger_seed_frame_count(self, seed_frame_count):
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        streamer = RHEEDStreamer(api_key="test-api-key", endpoint="http://localhost:9999")
+        with pytest.raises(TypeError):
+            streamer.initialize(
+                fps=30.0, rotations_per_min=30.0, chunk_size=60,
+                seed_frame_count=seed_frame_count,
+            )
+
+    def test_initialize_preserves_existing_positional_arguments(self, mock_server_factory):
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        server = mock_server_factory('"positional-stream"')
+        streamer = RHEEDStreamer(api_key="test-api-key", endpoint=server.endpoint)
+
+        assert streamer.initialize(
+            30.0, 0.0, 60, "parked", None, None, None, "100"
+        ) == "positional-stream"
+
+        body = server.get_captured_body()
+        assert body is not None
+        assert body["data_item_name"] == "parked"
+        assert body["azimuth_label"] == "100"
+        assert body["seed_frame_count"] == 3
+
     def test_initialize_accepts_project_id_parameter(self):
         """Verify initialize() signature includes project_id parameter."""
         import inspect
