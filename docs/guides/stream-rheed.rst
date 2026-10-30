@@ -41,10 +41,13 @@ Initialize a Stream
 The ``rotations_per_min`` parameter determines whether data is classified as
 rotating or stationary RHEED.
 
-``seed_frame_count`` sets the number of seed views requested for rotating
-analysis. It accepts integers from **1 through 8** and defaults to **3** when
-omitted. Choose the count when initializing the stream; existing calls can
-continue to omit it.
+``seed_frame_count`` sets the number of seed views requested for analysis.
+When omitted or set to ``None``, it defaults to **1** for stationary streams
+(``rotations_per_min=0``) and **3** otherwise. Stationary streams require a
+count of **1**; any other explicit count raises ``ValueError``. For nonzero
+rotation rates, an explicit integer from **1 through 8** overrides the default.
+Choose the count when initializing the stream; existing calls can continue to
+omit it.
 
 Link to a Physical Sample
 -------------------------

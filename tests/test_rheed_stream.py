@@ -192,23 +192,36 @@ def _logged_requests(server: MockServer) -> list[tuple[str, str, str]]:
 class TestRHEEDStreamerInitialize:
     """Tests for RHEEDStreamer.initialize() method."""
 
-    def test_initialize_seed_frame_count_defaults_to_three(self):
+    def test_initialize_seed_frame_count_defaults_to_none(self):
         import inspect
 
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
         params = inspect.signature(RHEEDStreamer.initialize).parameters
-        assert params["seed_frame_count"].default == 3
+        assert params["seed_frame_count"].default is None
         assert list(params)[-1] == "seed_frame_count"
 
     @pytest.mark.parametrize(
-        ("kwargs", "expected_count"),
-        [({}, 3), ({"seed_frame_count": 3}, 3), ({"seed_frame_count": 1}, 1),
-         ({"seed_frame_count": 4}, 4), ({"seed_frame_count": 8}, 8)],
-        ids=["omitted", "explicit-default", "minimum", "four", "maximum"],
+        ("rotations_per_min", "kwargs", "expected_count"),
+        [
+            pytest.param(0.0, {}, 1, id="parked-omitted"),
+            pytest.param(0.0, {"seed_frame_count": None}, 1, id="parked-none"),
+            pytest.param(-0.0, {}, 1, id="negative-zero-omitted"),
+            pytest.param(-0.0, {"seed_frame_count": None}, 1, id="negative-zero-none"),
+            pytest.param(30.0, {}, 3, id="rotating-omitted"),
+            pytest.param(30.0, {"seed_frame_count": None}, 3, id="rotating-none"),
+            pytest.param(0.01, {}, 3, id="slow-rotation-omitted"),
+            pytest.param(0.01, {"seed_frame_count": None}, 3, id="slow-rotation-none"),
+            pytest.param(0.0, {"seed_frame_count": 1}, 1, id="parked-explicit-one"),
+            pytest.param(-0.0, {"seed_frame_count": 1}, 1, id="negative-zero-explicit-one"),
+            pytest.param(30.0, {"seed_frame_count": 1}, 1, id="rotating-minimum"),
+            pytest.param(30.0, {"seed_frame_count": 3}, 3, id="rotating-explicit-default"),
+            pytest.param(30.0, {"seed_frame_count": 4}, 4, id="rotating-four"),
+            pytest.param(30.0, {"seed_frame_count": 8}, 8, id="rotating-maximum"),
+        ],
     )
     def test_initialize_serializes_seed_frame_count(
-        self, mock_server_factory, kwargs, expected_count
+        self, mock_server_factory, rotations_per_min, kwargs, expected_count
     ):
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
@@ -216,7 +229,7 @@ class TestRHEEDStreamerInitialize:
         streamer = RHEEDStreamer(api_key="test-api-key", endpoint=server.endpoint)
 
         assert streamer.initialize(
-            fps=30.0, rotations_per_min=30.0, chunk_size=60, **kwargs
+            fps=30.0, rotations_per_min=rotations_per_min, chunk_size=60, **kwargs
         ) == "seed-count-stream"
 
         body = server.get_captured_body()
@@ -225,19 +238,39 @@ class TestRHEEDStreamerInitialize:
         assert type(body["seed_frame_count"]) is int
         assert "seed_frames" not in body
 
+    @pytest.mark.parametrize("rotations_per_min", [0.0, 30.0])
     @pytest.mark.parametrize("seed_frame_count", [-1, 0, 9, 256])
-    def test_initialize_rejects_seed_frame_count_outside_bounds(self, seed_frame_count):
+    def test_initialize_rejects_seed_frame_count_outside_bounds(
+        self, rotations_per_min, seed_frame_count
+    ):
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
         streamer = RHEEDStreamer(api_key="test-api-key", endpoint="http://localhost:9999")
         with pytest.raises(ValueError, match="seed_frame_count.*1 through 8"):
             streamer.initialize(
-                fps=30.0, rotations_per_min=30.0, chunk_size=60,
+                fps=30.0, rotations_per_min=rotations_per_min, chunk_size=60,
                 physical_sample="must not be created", tags=["must not be created"],
                 seed_frame_count=seed_frame_count,
             )
 
-    @pytest.mark.parametrize("seed_frame_count", [None, 4.0, 1.5, "4"])
+    @pytest.mark.parametrize("rotations_per_min", [0.0, -0.0], ids=["zero", "negative-zero"])
+    @pytest.mark.parametrize("seed_frame_count", [2, 3, 4, 8])
+    def test_initialize_rejects_multiple_seed_frames_for_parked_stream(
+        self, rotations_per_min, seed_frame_count
+    ):
+        from atomscale.streaming.rheed_stream import RHEEDStreamer
+
+        streamer = RHEEDStreamer(api_key="test-api-key", endpoint="http://localhost:9999")
+        with pytest.raises(
+            ValueError, match="seed_frame_count must be 1 when rotations_per_min is 0"
+        ):
+            streamer.initialize(
+                fps=30.0, rotations_per_min=rotations_per_min, chunk_size=60,
+                physical_sample="must not be created", tags=["must not be created"],
+                seed_frame_count=seed_frame_count,
+            )
+
+    @pytest.mark.parametrize("seed_frame_count", [4.0, 1.5, "4"])
     def test_initialize_rejects_noninteger_seed_frame_count(self, seed_frame_count):
         from atomscale.streaming.rheed_stream import RHEEDStreamer
 
@@ -262,7 +295,7 @@ class TestRHEEDStreamerInitialize:
         assert body is not None
         assert body["data_item_name"] == "parked"
         assert body["azimuth_label"] == "100"
-        assert body["seed_frame_count"] == 3
+        assert body["seed_frame_count"] == 1
 
     def test_initialize_accepts_project_id_parameter(self):
         """Verify initialize() signature includes project_id parameter."""
