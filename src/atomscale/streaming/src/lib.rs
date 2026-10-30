@@ -236,7 +236,7 @@ impl RHEEDStreamer {
     }
 
     ////Initialize stream
-    /// initialize(self, fps: float, rotations_per_min: float, chunk_size: int, stream_name: Optional[str] = None, physical_sample: Optional[str] = None, project_id: Optional[str] = None) -> str
+    /// initialize(self, fps: float, rotations_per_min: float, chunk_size: int, stream_name: Optional[str] = None, physical_sample: Optional[str] = None, project_id: Optional[str] = None, tags: Optional[List[str]] = None, azimuth: Optional[str] = None, seed_frame_count: int = 3) -> str
     ///
     /// Creates a new **remote data item** for this stream and returns its `data_id`.
     /// Also captures runtime configuration used for subsequent chunk uploads.
@@ -265,18 +265,20 @@ impl RHEEDStreamer {
     ///     azimuth (Optional[str]): The azimuth a parked stream is recorded at, e.g. `"100"`. Its views are
     ///         labelled with it in place of the automatic azimuth classifier until a user edits the view.
     ///         Only valid with `rotations_per_min == 0`; a rotating stream carries several azimuths.
+    ///     seed_frame_count (int): Number of seed views to select for a rotating stream. Defaults to 3;
+    ///         must be an integer from 1 through 8.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
-    ///     ValueError: If `azimuth` is given for a rotating stream.
+    ///     ValueError: If `azimuth` is given for a rotating stream or `seed_frame_count` is outside 1 through 8.
     ///     RuntimeError: If the stream cannot be created or linked. The physical sample and tags
     ///         are resolved before the stream is created, so a bad one creates nothing. If linking
     ///         fails after creation, the stream is ended and the error names its `data_id`.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None))]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None, seed_frame_count=3))]
     #[pyo3(
-        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None)"
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None, seed_frame_count=3)"
     )]
     fn initialize(
         &self,
@@ -289,7 +291,14 @@ impl RHEEDStreamer {
         project_id: Option<String>,
         tags: Option<Vec<String>>,
         azimuth: Option<String>,
+        seed_frame_count: i64,
     ) -> PyResult<String> {
+        if !(1..=8).contains(&seed_frame_count) {
+            return Err(PyValueError::new_err(
+                "seed_frame_count must be an integer from 1 through 8",
+            ));
+        }
+
         // Measure the lab clock before the first chunk is stamped; a failure streams uncorrected.
         if let Some(clock) = &self.clock {
             py.detach(|| clock.wait_for_first_attempt());
@@ -336,6 +345,7 @@ impl RHEEDStreamer {
             rotational_period: fpr,
             rotations_per_min,
             fps_capture_rate: fps,
+            seed_frame_count,
             project_id,
             azimuth_label,
         };

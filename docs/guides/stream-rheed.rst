@@ -33,12 +33,18 @@ Initialize a Stream
        fps=120.0,
        rotations_per_min=15.0,  # Use 0.0 for stationary RHEED
        chunk_size=240,          # Frames per chunk (2 seconds at 120fps)
+       seed_frame_count=4,      # Request four seed views for rotating analysis
        stream_name="Growth 001",
        physical_sample="GaN-2025-001",
    )
 
 The ``rotations_per_min`` parameter determines whether data is classified as
 rotating or stationary RHEED.
+
+``seed_frame_count`` sets the number of seed views requested for rotating
+analysis. It accepts integers from **1 through 8** and defaults to **3** when
+omitted. Choose the count when initializing the stream; existing calls can
+continue to omit it.
 
 Link to a Physical Sample
 -------------------------
