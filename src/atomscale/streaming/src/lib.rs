@@ -236,7 +236,7 @@ impl RHEEDStreamer {
     }
 
     ////Initialize stream
-    /// initialize(self, fps: float, rotations_per_min: float, chunk_size: int, stream_name: Optional[str] = None, physical_sample: Optional[str] = None, project_id: Optional[str] = None, tags: Optional[List[str]] = None, azimuth: Optional[str] = None, seed_frame_count: int = 3) -> str
+    /// initialize(self, fps: float, rotations_per_min: float, chunk_size: int, stream_name: Optional[str] = None, physical_sample: Optional[str] = None, project_id: Optional[str] = None, tags: Optional[List[str]] = None, azimuth: Optional[str] = None, seed_frame_count: Optional[int] = None) -> str
     ///
     /// Creates a new **remote data item** for this stream and returns its `data_id`.
     /// Also captures runtime configuration used for subsequent chunk uploads.
@@ -265,20 +265,22 @@ impl RHEEDStreamer {
     ///     azimuth (Optional[str]): The azimuth a parked stream is recorded at, e.g. `"100"`. Its views are
     ///         labelled with it in place of the automatic azimuth classifier until a user edits the view.
     ///         Only valid with `rotations_per_min == 0`; a rotating stream carries several azimuths.
-    ///     seed_frame_count (int): Number of seed views to select for a rotating stream. Defaults to 3;
-    ///         must be an integer from 1 through 8.
+    ///     seed_frame_count (Optional[int]): Number of seed views to select. If omitted or `None`,
+    ///         defaults to 1 when `rotations_per_min == 0`, otherwise 3. Must be an integer from
+    ///         1 through 8; only 1 is allowed when `rotations_per_min == 0`.
     ///
     /// Returns:
     ///     str: The created `data_id` for this stream.
     ///
     /// Raises:
-    ///     ValueError: If `azimuth` is given for a rotating stream or `seed_frame_count` is outside 1 through 8.
+    ///     ValueError: If `azimuth` is given for a rotating stream, `seed_frame_count` is outside
+    ///         1 through 8, or `seed_frame_count` is not 1 when `rotations_per_min == 0`.
     ///     RuntimeError: If the stream cannot be created or linked. The physical sample and tags
     ///         are resolved before the stream is created, so a bad one creates nothing. If linking
     ///         fails after creation, the stream is ended and the error names its `data_id`.
-    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None, seed_frame_count=3))]
+    #[pyo3(signature = (fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None, seed_frame_count=None))]
     #[pyo3(
-        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None, seed_frame_count=3)"
+        text_signature = "(fps, rotations_per_min, chunk_size, stream_name=None, physical_sample=None, project_id=None, tags=None, azimuth=None, seed_frame_count=None)"
     )]
     fn initialize(
         &self,
@@ -291,11 +293,18 @@ impl RHEEDStreamer {
         project_id: Option<String>,
         tags: Option<Vec<String>>,
         azimuth: Option<String>,
-        seed_frame_count: i64,
+        seed_frame_count: Option<i64>,
     ) -> PyResult<String> {
+        let seed_frame_count =
+            seed_frame_count.unwrap_or(if rotations_per_min == 0.0 { 1 } else { 3 });
         if !(1..=8).contains(&seed_frame_count) {
             return Err(PyValueError::new_err(
                 "seed_frame_count must be an integer from 1 through 8",
+            ));
+        }
+        if rotations_per_min == 0.0 && seed_frame_count != 1 {
+            return Err(PyValueError::new_err(
+                "seed_frame_count must be 1 when rotations_per_min is 0",
             ));
         }
 

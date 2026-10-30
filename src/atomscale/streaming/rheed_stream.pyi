@@ -63,7 +63,7 @@ class RHEEDStreamer:
         project_id: str | None = None,
         tags: list[str] | None = None,
         azimuth: str | None = None,
-        seed_frame_count: int = 3,
+        seed_frame_count: int | None = None,
     ) -> str:
         """Initialize a new RHEED stream.
 
@@ -97,15 +97,18 @@ class RHEEDStreamer:
                 Its views are labelled with it in place of the automatic
                 azimuth classifier until a user edits the view. Only valid
                 with ``rotations_per_min=0``.
-            seed_frame_count: Number of seed views to select for a rotating
-                stream. Defaults to 3. Must be an integer from 1 through 8.
+            seed_frame_count: Number of seed views to select. If omitted or
+                None, defaults to 1 when rotations_per_min is 0, otherwise
+                3. Must be an integer from 1 through 8; only 1 is allowed
+                when rotations_per_min is 0.
 
         Returns:
             The data_id for this stream.
 
         Raises:
             ValueError: If ``azimuth`` is given for a rotating stream or
-                ``seed_frame_count`` is outside 1 through 8.
+                ``seed_frame_count`` is outside 1 through 8 or is not 1
+                when ``rotations_per_min`` is 0.
         """
     def run(
         self,
