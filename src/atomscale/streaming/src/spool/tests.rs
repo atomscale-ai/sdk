@@ -99,6 +99,7 @@ fn metadata(data_id: &str, chunk_idx: usize) -> FrameChunkMetadata {
         end_unix_ms_utc: start + 2_000,
         clock_offset_ms: Some(12),
         clock_uncertainty_ms: Some(3.5),
+        clock_measured_at_unix_ms: Some(T0 - 4_000),
     }
 }
 

@@ -11,7 +11,7 @@ use tokio::runtime::Runtime;
 use tokio::task::JoinHandle;
 use tracing::debug;
 
-use crate::clock::{clock_status_dict, lab_clock_for, LabClock};
+use crate::clock::{clock_status_dict, lab_clock_for, ClockStatus, LabClock};
 use crate::initialize::{link_new_stream, resolve_stream_links};
 use crate::retry::{with_retries, HttpStatusError};
 use crate::utils::init_tracing_once;
@@ -44,6 +44,8 @@ struct ChunkPayload {
     values: Vec<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     units: Option<String>,
+    /// The conversion applied to `timestamps`; `null` when they are the host clock as read.
+    clock: Option<ClockStatus>,
 }
 
 /// One channel's data inside a multi-channel chunk.
@@ -61,6 +63,8 @@ struct MultiChunkPayload {
     data_id: String,
     chunk_index: usize,
     channels: BTreeMap<String, ChannelPayload>,
+    /// The conversion applied to every channel's timestamps; `null` when they are as read.
+    clock: Option<ClockStatus>,
 }
 
 /// TimeseriesStreamer(api_key: str, endpoint: Optional[str] = None, points_per_chunk: int = 100)
@@ -317,13 +321,15 @@ impl TimeseriesStreamer {
             ));
         }
 
+        let (timestamps, clock) = self.reference_utc_secs(timestamps);
         let payload = ChunkPayload {
             data_id,
             chunk_index,
             channel_name,
-            timestamps: self.reference_utc_secs(timestamps),
+            timestamps,
             values,
             units,
+            clock,
         };
 
         // Dropping the handle leaves the upload running; flush() and finalize() still wait for it.
@@ -445,10 +451,12 @@ impl TimeseriesStreamer {
         if host_channels.is_empty() {
             return Ok(());
         }
+        let (channels, clock) = channels_to_reference_utc(self.clock.as_deref(), host_channels);
         drop(self.spawn_multi_upload(MultiChunkPayload {
             data_id,
             chunk_index,
-            channels: channels_to_reference_utc(self.clock.as_deref(), host_channels),
+            channels,
+            clock,
         }));
         Ok(())
     }
@@ -596,10 +604,11 @@ impl TimeseriesStreamer {
         format!("{}/tool-state/stream/{data_id}/finalize", self.endpoint)
     }
 
-    /// Host-clock Unix seconds as reference UTC (unchanged when correction is off or not yet
-    /// measured). One offset is read per call, so a chunk's points shift together.
-    fn reference_utc_secs(&self, timestamps: Vec<f64>) -> Vec<f64> {
-        to_reference_utc(timestamps, clock_offset_s(self.clock.as_deref()))
+    /// Host-clock Unix seconds as reference UTC, with the conversion applied (unchanged, with
+    /// none, when correction is off or not yet measured).
+    fn reference_utc_secs(&self, timestamps: Vec<f64>) -> (Vec<f64>, Option<ClockStatus>) {
+        let clock = self.clock.as_deref().and_then(LabClock::status);
+        (to_reference_utc(timestamps, clock), clock)
     }
 
     /// Internal implementation of run() that handles iteration and task management.
@@ -647,13 +656,15 @@ impl TimeseriesStreamer {
                 timestamps.len()
             );
 
+            let (timestamps, clock) = self.reference_utc_secs(timestamps);
             let payload = ChunkPayload {
                 data_id: data_id.clone(),
                 chunk_index,
                 channel_name: channel_name.clone(),
-                timestamps: self.reference_utc_secs(timestamps),
+                timestamps,
                 values,
                 units: units.clone(),
+                clock,
             };
 
             let handle = self.spawn_chunk_upload(payload);
@@ -751,34 +762,32 @@ impl TimeseriesStreamer {
     }
 }
 
-/// Reference UTC minus the host clock in seconds; `None` when correction is off.
-fn clock_offset_s(clock: Option<&LabClock>) -> Option<f64> {
-    clock.map(|clock| clock.offset_ms() / 1_000.0)
-}
-
-/// Host-clock Unix seconds as reference UTC; unchanged without an offset.
-fn to_reference_utc(mut timestamps: Vec<f64>, offset_s: Option<f64>) -> Vec<f64> {
-    if let Some(offset_s) = offset_s {
+/// Host-clock Unix seconds as reference UTC; unchanged without a measurement.
+fn to_reference_utc(mut timestamps: Vec<f64>, clock: Option<ClockStatus>) -> Vec<f64> {
+    if let Some(clock) = clock {
+        let offset_s = clock.offset_ms / 1_000.0;
         timestamps.iter_mut().for_each(|t| *t += offset_s);
     }
     timestamps
 }
 
-/// The channels of one chunk moved onto reference UTC with a single reading of the clock. While
-/// the offset slews it changes between reads, so channels sent with the same timestamps would
-/// otherwise land a float step apart, and the server files those as different rows.
+/// The channels of one chunk moved onto reference UTC with a single reading of the clock, which
+/// is returned as the record of the conversion applied. While the offset slews it changes between
+/// reads, so channels sent with the same timestamps would otherwise land a float step apart, and
+/// the server files those as different rows.
 fn channels_to_reference_utc(
     clock: Option<&LabClock>,
     channels: Vec<(String, ChannelPayload)>,
-) -> BTreeMap<String, ChannelPayload> {
-    let offset_s = clock_offset_s(clock);
-    channels
+) -> (BTreeMap<String, ChannelPayload>, Option<ClockStatus>) {
+    let reading = clock.and_then(LabClock::status);
+    let channels = channels
         .into_iter()
         .map(|(name, mut channel)| {
-            channel.timestamps = to_reference_utc(channel.timestamps, offset_s);
+            channel.timestamps = to_reference_utc(channel.timestamps, reading);
             (name, channel)
         })
-        .collect()
+        .collect();
+    (channels, reading)
 }
 
 /// How long flush() and finalize() wait for uploads by default: longer than one upload's full
@@ -998,6 +1007,21 @@ async fn post_chunk<T: Serialize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
+
+    fn streamer_with(clock: Option<LabClock>) -> TimeseriesStreamer {
+        TimeseriesStreamer {
+            api_key: "key".into(),
+            endpoint: "http://127.0.0.1:1".into(),
+            client: Client::new(),
+            rt: tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap(),
+            points_per_chunk: 100,
+            clock: clock.map(Arc::new),
+            uploads: Arc::default(),
+        }
+    }
 
     fn channel(timestamps: &[f64]) -> ChannelPayload {
         ChannelPayload {
@@ -1011,25 +1035,109 @@ mod tests {
     fn every_channel_of_a_chunk_shifts_by_the_same_offset_while_the_clock_slews() {
         let clock = LabClock::slewing(5_000.0, 5_300.0);
         // The hazard: a slewing clock reads differently from one moment to the next.
-        let first = clock.offset_ms();
+        let first = clock.status().unwrap().offset_ms;
         std::thread::sleep(Duration::from_millis(2));
-        assert_ne!(first, clock.offset_ms());
+        assert_ne!(first, clock.status().unwrap().offset_ms);
 
         // Small timestamps make any difference in offset visible after the addition.
         let channels = (0..2_000)
             .map(|i| (format!("channel {i}"), channel(&[1.0, 2.0])))
             .collect();
-        let corrected = channels_to_reference_utc(Some(&clock), channels);
+        let (corrected, record) = channels_to_reference_utc(Some(&clock), channels);
 
         let expected = &corrected["channel 0"].timestamps;
         assert!(expected[0] > 5.0, "{expected:?}");
         assert!(corrected.values().all(|c| &c.timestamps == expected));
+        let recorded_s = record.expect("measured").offset_ms / 1_000.0;
+        assert!(
+            (expected[0] - (1.0 + recorded_s)).abs() < 1e-9,
+            "the record must be the offset the stamps shifted by"
+        );
     }
 
     #[test]
     fn without_correction_timestamps_are_sent_as_read() {
-        let corrected = channels_to_reference_utc(None, vec![("t".into(), channel(&[1.5, 2.5]))]);
+        let (corrected, record) =
+            channels_to_reference_utc(None, vec![("t".into(), channel(&[1.5, 2.5]))]);
         assert_eq!(corrected["t"].timestamps, vec![1.5, 2.5]);
+        assert_eq!(record, None);
+    }
+
+    fn measured_clock_body() -> serde_json::Value {
+        json!({"offset_ms": 5_000.0, "uncertainty_ms": 20.0, "measured_at_unix_ms": 1_700_000_000_123_i64})
+    }
+
+    #[test]
+    fn a_single_channel_chunk_carries_the_conversion_applied_to_its_timestamps() {
+        let streamer = streamer_with(Some(LabClock::slewing(5_000.0, 5_000.0)));
+        let (timestamps, clock) = streamer.reference_utc_secs(vec![1.0, 2.0]);
+        let payload = ChunkPayload {
+            data_id: "d".into(),
+            chunk_index: 3,
+            channel_name: "temp".into(),
+            timestamps,
+            values: vec![10.0, 11.0],
+            units: None,
+            clock,
+        };
+        assert_eq!(
+            serde_json::to_value(&payload).unwrap(),
+            json!({
+                "data_id": "d",
+                "chunk_index": 3,
+                "channel_name": "temp",
+                "timestamps": [6.0, 7.0],
+                "values": [10.0, 11.0],
+                "clock": measured_clock_body(),
+            })
+        );
+    }
+
+    #[test]
+    fn a_multi_channel_chunk_carries_one_conversion_for_all_its_channels() {
+        let (channels, clock) = channels_to_reference_utc(
+            Some(&LabClock::slewing(5_000.0, 5_000.0)),
+            vec![("a".into(), channel(&[1.0])), ("b".into(), channel(&[2.0]))],
+        );
+        let payload = MultiChunkPayload {
+            data_id: "d".into(),
+            chunk_index: 0,
+            channels,
+            clock,
+        };
+        assert_eq!(
+            serde_json::to_value(&payload).unwrap(),
+            json!({
+                "data_id": "d",
+                "chunk_index": 0,
+                "channels": {
+                    "a": {"timestamps": [6.0], "values": [0.0]},
+                    "b": {"timestamps": [7.0], "values": [0.0]},
+                },
+                "clock": measured_clock_body(),
+            })
+        );
+    }
+
+    #[test]
+    fn before_the_first_measurement_the_chunk_says_its_clock_is_null_and_stamps_are_raw() {
+        for clock in [Some(LabClock::new()), None] {
+            let streamer = streamer_with(clock);
+            let (timestamps, clock) = streamer.reference_utc_secs(vec![1.5]);
+            let body = serde_json::to_value(ChunkPayload {
+                data_id: "d".into(),
+                chunk_index: 0,
+                channel_name: "temp".into(),
+                timestamps,
+                values: vec![1.0],
+                units: None,
+                clock,
+            })
+            .unwrap();
+            assert_eq!(body["timestamps"], json!([1.5]));
+            assert!(body.as_object().unwrap().contains_key("clock"));
+            assert_eq!(body["clock"], json!(null));
+        }
     }
 
     #[test]
