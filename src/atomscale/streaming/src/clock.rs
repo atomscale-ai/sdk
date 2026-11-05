@@ -19,7 +19,7 @@ use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize, Serializer};
 use tracing::{debug, info, warn};
 
 /// Environment variable that turns clock correction off.
@@ -46,11 +46,18 @@ struct Sample {
 }
 
 /// A measurement of the clock offset: reference UTC minus host, and the bound on its error.
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// Serialized, it is the `clock` record a timeseries chunk carries beside its converted stamps.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
 pub struct ClockStatus {
     pub offset_ms: f64,
     pub uncertainty_ms: f64,
+    #[serde(serialize_with = "as_unix_ms")]
     pub measured_at_unix_ms: f64,
+}
+
+/// The backend stores the sample's reference time as whole Unix milliseconds.
+fn as_unix_ms<S: Serializer>(ms: &f64, serializer: S) -> Result<S::Ok, S::Error> {
+    serializer.serialize_i64(ms.round() as i64)
 }
 
 #[derive(Default)]
@@ -145,13 +152,14 @@ struct TimeResponse {
     transmitted_at_unix_ms: f64,
 }
 
-/// The correction applied to one timestamp: reference UTC minus the host clock, and the bound on
-/// its error (half the round trip of the sample it came from). Recorded beside every stamp so a
-/// consumer can undo or refine it later.
+/// The correction applied to one timestamp: reference UTC minus the host clock, the bound on
+/// its error (half the round trip of the sample it came from) and the reference time that sample
+/// was taken. Recorded beside every stamp so a consumer can undo or refine it later.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Correction {
     pub offset_ms: i64,
     pub uncertainty_ms: f64,
+    pub measured_at_unix_ms: i64,
 }
 
 pub struct LabClock {
@@ -160,17 +168,11 @@ pub struct LabClock {
 }
 
 impl LabClock {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             state: Mutex::new(ClockState::default()),
             attempted: Condvar::new(),
         }
-    }
-
-    /// Reference UTC minus host clock, in milliseconds; 0 until the first measurement.
-    pub fn offset_ms(&self) -> f64 {
-        let mut state = self.state.lock().expect("lab clock mutex poisoned");
-        state.current_offset(host_now_ms()).unwrap_or(0.0)
     }
 
     /// A host-clock time as reference UTC, with the correction that was applied so the caller
@@ -188,10 +190,13 @@ impl LabClock {
             Some(Correction {
                 offset_ms,
                 uncertainty_ms,
+                measured_at_unix_ms: best.measured_at_ms.round() as i64,
             }),
         )
     }
 
+    /// The offset in effect and the sample behind it, read together; `None` until the first
+    /// measurement.
     pub fn status(&self) -> Option<ClockStatus> {
         let mut state = self.state.lock().expect("lab clock mutex poisoned");
         let offset_ms = state.current_offset(host_now_ms())?;
@@ -359,10 +364,17 @@ pub fn lab_clock_for(endpoint: &str) -> Option<Arc<LabClock>> {
 #[cfg(test)]
 impl LabClock {
     /// A clock part way through slewing from `offset_ms` toward `target_ms`, for streamer tests.
+    /// Its measurement was a 40 ms round trip (±20 ms), taken at reference time
+    /// 1_700_000_000_123 ms.
     pub(crate) fn slewing(offset_ms: f64, target_ms: f64) -> Self {
         let clock = Self::new();
         {
             let mut state = clock.state.lock().expect("lab clock mutex poisoned");
+            state.best = Some(Sample {
+                offset_ms: target_ms,
+                delay_ms: 40.0,
+                measured_at_ms: 1_700_000_000_123.4,
+            });
             state.offset_ms = Some(offset_ms);
             state.target_ms = target_ms;
             state.adjusted_at_ms = host_now_ms();
@@ -512,7 +524,7 @@ mod tests {
             Sample {
                 offset_ms: 5_000.4,
                 delay_ms: 20.0,
-                measured_at_ms: 0.0,
+                measured_at_ms: 1_700_000_000_123.6,
             },
             host_now_ms(),
         );
@@ -520,6 +532,7 @@ mod tests {
         let correction = correction.expect("measured");
         assert_eq!(correction.offset_ms, 5_000);
         assert_eq!(correction.uncertainty_ms, 10.0);
+        assert_eq!(correction.measured_at_unix_ms, 1_700_000_000_124);
         assert_eq!(
             utc,
             1_000 + correction.offset_ms,

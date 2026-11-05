@@ -48,6 +48,7 @@ def _server(extra_routes: dict, skew_ms: int | None = SKEW_MS) -> MockServer:
         )
     server = MockServer(port, json.dumps(routes))
     server.t_ref_ms = time.time() * 1000
+    server.reference_ms = reference if skew_ms is not None else None
     server.start()
     return server
 
@@ -56,6 +57,18 @@ def _expected_offset_bounds(server, before_ms: float, after_ms: float) -> tuple[
     """The offset a measurement taken between `before_ms` and `after_ms` must report."""
     skew_at = lambda now_ms: SKEW_MS - (now_ms - server.t_ref_ms)  # noqa: E731
     return skew_at(after_ms) - TOLERANCE_MS, skew_at(before_ms) + TOLERANCE_MS
+
+
+CLOCK_KEYS = {"offset_ms", "uncertainty_ms", "measured_at_unix_ms"}
+
+
+def _chunk_bodies(requests) -> list[tuple[str, dict]]:
+    """(route, body) of every tool-state chunk POST, in the order the server logged them."""
+    return [
+        (p, json.loads(b))
+        for m, p, b in requests
+        if p in ("/tool-state/stream/chunk", "/tool-state/stream/chunk/multi")
+    ]
 
 
 def _presigned_metadata(requests) -> list[dict]:
@@ -113,6 +126,9 @@ class TestRHEEDClockCorrection:
         # The mock stringifies metadata; the stamp is exactly the host time plus the recorded offset.
         assert int(meta["start_unix_ms_utc"]) == host_capture + int(meta["clock_offset_ms"])
         assert 0 <= float(meta["clock_uncertainty_ms"]) < TOLERANCE_MS
+        # The sample's reference time goes with its offset, as a string like the other two.
+        assert meta["clock_measured_at_unix_ms"].isdigit()
+        assert abs(int(meta["clock_measured_at_unix_ms"]) - server.reference_ms) <= 1
 
     def test_default_capture_time_is_corrected_too(self):
         server = _server({})
@@ -146,8 +162,7 @@ class TestRHEEDClockCorrection:
         assert status is None
         assert _presigned_starts(requests) == [(host_capture, host_capture + 2_000)]
         ((meta,),) = [_presigned_metadata(requests)]
-        assert "clock_offset_ms" not in meta
-        assert "clock_uncertainty_ms" not in meta
+        assert not [key for key in meta if key.startswith("clock_")]
 
     def test_the_skip_switch_sends_host_time(self, monkeypatch):
         monkeypatch.setenv("ATOMSCALE_SKIP_CLOCK_SYNC", "1")
@@ -164,11 +179,15 @@ class TestRHEEDClockCorrection:
         assert not any(p == "/gateway/time" for _, p, _ in requests)
         assert _presigned_starts(requests) == [(1_700_000_000_000, 1_700_000_002_000)]
         ((meta,),) = [_presigned_metadata(requests)]
-        assert "clock_offset_ms" not in meta
-        assert "clock_uncertainty_ms" not in meta
+        assert not [key for key in meta if key.startswith("clock_")]
 
 
 class TestTimeseriesClockCorrection:
+    CHUNK_ROUTES = {
+        "/tool-state/stream/chunk": '"OK"',
+        "/tool-state/stream/ts-data-id/finalize": '"OK"',
+    }
+
     def test_points_carry_the_same_offset(self):
         server = _server({"/tool-state/stream/chunk/multi": '"OK"', "/tool-state/stream/ts-data-id/finalize": '"OK"'})
         try:
@@ -188,3 +207,83 @@ class TestTimeseriesClockCorrection:
         low, high = _expected_offset_bounds(server, before, after)
         assert low / 1000 < offset_s < high / 1000
         assert points == pytest.approx([t + offset_s for t in host_times], abs=0.01)
+
+    def test_every_chunk_records_the_conversion_its_points_were_shifted_by(self):
+        server = _server(self.CHUNK_ROUTES)
+        try:
+            before = time.time() * 1000
+            streamer = TimeseriesStreamer(api_key="k", endpoint=server.endpoint)
+            data_id = streamer.initialize(stream_name="tool")
+            after = time.time() * 1000
+            host_times = [1_700_000_000.0, 1_700_000_001.0]
+            streamer.push(data_id, 0, "temp", host_times, [1.0, 2.0])
+            streamer.push_multi(
+                data_id,
+                1,
+                {
+                    "temp": {"timestamps": host_times, "values": [1.0, 2.0]},
+                    "pressure": {"timestamps": host_times, "values": [3.0, 4.0]},
+                },
+            )
+            streamer.run(data_id, "temp", iter([(host_times, [1.0, 2.0])]))
+            streamer.flush(data_id)
+            requests = _logged_requests(server)
+        finally:
+            server.stop()
+        bodies = _chunk_bodies(requests)
+        assert sorted(route for route, _ in bodies) == [
+            "/tool-state/stream/chunk",
+            "/tool-state/stream/chunk",
+            "/tool-state/stream/chunk/multi",
+        ]
+        low, high = _expected_offset_bounds(server, before, after)
+        for route, body in bodies:
+            clock = body["clock"]
+            assert set(clock) == CLOCK_KEYS
+            assert low < clock["offset_ms"] < high
+            assert 0 <= clock["uncertainty_ms"] < TOLERANCE_MS
+            assert isinstance(clock["measured_at_unix_ms"], int)
+            assert abs(clock["measured_at_unix_ms"] - server.reference_ms) <= 1
+            # The recorded offset is the one that moved the points.
+            channels = body["channels"].values() if route.endswith("/multi") else [body]
+            for channel in channels:
+                assert channel["timestamps"] == pytest.approx(
+                    [t + clock["offset_ms"] / 1000 for t in host_times], abs=1e-6
+                )
+
+    def test_before_the_first_measurement_chunks_say_their_clock_is_null(self):
+        server = _server(self.CHUNK_ROUTES, skew_ms=None)  # /gateway/time is a 404
+        try:
+            streamer = TimeseriesStreamer(api_key="k", endpoint=server.endpoint)
+            data_id = streamer.initialize(stream_name="tool")
+            host_times = [1_700_000_000.0, 1_700_000_001.0]
+            streamer.push(data_id, 0, "temp", host_times, [1.0, 2.0])
+            streamer.push_multi(data_id, 1, {"temp": {"timestamps": host_times, "values": [1.0, 2.0]}})
+            streamer.flush(data_id)
+            requests = _logged_requests(server)
+            status = streamer.clock_status()
+        finally:
+            server.stop()
+        assert status is None
+        bodies = _chunk_bodies(requests)
+        assert len(bodies) == 2
+        for route, body in bodies:
+            assert "clock" in body and body["clock"] is None
+            channels = body["channels"].values() if route.endswith("/multi") else [body]
+            assert [channel["timestamps"] for channel in channels] == [host_times]
+
+    def test_the_skip_switch_sends_a_null_clock(self, monkeypatch):
+        monkeypatch.setenv("ATOMSCALE_SKIP_CLOCK_SYNC", "1")
+        server = _server(self.CHUNK_ROUTES)
+        try:
+            streamer = TimeseriesStreamer(api_key="k", endpoint=server.endpoint)
+            data_id = streamer.initialize(stream_name="tool")
+            streamer.push(data_id, 0, "temp", [1_700_000_000.0], [1.0])
+            streamer.flush(data_id)
+            requests = _logged_requests(server)
+        finally:
+            server.stop()
+        assert not any(p == "/gateway/time" for _, p, _ in requests)
+        ((_, body),) = _chunk_bodies(requests)
+        assert "clock" in body and body["clock"] is None
+        assert body["timestamps"] == [1_700_000_000.0]
