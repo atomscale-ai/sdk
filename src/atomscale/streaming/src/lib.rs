@@ -541,6 +541,7 @@ impl RHEEDStreamer {
                 end_unix_ms_utc,
                 clock_offset_ms: correction.map(|c| c.offset_ms),
                 clock_uncertainty_ms: correction.map(|c| c.uncertainty_ms),
+                clock_measured_at_unix_ms: correction.map(|c| c.measured_at_unix_ms),
             };
 
             self.spool_chunk(py, &data_id, idx, metadata, flat, n, h, w)?;
@@ -657,6 +658,7 @@ impl RHEEDStreamer {
             end_unix_ms_utc,
             clock_offset_ms: correction.map(|c| c.offset_ms),
             clock_uncertainty_ms: correction.map(|c| c.uncertainty_ms),
+            clock_measured_at_unix_ms: correction.map(|c| c.measured_at_unix_ms),
         };
 
         self.spool_chunk(py, &data_id, chunk_idx, metadata, flat, n, h, w)
