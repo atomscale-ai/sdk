@@ -25,7 +25,7 @@
 <meta content="Stream RHEED Video | Python SDK" property="og:title"/>
 <meta content="Stream RHEED Video | Python SDK" name="twitter:title"/>
 <link href="../_static/pygments.css?v=03e43079" rel="stylesheet" type="text/css"/>
-<link href="../_static/theme.css?v=d6d7c91b" rel="stylesheet" type="text/css"/>
+<link href="../_static/theme.css?v=009055c6" rel="stylesheet" type="text/css"/>
 <link href="../_static/custom.css?v=a3c927c0" rel="stylesheet" type="text/css"/>
 <link href="../search.html" rel="search" title="Search"/>
 <link href="../genindex.html" rel="index" title="Index"/>
@@ -172,13 +172,21 @@ runs in real-time as data arrives.</p>
 </span><span id="line-2">    <span class="n">fps</span><span class="o">=</span><span class="mf">120.0</span><span class="p">,</span>
 </span><span id="line-3">    <span class="n">rotations_per_min</span><span class="o">=</span><span class="mf">15.0</span><span class="p">,</span>  <span class="c1"># Use 0.0 for stationary RHEED</span>
 </span><span id="line-4">    <span class="n">chunk_size</span><span class="o">=</span><span class="mi">240</span><span class="p">,</span>          <span class="c1"># Frames per chunk (2 seconds at 120fps)</span>
-</span><span id="line-5">    <span class="n">stream_name</span><span class="o">=</span><span class="s2">"Growth 001"</span><span class="p">,</span>
-</span><span id="line-6">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"GaN-2025-001"</span><span class="p">,</span>
-</span><span id="line-7"><span class="p">)</span>
+</span><span id="line-5">    <span class="n">seed_frame_count</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>      <span class="c1"># Request four seed views for rotating analysis</span>
+</span><span id="line-6">    <span class="n">stream_name</span><span class="o">=</span><span class="s2">"Growth 001"</span><span class="p">,</span>
+</span><span id="line-7">    <span class="n">physical_sample</span><span class="o">=</span><span class="s2">"GaN-2025-001"</span><span class="p">,</span>
+</span><span id="line-8"><span class="p">)</span>
 </span></code></pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">rotations_per_min</span></code> parameter determines whether data is classified as
 rotating or stationary RHEED.</p>
+<p><code class="docutils literal notranslate"><span class="pre">seed_frame_count</span></code> sets the number of seed views requested for analysis.
+When omitted or set to <code class="docutils literal notranslate"><span class="pre">None</span></code>, it defaults to <strong>1</strong> for stationary streams
+(<code class="docutils literal notranslate"><span class="pre">rotations_per_min=0</span></code>) and <strong>3</strong> otherwise. Stationary streams require a
+count of <strong>1</strong>; any other explicit count raises <code class="docutils literal notranslate"><span class="pre">ValueError</span></code>. For nonzero
+rotation rates, an explicit integer from <strong>1 through 8</strong> overrides the default.
+Choose the count when initializing the stream; existing calls can continue to
+omit it.</p>
 </section>
 <section id="link-to-a-physical-sample">
 <h2>Link to a Physical Sample<a class="headerlink" href="#link-to-a-physical-sample" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#link-to-a-physical-sample'"><span>#</span></a></h2>
@@ -387,6 +395,6 @@ analysis from completing.</p>
 <script src="../_static/documentation_options.js?v=cb975c41"></script>
 <script src="../_static/doctools.js?v=fd6eb6e6"></script>
 <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
-<script defer="defer" src="../_static/theme.js?v=5db23cf8"></script>
+<script defer="defer" src="../_static/theme.js?v=49cc6205"></script>
 </body>
 </html>
