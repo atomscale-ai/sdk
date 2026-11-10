@@ -11,7 +11,7 @@ from atomscale.client import _RETRYABLE_STATUSES, _retry_client_call
 from atomscale.core import ClientError
 from atomscale.results import UnknownResult
 
-from .conftest import ResultIDs
+from .conftest import ResultIDs, find_populated_rheed_video
 
 
 @pytest.fixture
@@ -173,6 +173,14 @@ def test_get(client: Client):
     data_ids = []
 
     for result_attr, aliases in data_type_aliases.items():
+        if result_attr in {"rheed_stationary", "rheed_rotating"}:
+            data_id = find_populated_rheed_video(
+                client, preferred_id=ResultIDs.rheed_stationary
+            )
+            setattr(ResultIDs, result_attr, data_id)
+            data_ids.append(data_id)
+            continue
+
         data_id = None
         for alias in aliases:
             for include_org in (False, True):
