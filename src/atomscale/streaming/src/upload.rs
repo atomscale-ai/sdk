@@ -43,6 +43,10 @@ pub struct FrameChunkMetadata {
     /// Bound on the error of `clock_offset_ms`, in ms.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub clock_uncertainty_ms: Option<f64>,
+    /// Reference-time Unix ms at which `clock_offset_ms` was measured. Defaults to absent so
+    /// chunks spooled before this field existed still load.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clock_measured_at_unix_ms: Option<i64>,
 }
 
 /// Accept (H,W) or (N,H,W) frames (casts to uint8) → (flat bytes, N,H,W).
@@ -148,6 +152,20 @@ pub fn package_to_zarr_bytes(frames_flat: &[u8], n: usize, h: usize, w: usize) -
         .ok_or_else(|| anyhow!("missing encoded chunk"))
 }
 
+/// The presign request body: the metadata with numbers and bools stringified, for an API that
+/// expects all strings.
+fn presign_body(chunk_metadata: &FrameChunkMetadata) -> Result<serde_json::Value> {
+    let mut meta = serde_json::to_value(chunk_metadata)?;
+    if let serde_json::Value::Object(map) = &mut meta {
+        for v in map.values_mut() {
+            if matches!(v, serde_json::Value::Number(_) | serde_json::Value::Bool(_)) {
+                *v = serde_json::Value::String(v.to_string());
+            }
+        }
+    }
+    Ok(meta)
+}
+
 pub async fn post_for_presigned(
     client: &Client,
     url: &str,
@@ -157,15 +175,7 @@ pub async fn post_for_presigned(
 ) -> Result<String> {
     debug!("[rheed_stream] presign: POST {}", url);
 
-    // Serialize once, then stringify numbers/bools for APIs that expect all strings.
-    let mut meta = serde_json::to_value(chunk_metadata)?;
-    if let serde_json::Value::Object(map) = &mut meta {
-        for v in map.values_mut() {
-            if matches!(v, serde_json::Value::Number(_) | serde_json::Value::Bool(_)) {
-                *v = serde_json::Value::String(v.to_string());
-            }
-        }
-    }
+    let meta = presign_body(chunk_metadata)?;
     debug!(
         "[presign] metadata json:\n{}",
         serde_json::to_string_pretty(&meta).unwrap_or_default()
@@ -319,5 +329,65 @@ impl Uploader for ShardUploader {
                 .context("PUT bytes failed")
                 .map_err(UploadError::Retry)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn metadata() -> FrameChunkMetadata {
+        FrameChunkMetadata {
+            data_id: "d".to_string(),
+            data_stream: "rheed".to_string(),
+            is_stream: 1,
+            is_rotating: 0,
+            raw_frame_rate: 8.0,
+            avg_frame_rate: 8.0,
+            chunk_size: 2,
+            dims: "2,4,4".to_string(),
+            start_unix_ms_utc: 1_700_000_005_000,
+            end_unix_ms_utc: 1_700_000_005_250,
+            clock_offset_ms: Some(5_000),
+            clock_uncertainty_ms: Some(12.5),
+            clock_measured_at_unix_ms: Some(1_700_000_004_321),
+        }
+    }
+
+    #[test]
+    fn the_presign_body_carries_the_whole_clock_record_as_strings() {
+        let body = presign_body(&metadata()).unwrap();
+        assert_eq!(body["clock_offset_ms"], json!("5000"));
+        assert_eq!(body["clock_uncertainty_ms"], json!("12.5"));
+        assert_eq!(body["clock_measured_at_unix_ms"], json!("1700000004321"));
+    }
+
+    #[test]
+    fn an_unmeasured_clock_omits_all_three_clock_keys() {
+        let body = presign_body(&FrameChunkMetadata {
+            clock_offset_ms: None,
+            clock_uncertainty_ms: None,
+            clock_measured_at_unix_ms: None,
+            ..metadata()
+        })
+        .unwrap();
+        let keys: Vec<_> = body.as_object().unwrap().keys().collect();
+        assert!(
+            !keys.iter().any(|key| key.starts_with("clock_")),
+            "{keys:?}"
+        );
+    }
+
+    #[test]
+    fn metadata_spooled_before_the_measured_at_field_still_loads() {
+        let mut sidecar = serde_json::to_value(metadata()).unwrap();
+        sidecar
+            .as_object_mut()
+            .unwrap()
+            .remove("clock_measured_at_unix_ms");
+        let loaded: FrameChunkMetadata = serde_json::from_value(sidecar).unwrap();
+        assert_eq!(loaded.clock_offset_ms, Some(5_000));
+        assert_eq!(loaded.clock_measured_at_unix_ms, None);
     }
 }
