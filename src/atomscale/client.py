@@ -296,7 +296,7 @@ class Client(BaseClient):
         columns_to_drop = [
             "user_id",
             "synth_source_id",
-            "sample_id",
+            "target_material_id",
             "processed_file_type",
             "bucket_file_name",
             "projects",
@@ -1107,7 +1107,7 @@ class Client(BaseClient):
             )
 
         columns_to_drop = [
-            "sample_id",
+            "target_material_id",
             "detail_notes_id",
             "user_id",
             "growth_instrument_id",

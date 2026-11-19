@@ -632,3 +632,51 @@ def test_search_propagates_a_422_that_is_not_about_the_rheed_enum():
     client._get = fake_get  # type: ignore[method-assign]
     with pytest.raises(ClientError):
         client.search(data_type="xps")
+
+
+TARGET_MATERIAL_ID = "66666666-6666-6666-6666-666666666666"
+
+
+def test_search_hides_target_material_id(monkeypatch):
+    """Catalogue rows carry the target material as a UUID ``target_material_id``;
+    it is an internal link and must not surface as a raw column."""
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    row = {
+        "data_id": "11111111-1111-1111-1111-111111111111",
+        "raw_name": "run.mp4",
+        "target_material_id": TARGET_MATERIAL_ID,
+        "physical_sample_id": WINNER_SAMPLE_ID,
+    }
+    monkeypatch.setattr(client, "_get", lambda sub_url, params=None: [row])
+
+    data = client.search()
+
+    assert "target_material_id" not in data.columns
+    assert "sample_id" not in data.columns
+    assert data["Physical Sample ID"].iloc[0] == WINNER_SAMPLE_ID
+
+
+def test_list_physical_samples_hides_target_material_id(monkeypatch):
+    """Physical samples reference their target material by UUID
+    ``target_material_id``; only the nested ``target_material`` summary is shown."""
+    client = Client(api_key="key_test", endpoint="http://example.com/")
+    row = {
+        "id": WINNER_SAMPLE_ID,
+        "name": "Run-1",
+        "target_material_id": TARGET_MATERIAL_ID,
+        "target_material": {
+            "id": TARGET_MATERIAL_ID,
+            "substrate": "Al2O3",
+            "sample_name": "BaTiO3 on sapphire",
+        },
+    }
+    monkeypatch.setattr(client, "_get", lambda sub_url, params=None: [row])
+
+    samples = client.list_physical_samples()
+
+    assert "target_material_id" not in samples.columns
+    assert samples["Physical Sample ID"].iloc[0] == WINNER_SAMPLE_ID
+    assert samples["Target Material"].iloc[0] == {
+        "substrate": "Al2O3",
+        "sample_name": "BaTiO3 on sapphire",
+    }
