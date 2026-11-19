@@ -99,3 +99,56 @@ class ResultIDs:
     changepoint = ""
     similarity_workflow = "rheed_stationary"
     similarity_source_id = "bb3494b1-b5fb-4f3e-ac50-e4024f8aacf5"
+
+
+def find_populated_rheed_video(
+    client, preferred_id: str = "", *, max_candidates: int = 50
+) -> str:
+    """Find a live video analysis, rather than a metadata-only success entry.
+
+    Synthetic catalogue records can be marked successful without any feature
+    rows. Probe a small raw window before selecting the fixture, independently
+    of the dataframe parser that the live tests need to exercise.
+    """
+    from atomscale.timeseries.rheed import RHEEDProvider
+
+    def candidates():
+        if preferred_id:
+            yield preferred_id
+        for include_org in (False, True):
+            catalogue = client.search(
+                data_type="rheed",
+                status="success",
+                include_organization_data=include_org,
+            )
+            if not catalogue.empty:
+                yield from catalogue["Data ID"].dropna()
+
+    provider = RHEEDProvider()
+    examined = []
+    for data_id in candidates():
+        if data_id in examined:
+            continue
+        examined.append(data_id)
+        raw = provider.fetch_raw(client, data_id, last_n=1)
+        if raw is not None:
+            assert isinstance(raw, dict) and isinstance(
+                raw.get("series_by_angle"), list
+            ), (
+                f"Malformed RHEED timeseries response for {data_id}: expected series_by_angle"
+            )
+            blocks = raw["series_by_angle"]
+            assert all(
+                isinstance(block, dict) and isinstance(block.get("series"), list)
+                for block in blocks
+            ), f"Malformed RHEED timeseries blocks for {data_id}"
+            if any(block["series"] for block in blocks):
+                return data_id
+        if len(examined) >= max_candidates:
+            break
+
+    pytest.fail(
+        "No populated RHEED video analysis found among "
+        f"{len(examined)} distinct success candidates (limit {max_candidates}). "
+        f"Examined data IDs: {examined}"
+    )

@@ -5,7 +5,7 @@ from atomscale import Client
 from atomscale.results import RHEEDVideoResult
 from atomscale.timeseries.rheed import RHEEDProvider
 
-from .conftest import ResultIDs
+from .conftest import ResultIDs, find_populated_rheed_video
 
 
 @pytest.fixture
@@ -15,7 +15,8 @@ def client():
 
 @pytest.fixture
 def result(client: Client):
-    results = client.get(data_ids=ResultIDs.rheed_rotating)
+    data_id = find_populated_rheed_video(client, preferred_id=ResultIDs.rheed_rotating)
+    results = client.get(data_ids=data_id)
     return results[0]
 
 
@@ -56,6 +57,9 @@ def test_get_dataframe(result: RHEEDVideoResult):
     )
 
     assert isinstance(result.timeseries_data, DataFrame)
+    assert not result.timeseries_data.empty, (
+        f"No timeseries points for {result.data_id}"
+    )
     assert not len(set(result.timeseries_data.keys().values) - column_names)
     # A unified backend indexes by view identity; one that predates it has only
     # the rotation angle to separate series.
