@@ -499,7 +499,7 @@
 </span><span id="line-296">        <span class="n">columns_to_drop</span> <span class="o">=</span> <span class="p">[</span>
 </span><span id="line-297">            <span class="s2">"user_id"</span><span class="p">,</span>
 </span><span id="line-298">            <span class="s2">"synth_source_id"</span><span class="p">,</span>
-</span><span id="line-299">            <span class="s2">"sample_id"</span><span class="p">,</span>
+</span><span id="line-299">            <span class="s2">"target_material_id"</span><span class="p">,</span>
 </span><span id="line-300">            <span class="s2">"processed_file_type"</span><span class="p">,</span>
 </span><span id="line-301">            <span class="s2">"bucket_file_name"</span><span class="p">,</span>
 </span><span id="line-302">            <span class="s2">"projects"</span><span class="p">,</span>
@@ -1358,7 +1358,7 @@
 </span><span id="line-1107">            <span class="p">)</span>
 </span><span id="line-1108">
 </span><span id="line-1109">        <span class="n">columns_to_drop</span> <span class="o">=</span> <span class="p">[</span>
-</span><span id="line-1110">            <span class="s2">"sample_id"</span><span class="p">,</span>
+</span><span id="line-1110">            <span class="s2">"target_material_id"</span><span class="p">,</span>
 </span><span id="line-1111">            <span class="s2">"detail_notes_id"</span><span class="p">,</span>
 </span><span id="line-1112">            <span class="s2">"user_id"</span><span class="p">,</span>
 </span><span id="line-1113">            <span class="s2">"growth_instrument_id"</span><span class="p">,</span>
@@ -2455,81 +2455,83 @@
 </span><span id="line-2171">
 </span><span id="line-2172"><span class="sd">        Returns:</span>
 </span><span id="line-2173"><span class="sd">            list[dict]: List of instruments with keys including:</span>
-</span><span id="line-2174"><span class="sd">                - synth_source_id (int): Unique instrument ID</span>
-</span><span id="line-2175"><span class="sd">                - source_name (str): Display name</span>
-</span><span id="line-2176"><span class="sd">                - synth_source_type (str): Instrument type (mbe, cvd, etc.)</span>
-</span><span id="line-2177"><span class="sd">                - source_manufacturer (str | None): Manufacturer name</span>
-</span><span id="line-2178"><span class="sd">                - source_model (str | None): Model name</span>
-</span><span id="line-2179">
-</span><span id="line-2180"><span class="sd">        Example:</span>
-</span><span id="line-2181"><span class="sd">            &gt;&gt;&gt; instruments = client.list_growth_instruments()</span>
-</span><span id="line-2182"><span class="sd">            &gt;&gt;&gt; for inst in instruments:</span>
-</span><span id="line-2183"><span class="sd">            ...     print(f"{inst['synth_source_id']}: {inst['source_name']}")</span>
-</span><span id="line-2184"><span class="sd">        """</span>
-</span><span id="line-2185">        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="s2">"instruments/synthesis"</span><span class="p">)</span>
-</span><span id="line-2186">        <span class="k">return</span> <span class="n">result</span> <span class="k">if</span> <span class="n">result</span> <span class="k">else</span> <span class="p">[]</span></div>
+</span><span id="line-2174"><span class="sd">                - synth_source_id (str): Unique instrument ID (a UUID)</span>
+</span><span id="line-2175"><span class="sd">                - legacy_id (int | None): The integer id the instrument had before</span>
+</span><span id="line-2176"><span class="sd">                  instruments took UUIDs; None for instruments created since</span>
+</span><span id="line-2177"><span class="sd">                - source_name (str): Display name</span>
+</span><span id="line-2178"><span class="sd">                - synth_source_type (str): Instrument type (mbe, cvd, etc.)</span>
+</span><span id="line-2179"><span class="sd">                - source_manufacturer (str | None): Manufacturer name</span>
+</span><span id="line-2180"><span class="sd">                - source_model (str | None): Model name</span>
+</span><span id="line-2181">
+</span><span id="line-2182"><span class="sd">        Example:</span>
+</span><span id="line-2183"><span class="sd">            &gt;&gt;&gt; instruments = client.list_growth_instruments()</span>
+</span><span id="line-2184"><span class="sd">            &gt;&gt;&gt; for inst in instruments:</span>
+</span><span id="line-2185"><span class="sd">            ...     print(f"{inst['synth_source_id']}: {inst['source_name']}")</span>
+</span><span id="line-2186"><span class="sd">        """</span>
+</span><span id="line-2187">        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get</span><span class="p">(</span><span class="n">sub_url</span><span class="o">=</span><span class="s2">"instruments/synthesis"</span><span class="p">)</span>
+</span><span id="line-2188">        <span class="k">return</span> <span class="n">result</span> <span class="k">if</span> <span class="n">result</span> <span class="k">else</span> <span class="p">[]</span></div>
 
-</span><span id="line-2187">
+</span><span id="line-2189">
 <div class="viewcode-block" id="Client.create_growth_instrument">
 <a class="viewcode-back" href="../../_autosummary/atomscale.client.Client.html#atomscale.client.Client.create_growth_instrument">[docs]</a>
-</span><span id="line-2188">    <span class="k">def</span><span class="w"> </span><span class="nf">create_growth_instrument</span><span class="p">(</span>
-</span><span id="line-2189">        <span class="bp">self</span><span class="p">,</span>
-</span><span id="line-2190">        <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-2191">        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-</span><span id="line-2192">        <span class="n">instrument_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"mbe"</span><span class="p">,</span> <span class="s2">"cvd"</span><span class="p">,</span> <span class="s2">"pvd"</span><span class="p">,</span> <span class="s2">"sputter"</span><span class="p">,</span> <span class="s2">"ald"</span><span class="p">,</span> <span class="s2">"pld"</span><span class="p">],</span>
-</span><span id="line-2193">        <span class="n">serial_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-</span><span id="line-2194">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-</span><span id="line-2195"><span class="w">        </span><span class="sd">"""Create a new growth instrument.</span>
-</span><span id="line-2196">
-</span><span id="line-2197"><span class="sd">        Args:</span>
-</span><span id="line-2198"><span class="sd">            label: Display name for the instrument (e.g., "Main MBE").</span>
-</span><span id="line-2199"><span class="sd">            name: Manufacturer and model (e.g., "Veeco GEN10").</span>
-</span><span id="line-2200"><span class="sd">            instrument_type: Type of instrument.</span>
-</span><span id="line-2201"><span class="sd">            serial_id: Optional serial number or identifier.</span>
-</span><span id="line-2202">
-</span><span id="line-2203"><span class="sd">        Returns:</span>
-</span><span id="line-2204"><span class="sd">            int: The synth_source_id of the created instrument.</span>
-</span><span id="line-2205">
-</span><span id="line-2206"><span class="sd">        Example:</span>
-</span><span id="line-2207"><span class="sd">            &gt;&gt;&gt; instrument_id = client.create_growth_instrument(</span>
-</span><span id="line-2208"><span class="sd">            ...     label="Main MBE",</span>
-</span><span id="line-2209"><span class="sd">            ...     name="Veeco GEN10",</span>
-</span><span id="line-2210"><span class="sd">            ...     instrument_type="mbe",</span>
-</span><span id="line-2211"><span class="sd">            ...     serial_id="SN-12345",</span>
-</span><span id="line-2212"><span class="sd">            ... )</span>
-</span><span id="line-2213"><span class="sd">        """</span>
-</span><span id="line-2214">        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span>
-</span><span id="line-2215">            <span class="s2">"label"</span><span class="p">:</span> <span class="n">label</span><span class="p">,</span>
-</span><span id="line-2216">            <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
-</span><span id="line-2217">            <span class="s2">"type"</span><span class="p">:</span> <span class="n">instrument_type</span><span class="p">,</span>
-</span><span id="line-2218">            <span class="s2">"serial_id"</span><span class="p">:</span> <span class="n">serial_id</span><span class="p">,</span>
-</span><span id="line-2219">        <span class="p">}</span>
-</span><span id="line-2220">        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post_or_put</span><span class="p">(</span>
-</span><span id="line-2221">            <span class="n">method</span><span class="o">=</span><span class="s2">"POST"</span><span class="p">,</span>
-</span><span id="line-2222">            <span class="n">sub_url</span><span class="o">=</span><span class="s2">"instruments/synthesis"</span><span class="p">,</span>
-</span><span id="line-2223">            <span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span>
-</span><span id="line-2224">        <span class="p">)</span>
-</span><span id="line-2225">        <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="s2">"synth_source_id"</span><span class="p">]</span></div>
+</span><span id="line-2190">    <span class="k">def</span><span class="w"> </span><span class="nf">create_growth_instrument</span><span class="p">(</span>
+</span><span id="line-2191">        <span class="bp">self</span><span class="p">,</span>
+</span><span id="line-2192">        <span class="n">label</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-2193">        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+</span><span id="line-2194">        <span class="n">instrument_type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">"mbe"</span><span class="p">,</span> <span class="s2">"cvd"</span><span class="p">,</span> <span class="s2">"pvd"</span><span class="p">,</span> <span class="s2">"sputter"</span><span class="p">,</span> <span class="s2">"ald"</span><span class="p">,</span> <span class="s2">"pld"</span><span class="p">],</span>
+</span><span id="line-2195">        <span class="n">serial_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="line-2196">    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="line-2197"><span class="w">        </span><span class="sd">"""Create a new growth instrument.</span>
+</span><span id="line-2198">
+</span><span id="line-2199"><span class="sd">        Args:</span>
+</span><span id="line-2200"><span class="sd">            label: Display name for the instrument (e.g., "Main MBE").</span>
+</span><span id="line-2201"><span class="sd">            name: Manufacturer and model (e.g., "Veeco GEN10").</span>
+</span><span id="line-2202"><span class="sd">            instrument_type: Type of instrument.</span>
+</span><span id="line-2203"><span class="sd">            serial_id: Optional serial number or identifier.</span>
+</span><span id="line-2204">
+</span><span id="line-2205"><span class="sd">        Returns:</span>
+</span><span id="line-2206"><span class="sd">            str: The synth_source_id (a UUID) of the created instrument.</span>
+</span><span id="line-2207">
+</span><span id="line-2208"><span class="sd">        Example:</span>
+</span><span id="line-2209"><span class="sd">            &gt;&gt;&gt; instrument_id = client.create_growth_instrument(</span>
+</span><span id="line-2210"><span class="sd">            ...     label="Main MBE",</span>
+</span><span id="line-2211"><span class="sd">            ...     name="Veeco GEN10",</span>
+</span><span id="line-2212"><span class="sd">            ...     instrument_type="mbe",</span>
+</span><span id="line-2213"><span class="sd">            ...     serial_id="SN-12345",</span>
+</span><span id="line-2214"><span class="sd">            ... )</span>
+</span><span id="line-2215"><span class="sd">        """</span>
+</span><span id="line-2216">        <span class="n">body</span> <span class="o">=</span> <span class="p">{</span>
+</span><span id="line-2217">            <span class="s2">"label"</span><span class="p">:</span> <span class="n">label</span><span class="p">,</span>
+</span><span id="line-2218">            <span class="s2">"name"</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+</span><span id="line-2219">            <span class="s2">"type"</span><span class="p">:</span> <span class="n">instrument_type</span><span class="p">,</span>
+</span><span id="line-2220">            <span class="s2">"serial_id"</span><span class="p">:</span> <span class="n">serial_id</span><span class="p">,</span>
+</span><span id="line-2221">        <span class="p">}</span>
+</span><span id="line-2222">        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_post_or_put</span><span class="p">(</span>
+</span><span id="line-2223">            <span class="n">method</span><span class="o">=</span><span class="s2">"POST"</span><span class="p">,</span>
+</span><span id="line-2224">            <span class="n">sub_url</span><span class="o">=</span><span class="s2">"instruments/synthesis"</span><span class="p">,</span>
+</span><span id="line-2225">            <span class="n">body</span><span class="o">=</span><span class="n">body</span><span class="p">,</span>
+</span><span id="line-2226">        <span class="p">)</span>
+</span><span id="line-2227">        <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="s2">"synth_source_id"</span><span class="p">]</span></div>
 
-</span><span id="line-2226">
+</span><span id="line-2228">
 <div class="viewcode-block" id="Client.delete_growth_instrument">
 <a class="viewcode-back" href="../../_autosummary/atomscale.client.Client.html#atomscale.client.Client.delete_growth_instrument">[docs]</a>
-</span><span id="line-2227">    <span class="k">def</span><span class="w"> </span><span class="nf">delete_growth_instrument</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">synth_source_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-</span><span id="line-2228"><span class="w">        </span><span class="sd">"""Delete a growth instrument.</span>
-</span><span id="line-2229">
-</span><span id="line-2230"><span class="sd">        Args:</span>
-</span><span id="line-2231"><span class="sd">            synth_source_id: ID of the instrument to delete.</span>
-</span><span id="line-2232">
-</span><span id="line-2233"><span class="sd">        Raises:</span>
-</span><span id="line-2234"><span class="sd">            ClientError: If the instrument is not found or not accessible.</span>
-</span><span id="line-2235">
-</span><span id="line-2236"><span class="sd">        Example:</span>
-</span><span id="line-2237"><span class="sd">            &gt;&gt;&gt; client.delete_growth_instrument(synth_source_id=42)</span>
-</span><span id="line-2238"><span class="sd">        """</span>
-</span><span id="line-2239">        <span class="bp">self</span><span class="o">.</span><span class="n">_delete</span><span class="p">(</span>
-</span><span id="line-2240">            <span class="n">sub_url</span><span class="o">=</span><span class="s2">"instruments/synthesis"</span><span class="p">,</span>
-</span><span id="line-2241">            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"synthesis_instrument_ids"</span><span class="p">:</span> <span class="n">synth_source_id</span><span class="p">},</span>
-</span><span id="line-2242">        <span class="p">)</span></div>
+</span><span id="line-2229">    <span class="k">def</span><span class="w"> </span><span class="nf">delete_growth_instrument</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">synth_source_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="line-2230"><span class="w">        </span><span class="sd">"""Delete a growth instrument.</span>
+</span><span id="line-2231">
+</span><span id="line-2232"><span class="sd">        Args:</span>
+</span><span id="line-2233"><span class="sd">            synth_source_id: ID (a UUID) of the instrument to delete.</span>
+</span><span id="line-2234">
+</span><span id="line-2235"><span class="sd">        Raises:</span>
+</span><span id="line-2236"><span class="sd">            ClientError: If the instrument is not found or not accessible.</span>
+</span><span id="line-2237">
+</span><span id="line-2238"><span class="sd">        Example:</span>
+</span><span id="line-2239"><span class="sd">            &gt;&gt;&gt; client.delete_growth_instrument(synth_source_id=instrument_id)</span>
+</span><span id="line-2240"><span class="sd">        """</span>
+</span><span id="line-2241">        <span class="bp">self</span><span class="o">.</span><span class="n">_delete</span><span class="p">(</span>
+</span><span id="line-2242">            <span class="n">sub_url</span><span class="o">=</span><span class="s2">"instruments/synthesis"</span><span class="p">,</span>
+</span><span id="line-2243">            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">"synthesis_instrument_ids"</span><span class="p">:</span> <span class="n">synth_source_id</span><span class="p">},</span>
+</span><span id="line-2244">        <span class="p">)</span></div>
 </div>
 
 </span></code></pre></div>
