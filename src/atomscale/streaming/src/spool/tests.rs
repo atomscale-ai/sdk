@@ -97,9 +97,11 @@ fn metadata(data_id: &str, chunk_idx: usize) -> FrameChunkMetadata {
         dims: format!("{N},{H},{W}"),
         start_unix_ms_utc: start,
         end_unix_ms_utc: start + 2_000,
-        clock_offset_ms: Some(12),
-        clock_uncertainty_ms: Some(3.5),
-        clock_measured_at_unix_ms: Some(T0 - 4_000),
+        clock: Some(Some(crate::clock::ClockStatus {
+            offset_ms: 12.0,
+            uncertainty_ms: 3.5,
+            measured_at_unix_ms: (T0 - 4_000) as f64,
+        })),
     }
 }
 

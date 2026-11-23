@@ -12,7 +12,7 @@ use tokio::runtime::Runtime;
 use tracing::{debug, warn};
 
 mod clock;
-use clock::{clock_status_dict, lab_clock_for, Correction, LabClock};
+use clock::{clock_status_dict, lab_clock_for, ClockStatus, LabClock};
 
 mod utils;
 use utils::{generic_post, init_tracing_once};
@@ -105,8 +105,8 @@ pub struct RHEEDStreamer {
     /// Chunks waiting to upload, on disk; its workers upload them in the background.
     spool: Arc<Spool>,
 
-    /// This computer's clock against AtomCloud's; every stamp leaves as reference UTC.
-    /// `None` when correction is switched off.
+    /// This computer's clock against AtomCloud's, sent with every chunk; AtomCloud converts the
+    /// stamps. `None` when correction is switched off.
     clock: Option<Arc<LabClock>>,
 }
 
@@ -308,7 +308,7 @@ impl RHEEDStreamer {
             ));
         }
 
-        // Measure the lab clock before the first chunk is stamped; a failure streams uncorrected.
+        // Measure the lab clock before the first chunk goes; a failure sends it with no measurement.
         if let Some(clock) = &self.clock {
             py.detach(|| clock.wait_for_first_attempt());
         }
@@ -432,9 +432,9 @@ impl RHEEDStreamer {
     /// - `(N, H, W)` `numpy.ndarray[uint8]`: a chunk of `N` grayscale frames
     /// - `(H, W)` `numpy.ndarray[uint8]`: a single frame (treated as `N = 1`)
     /// - `(frames, capture_start_ms_utc)` 2-tuple: frames as above + an explicit
-    ///   capture-start timestamp (int milliseconds since UNIX epoch, UTC). Use
-    ///   this when you have hardware/OS-level timestamps for each chunk
-    ///   (camera trigger time, OS monotonic-to-utc conversion, etc.).
+    ///   capture-start timestamp (int milliseconds since UNIX epoch, on this computer's
+    ///   clock). Use this when you have hardware/OS-level timestamps for each chunk
+    ///   (camera trigger time, OS monotonic-to-wall-clock conversion, etc.).
     ///
     /// For each yielded item, the method stamps it, encodes its shard and writes it to the disk
     /// spool, then asks the iterator for the next one. It never waits on uploads, which run in
@@ -444,8 +444,9 @@ impl RHEEDStreamer {
     ///
     /// Timestamps
     /// ----------
-    /// Every chunk is stamped with when its first frame was **captured**, so the stream
-    /// aligns with other lab wall-clock data. The chunk's `end_unix_ms_utc` is
+    /// Every chunk is stamped with when its first frame was **captured**, on this computer's
+    /// clock; AtomCloud converts the stamps by this computer's measured clock, so the stream
+    /// aligns with other lab data. The chunk's `end_unix_ms_utc` is
     /// `start + (n / fps) * 1000`. Yield `(frames, capture_start_ms_utc)` whenever you have a
     /// real capture clock (camera trigger, OS monotonic-to-utc conversion). When you yield
     /// bare frames, each chunk is taken to have just finished capturing: `Utc::now()` is
@@ -522,10 +523,8 @@ impl RHEEDStreamer {
                 t0.elapsed(), flat_len
             );
 
-            let (start_unix_ms_utc, correction) = self.reference_utc_ms(
-                caller_start_ms
-                    .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps)),
-            );
+            let start_unix_ms_utc = caller_start_ms
+                .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps));
             let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
 
             let metadata = FrameChunkMetadata {
@@ -539,9 +538,7 @@ impl RHEEDStreamer {
                 dims: format!("{n},{h},{w}"),
                 start_unix_ms_utc,
                 end_unix_ms_utc,
-                clock_offset_ms: correction.map(|c| c.offset_ms),
-                clock_uncertainty_ms: correction.map(|c| c.uncertainty_ms),
-                clock_measured_at_unix_ms: correction.map(|c| c.measured_at_unix_ms),
+                clock: Some(self.clock_reading()),
             };
 
             self.spool_chunk(py, &data_id, idx, metadata, flat, n, h, w)?;
@@ -595,8 +592,9 @@ impl RHEEDStreamer {
     ///
     /// Timestamps
     /// ----------
-    /// Every chunk is stamped with when its first frame was **captured**, so the stream
-    /// aligns with other lab wall-clock data. The chunk's `end_unix_ms_utc` is
+    /// Every chunk is stamped with when its first frame was **captured**, on this computer's
+    /// clock; AtomCloud converts the stamps by this computer's measured clock, so the stream
+    /// aligns with other lab data. The chunk's `end_unix_ms_utc` is
     /// `start + (n / fps) * 1000`. Pass `capture_start_ms_utc` whenever you have a real
     /// capture clock (camera trigger, OS monotonic-to-utc conversion). When you do not, the
     /// chunk is taken to have just finished being captured: `push()` samples `Utc::now()` on
@@ -609,7 +607,7 @@ impl RHEEDStreamer {
     ///     chunk_idx (int): Zero-based index of this chunk (used in Zarr shard path).
     ///     frames (numpy.ndarray): `(N,H,W)` or `(H,W)` grayscale frames as `uint8`.
     ///     capture_start_ms_utc (Optional[int]): Capture-start timestamp in milliseconds
-    ///         since UNIX epoch (UTC). Pass when you have a real capture-time clock
+    ///         since UNIX epoch, on this computer's clock. Pass when you have a real capture-time clock
     ///         (camera trigger, OS monotonic-to-utc conversion). When None, the chunk is
     ///         taken to have just finished capturing: `Utc::now()` on entry minus `n / fps`.
     ///
@@ -639,10 +637,8 @@ impl RHEEDStreamer {
         let py = frames.py();
         let (flat, n, h, w) = numpy_frames_to_flat(frames)?;
 
-        let (start_unix_ms_utc, correction) = self.reference_utc_ms(
-            capture_start_ms_utc
-                .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps)),
-        );
+        let start_unix_ms_utc = capture_start_ms_utc
+            .unwrap_or_else(|| capture_start_for_completed_chunk(arrival_ms, n, fps));
         let end_unix_ms_utc = chunk_end(start_unix_ms_utc, n, fps);
 
         let metadata = FrameChunkMetadata {
@@ -656,9 +652,7 @@ impl RHEEDStreamer {
             dims: format!("{n},{h},{w}"),
             start_unix_ms_utc,
             end_unix_ms_utc,
-            clock_offset_ms: correction.map(|c| c.offset_ms),
-            clock_uncertainty_ms: correction.map(|c| c.uncertainty_ms),
-            clock_measured_at_unix_ms: correction.map(|c| c.measured_at_unix_ms),
+            clock: Some(self.clock_reading()),
         };
 
         self.spool_chunk(py, &data_id, chunk_idx, metadata, flat, n, h, w)
@@ -668,8 +662,10 @@ impl RHEEDStreamer {
     ///
     /// This computer's clock measured against AtomCloud's reference clock, or `None` when
     /// correction is off (`ATOMSCALE_SKIP_CLOCK_SYNC`) or no measurement has succeeded yet.
-    /// Every chunk is stamped in reference UTC, so `offset_ms` (reference minus host) is the
-    /// correction in effect, `uncertainty_ms` bounds its error (half the best round trip) and
+    /// Every chunk goes with this measurement; AtomCloud converts the stream's stamps by the
+    /// first one it receives.
+    /// `offset_ms` (reference minus host) is the correction in effect, `uncertainty_ms` bounds
+    /// its error (half the best round trip, plus how far the offset still has to slew) and
     /// `measured_at_unix_ms` is the reference time of the sample it came from.
     fn clock_status<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyDict>>> {
         clock_status_dict(py, self.clock.as_deref())
@@ -872,12 +868,10 @@ impl RHEEDStreamer {
         format!("{}/rheed/stream/{data_id}/end", self.endpoint)
     }
 
-    /// A host-clock time as reference UTC, with the correction applied (none when correction is off
-    /// or the clock is not yet measured).
-    fn reference_utc_ms(&self, host_ms: i64) -> (i64, Option<Correction>) {
-        self.clock
-            .as_ref()
-            .map_or((host_ms, None), |clock| clock.correct_ms(host_ms))
+    /// The clock a chunk's stamps are on, as measured now; `None` when correction is off or not
+    /// yet measured.
+    fn clock_reading(&self) -> Option<ClockStatus> {
+        self.clock.as_deref().and_then(LabClock::status)
     }
 
     /// Chunks of the stream that will not be uploaded so far.

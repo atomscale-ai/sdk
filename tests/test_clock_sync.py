@@ -107,11 +107,12 @@ class TestRHEEDClockCorrection:
         low, high = _expected_offset_bounds(server, before, after)
         assert low < status["offset_ms"] < high
         assert status["uncertainty_ms"] < TOLERANCE_MS
-        ((start, end),) = _presigned_starts(requests)
-        assert abs(start - (host_capture + status["offset_ms"])) < 2  # the offset slews, never jumps
-        assert end - start == 2_000
+        # On this computer's clock: AtomCloud converts them by the clock sent with them.
+        assert _presigned_starts(requests) == [(host_capture, host_capture + 2_000)]
+        ((meta,),) = [_presigned_metadata(requests)]
+        assert low < meta["clock"]["offset_ms"] < high
 
-    def test_the_shard_records_the_correction_applied_to_its_stamps(self):
+    def test_the_shard_sends_the_measurement_its_stamps_are_converted_by(self):
         server = _server({})
         try:
             streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
@@ -123,19 +124,17 @@ class TestRHEEDClockCorrection:
         finally:
             server.stop()
         ((meta,),) = [_presigned_metadata(requests)]
-        # The mock stringifies metadata; the stamp is exactly the host time plus the recorded offset.
-        assert int(meta["start_unix_ms_utc"]) == host_capture + int(meta["clock_offset_ms"])
-        assert 0 <= float(meta["clock_uncertainty_ms"]) < TOLERANCE_MS
-        # The sample's reference time goes with its offset, as a string like the other two.
-        assert meta["clock_measured_at_unix_ms"].isdigit()
-        assert abs(int(meta["clock_measured_at_unix_ms"]) - server.reference_ms) <= 1
+        assert int(meta["start_unix_ms_utc"]) == host_capture
+        assert set(meta["clock"]) == CLOCK_KEYS
+        assert 0 <= meta["clock"]["uncertainty_ms"] < TOLERANCE_MS
+        assert abs(meta["clock"]["measured_at_unix_ms"] - server.reference_ms) <= 1
+        assert not [key for key in meta if key.startswith("clock_")]
 
-    def test_default_capture_time_is_corrected_too(self):
+    def test_default_capture_time_is_this_computers_too(self):
         server = _server({})
         try:
             streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
             data_id = streamer.initialize(fps=1.0, rotations_per_min=0.0, chunk_size=2)
-            offset = streamer.clock_status()["offset_ms"]
             before = int(time.time() * 1000)
             streamer.push(data_id, 0, np.full((2, 8, 8), 7, dtype=np.uint8))
             after = int(time.time() * 1000)
@@ -144,10 +143,10 @@ class TestRHEEDClockCorrection:
         finally:
             server.stop()
         ((_, end),) = _presigned_starts(requests)
-        # The chunk had just finished capturing, so it ends at the push, in reference time.
-        assert before + offset - 2 < end < after + offset + 2
+        # The chunk had just finished capturing, so it ends at the push, on this computer's clock.
+        assert before - 2 < end < after + 2
 
-    def test_an_unreachable_reference_clock_streams_uncorrected(self):
+    def test_an_unreachable_reference_clock_sends_a_null_clock(self):
         server = _server({}, skew_ms=None)  # /gateway/time is a 404
         try:
             streamer = RHEEDStreamer(api_key="k", endpoint=server.endpoint)
@@ -162,7 +161,7 @@ class TestRHEEDClockCorrection:
         assert status is None
         assert _presigned_starts(requests) == [(host_capture, host_capture + 2_000)]
         ((meta,),) = [_presigned_metadata(requests)]
-        assert not [key for key in meta if key.startswith("clock_")]
+        assert "clock" in meta and meta["clock"] is None
 
     def test_the_skip_switch_sends_host_time(self, monkeypatch):
         monkeypatch.setenv("ATOMSCALE_SKIP_CLOCK_SYNC", "1")
@@ -179,7 +178,7 @@ class TestRHEEDClockCorrection:
         assert not any(p == "/gateway/time" for _, p, _ in requests)
         assert _presigned_starts(requests) == [(1_700_000_000_000, 1_700_000_002_000)]
         ((meta,),) = [_presigned_metadata(requests)]
-        assert not [key for key in meta if key.startswith("clock_")]
+        assert "clock" in meta and meta["clock"] is None
 
 
 class TestTimeseriesClockCorrection:
@@ -188,7 +187,7 @@ class TestTimeseriesClockCorrection:
         "/tool-state/stream/ts-data-id/finalize": '"OK"',
     }
 
-    def test_points_carry_the_same_offset(self):
+    def test_points_go_as_read_with_the_measurement(self):
         server = _server({"/tool-state/stream/chunk/multi": '"OK"', "/tool-state/stream/ts-data-id/finalize": '"OK"'})
         try:
             before = time.time() * 1000
@@ -203,12 +202,13 @@ class TestTimeseriesClockCorrection:
         finally:
             server.stop()
         sent = next(json.loads(b) for _, p, b in requests if p.startswith("/tool-state/stream/chunk/multi"))
-        points = sent["channels"]["temp"]["timestamps"]
         low, high = _expected_offset_bounds(server, before, after)
         assert low / 1000 < offset_s < high / 1000
-        assert points == pytest.approx([t + offset_s for t in host_times], abs=0.01)
+        # AtomCloud converts them by the clock sent with them.
+        assert sent["channels"]["temp"]["timestamps"] == host_times
+        assert low < sent["clock"]["offset_ms"] < high
 
-    def test_every_chunk_records_the_conversion_its_points_were_shifted_by(self):
+    def test_every_chunk_carries_the_clock_its_points_are_on(self):
         server = _server(self.CHUNK_ROUTES)
         try:
             before = time.time() * 1000
@@ -242,14 +242,10 @@ class TestTimeseriesClockCorrection:
             assert set(clock) == CLOCK_KEYS
             assert low < clock["offset_ms"] < high
             assert 0 <= clock["uncertainty_ms"] < TOLERANCE_MS
-            assert isinstance(clock["measured_at_unix_ms"], int)
             assert abs(clock["measured_at_unix_ms"] - server.reference_ms) <= 1
-            # The recorded offset is the one that moved the points.
             channels = body["channels"].values() if route.endswith("/multi") else [body]
             for channel in channels:
-                assert channel["timestamps"] == pytest.approx(
-                    [t + clock["offset_ms"] / 1000 for t in host_times], abs=1e-6
-                )
+                assert channel["timestamps"] == host_times
 
     def test_before_the_first_measurement_chunks_say_their_clock_is_null(self):
         server = _server(self.CHUNK_ROUTES, skew_ms=None)  # /gateway/time is a 404

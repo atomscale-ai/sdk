@@ -4,7 +4,7 @@ use numpy::PyArrayMethods;
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyModule};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,6 +19,7 @@ use zarrs::{
 use numpy::{PyArrayDyn, PyReadonlyArrayDyn};
 use tracing::debug;
 
+use crate::clock::ClockStatus;
 use crate::retry::{is_rejection, HttpStatusError};
 use crate::spool::{EntryMeta, UploadError, UploadFuture, Uploader};
 
@@ -33,20 +34,25 @@ pub struct FrameChunkMetadata {
     pub avg_frame_rate: f64,
     pub chunk_size: usize,
     pub dims: String,
+    /// On this computer's clock; AtomCloud converts them by `clock`.
     pub start_unix_ms_utc: i64,
     pub end_unix_ms_utc: i64,
-    /// The clock correction already applied to the two stamps above: reference UTC minus the
-    /// host clock, in ms, so `host time = start_unix_ms_utc - clock_offset_ms`. Absent when the
-    /// stamps are the host clock as read (correction off, or the clock never measured).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub clock_offset_ms: Option<i64>,
-    /// Bound on the error of `clock_offset_ms`, in ms.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub clock_uncertainty_ms: Option<f64>,
-    /// Reference-time Unix ms at which `clock_offset_ms` was measured. Defaults to absent so
-    /// chunks spooled before this field existed still load.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub clock_measured_at_unix_ms: Option<i64>,
+    /// This computer's clock against AtomCloud's, `null` before the first measurement. Absent
+    /// only on a chunk spooled by an SDK that converted its stamps itself, which AtomCloud
+    /// stores as sent.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "present"
+    )]
+    pub clock: Option<Option<ClockStatus>>,
+}
+
+/// A key that is present, `null` included; with `default`, an absent one is `None`.
+fn present<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<Option<Option<ClockStatus>>, D::Error> {
+    Option::<ClockStatus>::deserialize(deserializer).map(Some)
 }
 
 /// Accept (H,W) or (N,H,W) frames (casts to uint8) → (flat bytes, N,H,W).
@@ -337,7 +343,13 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn metadata() -> FrameChunkMetadata {
+    const CLOCK: ClockStatus = ClockStatus {
+        offset_ms: 5_000.25,
+        uncertainty_ms: 12.5,
+        measured_at_unix_ms: 1_700_000_004_321.5,
+    };
+
+    fn metadata(clock: Option<Option<ClockStatus>>) -> FrameChunkMetadata {
         FrameChunkMetadata {
             data_id: "d".to_string(),
             data_stream: "rheed".to_string(),
@@ -347,47 +359,45 @@ mod tests {
             avg_frame_rate: 8.0,
             chunk_size: 2,
             dims: "2,4,4".to_string(),
-            start_unix_ms_utc: 1_700_000_005_000,
-            end_unix_ms_utc: 1_700_000_005_250,
-            clock_offset_ms: Some(5_000),
-            clock_uncertainty_ms: Some(12.5),
-            clock_measured_at_unix_ms: Some(1_700_000_004_321),
+            start_unix_ms_utc: 1_700_000_000_000,
+            end_unix_ms_utc: 1_700_000_000_250,
+            clock,
         }
     }
 
     #[test]
-    fn the_presign_body_carries_the_whole_clock_record_as_strings() {
-        let body = presign_body(&metadata()).unwrap();
-        assert_eq!(body["clock_offset_ms"], json!("5000"));
-        assert_eq!(body["clock_uncertainty_ms"], json!("12.5"));
-        assert_eq!(body["clock_measured_at_unix_ms"], json!("1700000004321"));
-    }
-
-    #[test]
-    fn an_unmeasured_clock_omits_all_three_clock_keys() {
-        let body = presign_body(&FrameChunkMetadata {
-            clock_offset_ms: None,
-            clock_uncertainty_ms: None,
-            clock_measured_at_unix_ms: None,
-            ..metadata()
-        })
-        .unwrap();
-        let keys: Vec<_> = body.as_object().unwrap().keys().collect();
-        assert!(
-            !keys.iter().any(|key| key.starts_with("clock_")),
-            "{keys:?}"
+    fn the_presign_body_sends_host_clock_stamps_with_the_clock_as_an_object() {
+        let body = presign_body(&metadata(Some(Some(CLOCK)))).unwrap();
+        assert_eq!(body["start_unix_ms_utc"], json!("1700000000000"));
+        assert_eq!(
+            body["clock"],
+            json!({"offset_ms": 5_000.25, "uncertainty_ms": 12.5, "measured_at_unix_ms": 1_700_000_004_321.5})
         );
     }
 
     #[test]
-    fn metadata_spooled_before_the_measured_at_field_still_loads() {
-        let mut sidecar = serde_json::to_value(metadata()).unwrap();
-        sidecar
-            .as_object_mut()
-            .unwrap()
-            .remove("clock_measured_at_unix_ms");
+    fn an_unmeasured_clock_is_sent_as_null() {
+        let body = presign_body(&metadata(Some(None))).unwrap();
+        assert_eq!(body["clock"], json!(null));
+    }
+
+    #[test]
+    fn a_chunk_spooled_before_clocks_were_sent_goes_without_one() {
+        // Its SDK converted the stamps itself and recorded the offset beside them.
+        let mut sidecar = serde_json::to_value(metadata(None)).unwrap();
+        sidecar["clock_offset_ms"] = json!(5_000);
         let loaded: FrameChunkMetadata = serde_json::from_value(sidecar).unwrap();
-        assert_eq!(loaded.clock_offset_ms, Some(5_000));
-        assert_eq!(loaded.clock_measured_at_unix_ms, None);
+        assert_eq!(loaded.clock, None);
+        let body = presign_body(&loaded).unwrap();
+        assert!(body.get("clock").is_none(), "{body}");
+    }
+
+    #[test]
+    fn spooled_metadata_round_trips_every_clock_state() {
+        for clock in [None, Some(None), Some(Some(CLOCK))] {
+            let sidecar = serde_json::to_value(metadata(clock)).unwrap();
+            let loaded: FrameChunkMetadata = serde_json::from_value(sidecar).unwrap();
+            assert_eq!(loaded.clock, clock);
+        }
     }
 }
