@@ -2171,7 +2171,9 @@ class Client(BaseClient):
 
         Returns:
             list[dict]: List of instruments with keys including:
-                - synth_source_id (int): Unique instrument ID
+                - synth_source_id (str): Unique instrument ID (a UUID)
+                - legacy_id (int | None): The integer id the instrument had before
+                  instruments took UUIDs; None for instruments created since
                 - source_name (str): Display name
                 - synth_source_type (str): Instrument type (mbe, cvd, etc.)
                 - source_manufacturer (str | None): Manufacturer name
@@ -2191,7 +2193,7 @@ class Client(BaseClient):
         name: str,
         instrument_type: Literal["mbe", "cvd", "pvd", "sputter", "ald", "pld"],
         serial_id: str | None = None,
-    ) -> int:
+    ) -> str:
         """Create a new growth instrument.
 
         Args:
@@ -2201,7 +2203,7 @@ class Client(BaseClient):
             serial_id: Optional serial number or identifier.
 
         Returns:
-            int: The synth_source_id of the created instrument.
+            str: The synth_source_id (a UUID) of the created instrument.
 
         Example:
             >>> instrument_id = client.create_growth_instrument(
@@ -2224,17 +2226,17 @@ class Client(BaseClient):
         )
         return result["synth_source_id"]
 
-    def delete_growth_instrument(self, synth_source_id: int) -> None:
+    def delete_growth_instrument(self, synth_source_id: str) -> None:
         """Delete a growth instrument.
 
         Args:
-            synth_source_id: ID of the instrument to delete.
+            synth_source_id: ID (a UUID) of the instrument to delete.
 
         Raises:
             ClientError: If the instrument is not found or not accessible.
 
         Example:
-            >>> client.delete_growth_instrument(synth_source_id=42)
+            >>> client.delete_growth_instrument(synth_source_id=instrument_id)
         """
         self._delete(
             sub_url="instruments/synthesis",

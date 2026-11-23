@@ -17,12 +17,21 @@ use crate::retry::{with_retries, HttpStatusError};
 use crate::utils::init_tracing_once;
 use crate::warn_py;
 
+/// A growth instrument: its UUID, or the integer id it had before instruments took UUIDs,
+/// which AtomCloud still accepts.
+#[derive(FromPyObject, Serialize, Debug)]
+#[serde(untagged)]
+enum GrowthInstrumentId {
+    Uuid(String),
+    Legacy(i64),
+}
+
 /// Request body for stream initialization.
 #[derive(Serialize, Debug)]
 struct InitializeRequest {
     stream_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    synth_source_id: Option<i64>,
+    synth_source_id: Option<GrowthInstrumentId>,
     points_per_chunk: usize,
     project_id: Option<String>,
 }
@@ -142,7 +151,7 @@ impl TimeseriesStreamer {
         })
     }
 
-    /// initialize(self, stream_name: Optional[str] = None, synth_source_id: Optional[int] = None, ...) -> str
+    /// initialize(self, stream_name: Optional[str] = None, synth_source_id: Optional[str] = None, ...) -> str
     ///
     /// Initialize a new time series stream on the server.
     ///
@@ -151,8 +160,9 @@ impl TimeseriesStreamer {
     ///
     /// Args:
     ///     stream_name (Optional[str]): Human-readable name for the stream.
-    ///     synth_source_id (Optional[int]): Growth instrument ID to link. Must belong to your
-    ///         organization. Use list_instruments() to see available instruments.
+    ///     synth_source_id (Optional[str]): Growth instrument ID (a UUID) to link. Must belong to
+    ///         your organization. Use list_growth_instruments() to see available instruments. The
+    ///         integer id an instrument had before instruments took UUIDs is still accepted.
     ///     physical_sample (Optional[str]): Name or UUID of a physical sample to associate with the
     ///         data item. If a UUID is provided, it must match an existing sample. If a name is
     ///         provided, it is matched case-insensitively against existing samples, or a new sample
@@ -181,7 +191,7 @@ impl TimeseriesStreamer {
         &self,
         py: Python<'_>,
         stream_name: Option<String>,
-        synth_source_id: Option<i64>,
+        synth_source_id: Option<GrowthInstrumentId>,
         physical_sample: Option<String>,
         project_id: Option<String>,
         tags: Option<Vec<String>>,
@@ -998,6 +1008,30 @@ async fn post_chunk<T: Serialize>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_instrument_is_sent_as_its_uuid_or_as_the_legacy_integer_it_was_given() {
+        let body = |synth_source_id| {
+            serde_json::to_value(InitializeRequest {
+                stream_name: None,
+                synth_source_id,
+                points_per_chunk: 1,
+                project_id: None,
+            })
+            .unwrap()["synth_source_id"]
+                .clone()
+        };
+        let uuid = "8d3e7f10-2b4c-4d6e-9f01-3a5b7c9d1e2f";
+        assert_eq!(
+            body(Some(GrowthInstrumentId::Uuid(uuid.into()))),
+            serde_json::json!(uuid)
+        );
+        assert_eq!(
+            body(Some(GrowthInstrumentId::Legacy(136))),
+            serde_json::json!(136)
+        );
+        assert_eq!(body(None), serde_json::Value::Null);
+    }
 
     fn channel(timestamps: &[f64]) -> ChannelPayload {
         ChannelPayload {

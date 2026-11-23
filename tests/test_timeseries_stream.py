@@ -202,6 +202,33 @@ class TestTimeseriesStreamerInitialize:
         assert body["stream_name"] == "My Stream"
         assert body["points_per_chunk"] == 50
 
+    @pytest.mark.parametrize(
+        "synth_source_id", ["8d3e7f10-2b4c-4d6e-9f01-3a5b7c9d1e2f", 136]
+    )
+    def test_initialize_sends_instrument_as_given(
+        self, mock_server_factory, synth_source_id
+    ):
+        """A growth instrument goes out as its UUID, or as the integer id it had before."""
+        from atomscale.streaming.rheed_stream import TimeseriesStreamer
+
+        response = json.dumps({
+            "data_id": "test-data-id",
+            "processed_data_id": "test-processed-id",
+        })
+        server = mock_server_factory(response)
+
+        streamer = TimeseriesStreamer(
+            api_key="test-api-key",
+            endpoint=server.endpoint,
+            points_per_chunk=50,
+        )
+
+        streamer.initialize(stream_name="My Stream", synth_source_id=synth_source_id)
+
+        body = server.get_captured_body()
+        assert body is not None
+        assert body["synth_source_id"] == synth_source_id
+
     def test_initialize_attaches_tag(self, mock_server_factory):
         """Verify tags wire through TimeseriesStreamer.initialize.
 
