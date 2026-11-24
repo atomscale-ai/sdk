@@ -225,6 +225,7 @@ class Client(BaseClient):
 
         Returns:
             (DataFrame): Pandas DataFrame containing matched entries in the data catalogue.
+                If no entries match, the frame has zero rows and retains the standard columns.
 
         """
         if last_accessed_datetime is not None:
@@ -275,6 +276,8 @@ class Client(BaseClient):
             "raw_name": "File Name",
             "pipeline_status": "Status",
             "raw_file_type": "File Type",
+            "tool_name": "Instrument Source",
+            # The name an AtomCloud from before instruments were renamed tools sends.
             "source_name": "Instrument Source",
             "sample_name": "Sample Name",
             "growth_length": "Growth Length",
@@ -295,6 +298,7 @@ class Client(BaseClient):
 
         columns_to_drop = [
             "user_id",
+            "tool_id",
             "synth_source_id",
             "target_material_id",
             "processed_file_type",
@@ -346,6 +350,9 @@ class Client(BaseClient):
             "Collected Datetime",
             "Has Instrument Logs",
         ]
+        if catalogue.empty:
+            return DataFrame(columns=desired_order)
+
         ordered_cols = [col for col in desired_order if col in catalogue.columns] + [
             col for col in catalogue.columns if col not in desired_order
         ]
