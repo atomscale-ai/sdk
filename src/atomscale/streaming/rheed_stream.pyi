@@ -250,10 +250,12 @@ class TimeseriesStreamer:
     def initialize(
         self,
         stream_name: str | None = None,
-        synth_source_id: str | int | None = None,
+        tool_id: str | int | None = None,
         physical_sample: str | None = None,
         project_id: str | None = None,
         tags: list[str] | None = None,
+        *,
+        synth_source_id: str | int | None = None,
     ) -> str:
         """Initialize a new timeseries stream.
 
@@ -262,10 +264,10 @@ class TimeseriesStreamer:
 
         Args:
             stream_name: Human-readable name for the stream.
-            synth_source_id: Growth instrument ID (a UUID) to link. Must belong to
+            tool_id: ID (a UUID) of the tool (instrument) to link. Must belong to
                 your organization. Use list_growth_instruments() to see available
-                instruments. The integer id an instrument had before instruments
-                took UUIDs is still accepted.
+                tools. The integer id an instrument had before instruments took
+                UUIDs is still accepted.
             physical_sample: Name or UUID of a physical sample to associate
                 with the data item. If a UUID is provided, it must match an
                 existing sample. If a name is provided, it is matched
@@ -277,6 +279,7 @@ class TimeseriesStreamer:
                 POST /projects/{id}/configuration/tracking_samples. The sample
                 is also marked as the project's active tracking sample for
                 growth monitoring.
+            synth_source_id: Deprecated name for ``tool_id``.
 
         Returns:
             The data_id for this stream.

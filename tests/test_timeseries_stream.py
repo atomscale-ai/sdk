@@ -10,6 +10,7 @@ import socket
 import subprocess
 import sys
 import time
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 
@@ -202,13 +203,49 @@ class TestTimeseriesStreamerInitialize:
         assert body["stream_name"] == "My Stream"
         assert body["points_per_chunk"] == 50
 
-    @pytest.mark.parametrize(
-        "synth_source_id", ["8d3e7f10-2b4c-4d6e-9f01-3a5b7c9d1e2f", 136]
-    )
-    def test_initialize_sends_instrument_as_given(
-        self, mock_server_factory, synth_source_id
-    ):
-        """A growth instrument goes out as its UUID, or as the integer id it had before."""
+    @pytest.mark.parametrize("tool_id", ["8d3e7f10-2b4c-4d6e-9f01-3a5b7c9d1e2f", 136])
+    def test_initialize_sends_tool_as_given(self, mock_server_factory, tool_id):
+        """A tool goes out as its UUID, or as the integer id it had before."""
+        streamer, server = self._initialize_streamer(mock_server_factory)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            streamer.initialize(stream_name="My Stream", tool_id=tool_id)
+
+        body = server.get_captured_body()
+        assert body is not None
+        assert body["tool_id"] == tool_id
+        assert "synth_source_id" not in body
+
+    def test_initialize_takes_the_tool_positionally(self, mock_server_factory):
+        """tool_id holds the place synth_source_id had, so positional calls still link."""
+        streamer, server = self._initialize_streamer(mock_server_factory)
+
+        streamer.initialize("My Stream", "8d3e7f10-2b4c-4d6e-9f01-3a5b7c9d1e2f")
+
+        assert server.get_captured_body()["tool_id"] == (
+            "8d3e7f10-2b4c-4d6e-9f01-3a5b7c9d1e2f"
+        )
+
+    def test_initialize_still_takes_synth_source_id(self, mock_server_factory):
+        """The pre-rename keyword still links the tool, with a deprecation warning."""
+        streamer, server = self._initialize_streamer(mock_server_factory)
+
+        with pytest.warns(DeprecationWarning, match="use tool_id"):
+            streamer.initialize(stream_name="My Stream", synth_source_id=136)
+
+        body = server.get_captured_body()
+        assert body["tool_id"] == 136
+        assert "synth_source_id" not in body
+
+    def test_initialize_refuses_both_tool_names(self, mock_server_factory):
+        streamer, _ = self._initialize_streamer(mock_server_factory)
+
+        with pytest.raises(TypeError, match="not both"):
+            streamer.initialize(tool_id=136, synth_source_id=136)
+
+    @staticmethod
+    def _initialize_streamer(mock_server_factory):
         from atomscale.streaming.rheed_stream import TimeseriesStreamer
 
         response = json.dumps({
@@ -216,18 +253,12 @@ class TestTimeseriesStreamerInitialize:
             "processed_data_id": "test-processed-id",
         })
         server = mock_server_factory(response)
-
         streamer = TimeseriesStreamer(
             api_key="test-api-key",
             endpoint=server.endpoint,
             points_per_chunk=50,
         )
-
-        streamer.initialize(stream_name="My Stream", synth_source_id=synth_source_id)
-
-        body = server.get_captured_body()
-        assert body is not None
-        assert body["synth_source_id"] == synth_source_id
+        return streamer, server
 
     def test_initialize_attaches_tag(self, mock_server_factory):
         """Verify tags wire through TimeseriesStreamer.initialize.
