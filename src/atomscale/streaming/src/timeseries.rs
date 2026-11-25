@@ -1,10 +1,11 @@
 use anyhow::Result;
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::exceptions::{PyDeprecationWarning, PyRuntimeError, PyTypeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyIterator};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use std::ffi::CString;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
@@ -17,11 +18,11 @@ use crate::retry::{with_retries, HttpStatusError};
 use crate::utils::init_tracing_once;
 use crate::warn_py;
 
-/// A growth instrument: its UUID, or the integer id it had before instruments took UUIDs,
+/// A tool (instrument): its UUID, or the integer id it had before instruments took UUIDs,
 /// which AtomCloud still accepts.
 #[derive(FromPyObject, Serialize, Debug)]
 #[serde(untagged)]
-enum GrowthInstrumentId {
+enum ToolId {
     Uuid(String),
     Legacy(i64),
 }
@@ -31,7 +32,7 @@ enum GrowthInstrumentId {
 struct InitializeRequest {
     stream_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    synth_source_id: Option<GrowthInstrumentId>,
+    tool_id: Option<ToolId>,
     points_per_chunk: usize,
     project_id: Option<String>,
 }
@@ -156,7 +157,7 @@ impl TimeseriesStreamer {
         })
     }
 
-    /// initialize(self, stream_name: Optional[str] = None, synth_source_id: Optional[str] = None, ...) -> str
+    /// initialize(self, stream_name: Optional[str] = None, tool_id: Optional[str] = None, ...) -> str
     ///
     /// Initialize a new time series stream on the server.
     ///
@@ -165,8 +166,8 @@ impl TimeseriesStreamer {
     ///
     /// Args:
     ///     stream_name (Optional[str]): Human-readable name for the stream.
-    ///     synth_source_id (Optional[str]): Growth instrument ID (a UUID) to link. Must belong to
-    ///         your organization. Use list_growth_instruments() to see available instruments. The
+    ///     tool_id (Optional[str]): ID (a UUID) of the tool (instrument) to link. Must belong to
+    ///         your organization. Use list_growth_instruments() to see available tools. The
     ///         integer id an instrument had before instruments took UUIDs is still accepted.
     ///     physical_sample (Optional[str]): Name or UUID of a physical sample to associate with the
     ///         data item. If a UUID is provided, it must match an existing sample. If a name is
@@ -179,6 +180,7 @@ impl TimeseriesStreamer {
     ///     tags (Optional[List[str]]): List of tag names or UUIDs to attach to the data item. Names
     ///         are matched case-insensitively against existing org tags; unknown names are created.
     ///         UUIDs must reference existing tags.
+    ///     synth_source_id (Optional[str]): Deprecated name for `tool_id`.
     ///
     /// Returns:
     ///     str: The data_id for this stream.
@@ -188,19 +190,43 @@ impl TimeseriesStreamer {
     ///         found. The physical sample and tags are resolved before the stream is created, so
     ///         a bad one creates nothing. If linking fails after creation, the stream is
     ///         finalized and the error names its `data_id`.
-    #[pyo3(signature = (stream_name=None, synth_source_id=None, physical_sample=None, project_id=None, tags=None))]
+    #[pyo3(signature = (stream_name=None, tool_id=None, physical_sample=None, project_id=None, tags=None, *, synth_source_id=None))]
     #[pyo3(
-        text_signature = "(stream_name=None, synth_source_id=None, physical_sample=None, project_id=None, tags=None)"
+        text_signature = "(stream_name=None, tool_id=None, physical_sample=None, project_id=None, tags=None, *, synth_source_id=None)"
     )]
+    #[allow(clippy::too_many_arguments)]
     fn initialize(
         &self,
         py: Python<'_>,
         stream_name: Option<String>,
-        synth_source_id: Option<GrowthInstrumentId>,
+        tool_id: Option<ToolId>,
         physical_sample: Option<String>,
         project_id: Option<String>,
         tags: Option<Vec<String>>,
+        synth_source_id: Option<ToolId>,
     ) -> PyResult<String> {
+        let tool_id = match (tool_id, synth_source_id) {
+            (Some(_), Some(_)) => {
+                return Err(PyTypeError::new_err(
+                    "Pass tool_id or its deprecated name synth_source_id, not both.",
+                ))
+            }
+            (None, Some(legacy)) => {
+                PyErr::warn(
+                    py,
+                    &py.get_type::<PyDeprecationWarning>(),
+                    &CString::new(
+                        "TimeseriesStreamer.initialize(synth_source_id=...) is deprecated; \
+                         use tool_id=... instead.",
+                    )
+                    .expect("no NUL bytes"),
+                    1,
+                )?;
+                Some(legacy)
+            }
+            (tool_id, None) => tool_id,
+        };
+
         // Measure the lab clock before the first point is stamped; a failure streams uncorrected.
         if let Some(clock) = &self.clock {
             py.detach(|| clock.wait_for_first_attempt());
@@ -231,7 +257,7 @@ impl TimeseriesStreamer {
 
         let request = InitializeRequest {
             stream_name,
-            synth_source_id,
+            tool_id,
             points_per_chunk: self.points_per_chunk,
             project_id,
         };
@@ -1005,26 +1031,23 @@ mod tests {
     }
 
     #[test]
-    fn an_instrument_is_sent_as_its_uuid_or_as_the_legacy_integer_it_was_given() {
-        let body = |synth_source_id| {
+    fn a_tool_is_sent_as_its_uuid_or_as_the_legacy_integer_it_was_given() {
+        let body = |tool_id| {
             serde_json::to_value(InitializeRequest {
                 stream_name: None,
-                synth_source_id,
+                tool_id,
                 points_per_chunk: 1,
                 project_id: None,
             })
-            .unwrap()["synth_source_id"]
+            .unwrap()["tool_id"]
                 .clone()
         };
         let uuid = "8d3e7f10-2b4c-4d6e-9f01-3a5b7c9d1e2f";
         assert_eq!(
-            body(Some(GrowthInstrumentId::Uuid(uuid.into()))),
+            body(Some(ToolId::Uuid(uuid.into()))),
             serde_json::json!(uuid)
         );
-        assert_eq!(
-            body(Some(GrowthInstrumentId::Legacy(136))),
-            serde_json::json!(136)
-        );
+        assert_eq!(body(Some(ToolId::Legacy(136))), serde_json::json!(136));
         assert_eq!(body(None), serde_json::Value::Null);
     }
 

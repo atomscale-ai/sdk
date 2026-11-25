@@ -53,6 +53,7 @@ from atomscale.timeseries.physical_sample import (
     physical_sample_timeseries_to_dataframe,
 )
 from atomscale.timeseries.registry import get_provider
+from atomscale.tools import ToolType, as_tool
 
 TimeseriesDomain = Literal["rheed", "optical", "tool_state"]
 
@@ -275,6 +276,8 @@ class Client(BaseClient):
             "raw_name": "File Name",
             "pipeline_status": "Status",
             "raw_file_type": "File Type",
+            "tool_name": "Instrument Source",
+            # The name an AtomCloud from before instruments were renamed tools sends.
             "source_name": "Instrument Source",
             "sample_name": "Sample Name",
             "growth_length": "Growth Length",
@@ -295,6 +298,7 @@ class Client(BaseClient):
 
         columns_to_drop = [
             "user_id",
+            "tool_id",
             "synth_source_id",
             "target_material_id",
             "processed_file_type",
@@ -1066,7 +1070,13 @@ class Client(BaseClient):
         )
 
     def list_physical_samples(self) -> DataFrame:
-        """List physical samples available to the user."""
+        """List physical samples available to the user.
+
+        The ``Growth Instrument`` column holds each sample's tool as a dict with the
+        keys :meth:`list_growth_instruments` returns, or ``None``. AtomCloud derives
+        it from the sample's data items; it cannot be set on the sample. ``Owner``
+        is ``None`` once the creator's account is deleted.
+        """
         data = self._get(sub_url="physical_samples/")
         if data is None:
             return DataFrame(None)
@@ -1092,6 +1102,12 @@ class Client(BaseClient):
             samples["detail_note_last_updated"] = samples[
                 "detail_note_last_updated"
             ].apply(lambda v: None if (pd.isna(v) or v == "NaT") else v)
+
+        if "growth_instrument" in samples.columns and "tool" not in samples.columns:
+            # An AtomCloud from before instruments were renamed tools.
+            samples = samples.rename(columns={"growth_instrument": "tool"})
+        if "tool" in samples.columns:
+            samples["tool"] = samples["tool"].apply(as_tool)
 
         if "target_material" in samples.columns:
             samples["target_material"] = samples["target_material"].apply(
@@ -1125,7 +1141,7 @@ class Client(BaseClient):
             "id": "Physical Sample ID",
             "owner_name": "Owner",
             "target_material": "Target Material",
-            "growth_instrument": "Growth Instrument",
+            "tool": "Growth Instrument",
             "num_data_items": "Data Items",
             "project_id": "Project ID",
             "project_name": "Project Name",
@@ -2165,45 +2181,61 @@ class Client(BaseClient):
     # -------------------------------------------------------------------------
 
     def list_growth_instruments(self) -> list[dict[str, Any]]:
-        """List all growth instruments accessible by the user.
+        """List the tools (instruments) in the user's organization.
 
-        Returns instruments within the user's organization.
+        Instruments are called tools in AtomCloud. They include process tools
+        (MBE, CVD, ...) and measurement instruments (RHEED, XPS, SEM, ...).
 
         Returns:
-            list[dict]: List of instruments with keys including:
-                - synth_source_id (str): Unique instrument ID (a UUID)
+            list[dict]: One dict per tool, with keys including:
+                - id (str): Unique tool ID (a UUID)
                 - legacy_id (int | None): The integer id the instrument had before
                   instruments took UUIDs; None for instruments created since
-                - source_name (str): Display name
-                - synth_source_type (str): Instrument type (mbe, cvd, etc.)
-                - source_manufacturer (str | None): Manufacturer name
-                - source_model (str | None): Model name
+                - name (str): Display name
+                - tool_type (str): Tool type (mbe, cvd, rheed, xps, ...)
+                - manufacturer (str): Manufacturer name
+                - model (str): Model name
+                - make_id (int): ID of the tool's make
+                - tool_metadata (dict): Label, serial number and other metadata
+                - host_tool_id (str | None): The process tool a measurement
+                  instrument is mounted on, such as the chamber of a RHEED system
+                - user_id, user_name (str | None): The creator; None once the
+                  creator's account is deleted
+
+            The keys from before the rename (``synth_source_id``, ``source_name``,
+            ``synth_source_type``, ``source_makes_id``, ``source_metadata``,
+            ``source_model``, ``source_manufacturer``) still read, with a
+            :class:`DeprecationWarning`.
 
         Example:
             >>> instruments = client.list_growth_instruments()
             >>> for inst in instruments:
-            ...     print(f"{inst['synth_source_id']}: {inst['source_name']}")
+            ...     print(f"{inst['id']}: {inst['name']}")
         """
         result = self._get(sub_url="instruments/synthesis")
-        return result if result else []
+        return [as_tool(tool) for tool in result] if result else []
 
     def create_growth_instrument(
         self,
         label: str,
         name: str,
-        instrument_type: Literal["mbe", "cvd", "pvd", "sputter", "ald", "pld"],
+        instrument_type: ToolType,
         serial_id: str | None = None,
+        host_tool_id: str | None = None,
     ) -> str:
-        """Create a new growth instrument.
+        """Create a new tool (instrument).
 
         Args:
-            label: Display name for the instrument (e.g., "Main MBE").
+            label: Display name for the tool (e.g., "Main MBE").
             name: Manufacturer and model (e.g., "Veeco GEN10").
-            instrument_type: Type of instrument.
+            instrument_type: Type of tool: a process tool (``"mbe"``, ``"cvd"``,
+                ...) or a measurement instrument (``"rheed"``, ``"xps"``, ...).
             serial_id: Optional serial number or identifier.
+            host_tool_id: ID (a UUID) of the process tool a measurement instrument
+                is mounted on, such as the chamber of a RHEED system.
 
         Returns:
-            str: The synth_source_id (a UUID) of the created instrument.
+            str: The ID (a UUID) of the created tool.
 
         Example:
             >>> instrument_id = client.create_growth_instrument(
@@ -2219,26 +2251,45 @@ class Client(BaseClient):
             "type": instrument_type,
             "serial_id": serial_id,
         }
+        if host_tool_id is not None:
+            body["host_tool_id"] = host_tool_id
         result = self._post_or_put(
             method="POST",
             sub_url="instruments/synthesis",
             body=body,
         )
-        return result["synth_source_id"]
+        return as_tool(result)["id"]
 
-    def delete_growth_instrument(self, synth_source_id: str) -> None:
-        """Delete a growth instrument.
+    def delete_growth_instrument(
+        self, tool_id: str | None = None, *, synth_source_id: str | None = None
+    ) -> None:
+        """Delete a tool (instrument).
 
         Args:
-            synth_source_id: ID (a UUID) of the instrument to delete.
+            tool_id: ID (a UUID) of the tool to delete.
+            synth_source_id: Deprecated name for ``tool_id``.
 
         Raises:
-            ClientError: If the instrument is not found or not accessible.
+            ClientError: If the tool is not found or not accessible.
 
         Example:
-            >>> client.delete_growth_instrument(synth_source_id=instrument_id)
+            >>> client.delete_growth_instrument(tool_id=instrument_id)
         """
+        if synth_source_id is not None:
+            if tool_id is not None:
+                raise TypeError(
+                    "Pass tool_id or its deprecated name synth_source_id, not both."
+                )
+            warnings.warn(
+                "delete_growth_instrument(synth_source_id=...) is deprecated; "
+                "use tool_id=... instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            tool_id = synth_source_id
+        if tool_id is None:
+            raise TypeError("delete_growth_instrument() needs a tool_id.")
         self._delete(
             sub_url="instruments/synthesis",
-            params={"synthesis_instrument_ids": synth_source_id},
+            params={"synthesis_instrument_ids": tool_id},
         )
