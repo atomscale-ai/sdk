@@ -226,6 +226,7 @@ class Client(BaseClient):
 
         Returns:
             (DataFrame): Pandas DataFrame containing matched entries in the data catalogue.
+                If no entries match, the frame has zero rows and retains the standard columns.
 
         """
         if last_accessed_datetime is not None:
@@ -350,6 +351,9 @@ class Client(BaseClient):
             "Collected Datetime",
             "Has Instrument Logs",
         ]
+        if catalogue.empty:
+            return DataFrame(columns=desired_order)
+
         ordered_cols = [col for col in desired_order if col in catalogue.columns] + [
             col for col in catalogue.columns if col not in desired_order
         ]

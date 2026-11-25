@@ -4,6 +4,7 @@ from unittest import mock
 
 import pytest
 from pandas import DataFrame
+from pytest_httpserver import HTTPServer
 from requests.exceptions import ConnectionError as RequestsConnectionError
 
 from atomscale import Client
@@ -52,9 +53,11 @@ def test_generic_search(client: Client):
             "sha256",
             "Collected Datetime",
             "Has Instrument Logs",
+            "Workspaces",
         ]
     )
-    assert not len(set(orig_data.keys().values) - column_names)
+    unexpected = set(orig_data.columns) - column_names
+    assert not unexpected, f"Unexpected search columns: {unexpected}"
 
 
 def test_keyword_search(client: Client):
@@ -62,20 +65,62 @@ def test_keyword_search(client: Client):
     assert len(data["Data ID"].values)
 
 
-def test_include_org_search(client: Client):
-    data = client.search(include_organization_data=False)
-    assert len(data["Data ID"].values)
+@pytest.mark.parametrize(
+    ("name_key", "id_key"),
+    [("source_name", "synth_source_id"), ("tool_name", "tool_id")],
+)
+def test_search_preserves_instrument_source(httpserver: HTTPServer, name_key, id_key):
+    httpserver.expect_request("/data_entries/", method="GET").respond_with_json(
+        [{"data_id": "upload", name_key: "Main MBE", id_key: "tool-uuid"}]
+    )
+    client = Client(api_key="key_test", endpoint=httpserver.url_for("/"))
+
+    assert client.search().to_dict("records") == [
+        {"Data ID": "upload", "Instrument Source": "Main MBE"}
+    ]
+
+
+def test_empty_search_preserves_columns(httpserver: HTTPServer):
+    httpserver.expect_request("/data_entries/", method="GET").respond_with_json([])
+    client = Client(api_key="key_test", endpoint=httpserver.url_for("/"))
+
+    data = client.search()
+
+    assert data.empty
+    assert data["Data ID"].tolist() == []
+    assert "Instrument Source" in data.columns
+
+
+def test_include_org_search(httpserver: HTTPServer):
+    own_row = {"data_id": "personal-upload"}
+    teammate_row = {"data_id": "teammate-upload"}
+    httpserver.expect_request(
+        "/data_entries/",
+        method="GET",
+        query_string={"status": "all", "include_organization_data": "True"},
+    ).respond_with_json([own_row, teammate_row])
+    httpserver.expect_request(
+        "/data_entries/",
+        method="GET",
+        query_string={"status": "all", "include_organization_data": "False"},
+    ).respond_with_json([own_row])
+    client = Client(api_key="key_test", endpoint=httpserver.url_for("/"))
+
+    assert client.search()["Data ID"].tolist() == ["personal-upload", "teammate-upload"]
+    assert client.search(include_organization_data=False)["Data ID"].tolist() == [
+        "personal-upload"
+    ]
 
 
 def test_data_ids_search(client: Client):
-    user_data = client.search(include_organization_data=False)
-    # Keep request size bounded when this test runs against live catalogue data.
-    data_ids = list(user_data["Data ID"].values)[:20]
+    data_ids = client.search()["Data ID"].drop_duplicates().head(2).tolist()
+    assert len(data_ids) == 2, "ID search needs two visible catalogue items"
+
     data = client.search(data_ids=data_ids)
-    assert len(data["Data ID"].values) == len(data_ids)
+    assert sorted(data["Data ID"].tolist()) == sorted(data_ids)
 
     data = client.search(data_ids=data_ids[0])
-    assert data["Data ID"].values[0] == data_ids[0]
+    assert data["Data ID"].tolist() == [data_ids[0]]
 
 
 def test_data_type_search(client: Client):
