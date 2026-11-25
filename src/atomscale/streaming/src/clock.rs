@@ -1,8 +1,10 @@
 //! The lab computer's clock measured against AtomCloud's reference clock.
 //!
-//! Lab PCs drift by seconds to minutes, so a stream never sends the host clock as it reads: every
-//! timestamp leaves converted to reference UTC, exactly as the gateway does (its `labClock.ts`).
-//! The host clock itself is never changed.
+//! Lab PCs drift by seconds to minutes, so no stream sends the host clock without saying how it
+//! compares with AtomCloud's. Timeseries chunks and RHEED shards send their timestamps as read,
+//! with the measurement (`ClockStatus`) as their `clock`, and AtomCloud converts a stream's
+//! stamps by the first measurement it receives, as for the gateway's chunks. The host clock
+//! itself is never changed.
 //!
 //! The offset comes from NTP's four-timestamp exchange over HTTPS (`GET /gateway/time`, public and
 //! free of database work so nothing skews it). That measures the round trip in both directions: the
@@ -12,14 +14,14 @@
 //!
 //! One clock is shared by every streamer of an endpoint in the process, so RHEED and tool-state
 //! streams are corrected by the same offset. Set `ATOMSCALE_SKIP_CLOCK_SYNC` to send host time
-//! unchanged.
+//! with no measurement.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use anyhow::{bail, Context, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, info, warn};
 
 /// Environment variable that turns clock correction off.
@@ -45,8 +47,10 @@ struct Sample {
     measured_at_ms: f64,
 }
 
-/// A measurement of the clock offset: reference UTC minus host, and the bound on its error.
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// The clock offset in effect: reference UTC minus host, the bound on its error and the
+/// reference time of the sample behind it. Serialized, it is the `clock` a timeseries chunk
+/// carries beside its host-clock stamps, the same measurement the gateway sends.
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ClockStatus {
     pub offset_ms: f64,
     pub uncertainty_ms: f64,
@@ -145,60 +149,29 @@ struct TimeResponse {
     transmitted_at_unix_ms: f64,
 }
 
-/// The correction applied to one timestamp: reference UTC minus the host clock, and the bound on
-/// its error (half the round trip of the sample it came from). Recorded beside every stamp so a
-/// consumer can undo or refine it later.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Correction {
-    pub offset_ms: i64,
-    pub uncertainty_ms: f64,
-}
-
 pub struct LabClock {
     state: Mutex<ClockState>,
     attempted: Condvar,
 }
 
 impl LabClock {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             state: Mutex::new(ClockState::default()),
             attempted: Condvar::new(),
         }
     }
 
-    /// Reference UTC minus host clock, in milliseconds; 0 until the first measurement.
-    pub fn offset_ms(&self) -> f64 {
-        let mut state = self.state.lock().expect("lab clock mutex poisoned");
-        state.current_offset(host_now_ms()).unwrap_or(0.0)
-    }
-
-    /// A host-clock time as reference UTC, with the correction that was applied so the caller
-    /// can record it beside the stamp. Unchanged, with no correction, until the first
-    /// measurement. The offset is applied in whole milliseconds, so `host + offset == utc`.
-    pub fn correct_ms(&self, host_ms: i64) -> (i64, Option<Correction>) {
-        let mut state = self.state.lock().expect("lab clock mutex poisoned");
-        let (Some(offset), Some(best)) = (state.current_offset(host_now_ms()), state.best) else {
-            return (host_ms, None);
-        };
-        let offset_ms = offset.round() as i64;
-        let uncertainty_ms = (best.delay_ms / 2.0 * 10.0).round() / 10.0;
-        (
-            host_ms + offset_ms,
-            Some(Correction {
-                offset_ms,
-                uncertainty_ms,
-            }),
-        )
-    }
-
+    /// The offset in effect and the sample behind it, read together; `None` until the first
+    /// measurement.
     pub fn status(&self) -> Option<ClockStatus> {
         let mut state = self.state.lock().expect("lab clock mutex poisoned");
         let offset_ms = state.current_offset(host_now_ms())?;
         let best = state.best?;
         Some(ClockStatus {
             offset_ms,
-            uncertainty_ms: best.delay_ms / 2.0,
+            // While it slews, the offset in effect is short of the best sample by the rest.
+            uncertainty_ms: best.delay_ms / 2.0 + (best.offset_ms - offset_ms).abs(),
             measured_at_unix_ms: best.measured_at_ms,
         })
     }
@@ -359,10 +332,17 @@ pub fn lab_clock_for(endpoint: &str) -> Option<Arc<LabClock>> {
 #[cfg(test)]
 impl LabClock {
     /// A clock part way through slewing from `offset_ms` toward `target_ms`, for streamer tests.
+    /// Its measurement was a 40 ms round trip (±20 ms), taken at reference time
+    /// 1_700_000_000_123 ms.
     pub(crate) fn slewing(offset_ms: f64, target_ms: f64) -> Self {
         let clock = Self::new();
         {
             let mut state = clock.state.lock().expect("lab clock mutex poisoned");
+            state.best = Some(Sample {
+                offset_ms: target_ms,
+                delay_ms: 40.0,
+                measured_at_ms: 1_700_000_000_123.4,
+            });
             state.offset_ms = Some(offset_ms);
             state.target_ms = target_ms;
             state.adjusted_at_ms = host_now_ms();
@@ -498,32 +478,5 @@ mod tests {
         );
         assert_eq!(state.samples.len(), 1);
         assert_eq!(state.current_offset(1.0), Some(65_000.0));
-    }
-
-    #[test]
-    fn a_corrected_stamp_reports_the_correction_that_produced_it() {
-        let clock = LabClock::new();
-        assert_eq!(
-            clock.correct_ms(1_000),
-            (1_000, None),
-            "unmeasured passes through"
-        );
-        clock.state.lock().unwrap().record(
-            Sample {
-                offset_ms: 5_000.4,
-                delay_ms: 20.0,
-                measured_at_ms: 0.0,
-            },
-            host_now_ms(),
-        );
-        let (utc, correction) = clock.correct_ms(1_000);
-        let correction = correction.expect("measured");
-        assert_eq!(correction.offset_ms, 5_000);
-        assert_eq!(correction.uncertainty_ms, 10.0);
-        assert_eq!(
-            utc,
-            1_000 + correction.offset_ms,
-            "host + offset == stamp, exactly"
-        );
     }
 }

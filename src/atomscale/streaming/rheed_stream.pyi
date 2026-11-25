@@ -147,7 +147,8 @@ class RHEEDStreamer:
             chunk_idx: Zero-based chunk index for ordering.
             frames: Grayscale uint8 array, shape (N, H, W) or (H, W).
             capture_start_ms_utc: Optional capture-time timestamp (ms since
-                UNIX epoch, UTC) for the first frame in the chunk. Pass it
+                UNIX epoch, on this computer's clock) for the first frame in
+                the chunk; AtomCloud converts it by the measured clock. Pass it
                 whenever you have a hardware/trigger timestamp aligned with
                 frame capture. When omitted, the chunk is taken to have just
                 finished capturing: ``Utc::now()`` at push entry minus the
@@ -188,16 +189,19 @@ class RHEEDStreamer:
     def clock_status(self) -> dict[str, float] | None:
         """This computer's clock measured against AtomCloud's reference clock.
 
-        Every timestamp is read as this computer's clock and sent as reference UTC,
-        like the gateway: the offset comes from an NTP-style four-timestamp exchange
-        with ``GET /gateway/time``, so it accounts for the transit time in both
-        directions. Returns ``None`` when correction is off (set the
-        ``ATOMSCALE_SKIP_CLOCK_SYNC`` environment variable) or no measurement has
-        succeeded yet; then timestamps are sent as read.
+        Every timestamp is read as this computer's clock and sent as it is, with
+        this measurement, like the gateway; AtomCloud converts the stream's timestamps
+        to reference UTC by the first measurement it receives and records that offset
+        with the stream. The offset comes from an NTP-style
+        four-timestamp exchange with ``GET /gateway/time``, so it accounts for the
+        transit time in both directions. Returns ``None`` when correction is off
+        (set the ``ATOMSCALE_SKIP_CLOCK_SYNC`` environment variable) or no
+        measurement has succeeded yet; then AtomCloud stores timestamps as sent.
 
         Returns:
             ``offset_ms`` (reference UTC minus this computer's clock),
-            ``uncertainty_ms`` (bound on its error: half the best round trip) and
+            ``uncertainty_ms`` (bound on its error: half the best round trip, plus
+            how far the offset in effect still is from that sample's) and
             ``measured_at_unix_ms``.
         """
 
@@ -234,16 +238,20 @@ class TimeseriesStreamer:
     def clock_status(self) -> dict[str, float] | None:
         """This computer's clock measured against AtomCloud's reference clock.
 
-        Every timestamp is read as this computer's clock and sent as reference UTC,
-        like the gateway: the offset comes from an NTP-style four-timestamp exchange
-        with ``GET /gateway/time``, so it accounts for the transit time in both
-        directions. Returns ``None`` when correction is off (set the
-        ``ATOMSCALE_SKIP_CLOCK_SYNC`` environment variable) or no measurement has
-        succeeded yet; then timestamps are sent as read.
+        Every timestamp is read as this computer's clock and sent as it is, with
+        this measurement, like the gateway; AtomCloud converts the stream's timestamps
+        to reference UTC by the first measurement it receives and records that offset
+        with the stream, so the stream's times map back to this computer's clock. The
+        offset comes from an NTP-style
+        four-timestamp exchange with ``GET /gateway/time``, so it accounts for the
+        transit time in both directions. Returns ``None`` when correction is off
+        (set the ``ATOMSCALE_SKIP_CLOCK_SYNC`` environment variable) or no
+        measurement has succeeded yet; then AtomCloud stores timestamps as sent.
 
         Returns:
             ``offset_ms`` (reference UTC minus this computer's clock),
-            ``uncertainty_ms`` (bound on its error: half the best round trip) and
+            ``uncertainty_ms`` (bound on its error: half the best round trip, plus
+            how far the offset in effect still is from that sample's) and
             ``measured_at_unix_ms``.
         """
 
@@ -314,9 +322,8 @@ class TimeseriesStreamer:
 
         All channels of the chunk go in one request, so the server writes the shared
         time axis once per chunk. Prefer this over one push() per channel. Channels
-        with no points are left out. Every channel is moved onto reference UTC by the
-        same clock reading, so channels sent with the same timestamps arrive with the
-        same timestamps. Network errors, 5xx and 429 responses are retried up to 3
+        with no points are left out. Every channel goes with the same clock
+        reading. Network errors, 5xx and 429 responses are retried up to 3
         times; a chunk that still fails is logged at warning level and reported by
         flush() and finalize().
 
