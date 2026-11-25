@@ -194,8 +194,10 @@ discarded. Default 24 h.</p></li>
 <span class="sig-name descname"><span class="pre">clock_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span></dt>
 <dd><p>This computer’s clock measured against AtomCloud’s reference clock, or <cite>None</cite> when
 correction is off (<cite>ATOMSCALE_SKIP_CLOCK_SYNC</cite>) or no measurement has succeeded yet.
-Every chunk is stamped in reference UTC, so <cite>offset_ms</cite> (reference minus host) is the
-correction in effect, <cite>uncertainty_ms</cite> bounds its error (half the best round trip) and
+Every chunk goes with this measurement; AtomCloud converts the stream’s stamps by the
+first one it receives.
+<cite>offset_ms</cite> (reference minus host) is the correction in effect, <cite>uncertainty_ms</cite> bounds
+its error (half the best round trip, plus how far the offset still has to slew) and
 <cite>measured_at_unix_ms</cite> is the reference time of the sample it came from.</p>
 </dd></dl>
 <dl class="py method">
@@ -307,8 +309,9 @@ backend sees a missing shard rather than your loop stalling.</p>
 <p>After your last <cite>push(…)</cite>, call <strong>`finalize(data_id)`</strong> to mark the stream as complete on the server.</p>
 <section id="timestamps">
 <h2>Timestamps<a class="headerlink" href="#timestamps" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#timestamps'"><span>#</span></a></h2>
-<p>Every chunk is stamped with when its first frame was <strong>captured</strong>, so the stream
-aligns with other lab wall-clock data. The chunk’s <cite>end_unix_ms_utc</cite> is
+<p>Every chunk is stamped with when its first frame was <strong>captured</strong>, on this computer’s
+clock; AtomCloud converts the stamps by this computer’s measured clock, so the stream
+aligns with other lab data. The chunk’s <cite>end_unix_ms_utc</cite> is
 <cite>start + (n / fps) * 1000</cite>. Pass <cite>capture_start_ms_utc</cite> whenever you have a real
 capture clock (camera trigger, OS monotonic-to-utc conversion). When you do not, the
 chunk is taken to have just finished being captured: <cite>push()</cite> samples <cite>Utc::now()</cite> on
@@ -348,7 +351,7 @@ pushed late is stamped late.</p>
 </dd>
 <dt class="field-odd">param capture_start_ms_utc<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Capture-start timestamp in milliseconds
-since UNIX epoch (UTC). Pass when you have a real capture-time clock
+since UNIX epoch, on this computer’s clock. Pass when you have a real capture-time clock
 (camera trigger, OS monotonic-to-utc conversion). When None, the chunk is
 taken to have just finished capturing: <cite>Utc::now()</cite> on entry minus <cite>n / fps</cite>.</p>
 </dd>
@@ -376,9 +379,9 @@ taken to have just finished capturing: <cite>Utc::now()</cite> on entry minus <c
 <li><p><cite>(N, H, W)</cite> <cite>numpy.ndarray[uint8]</cite>: a chunk of <cite>N</cite> grayscale frames</p></li>
 <li><p><cite>(H, W)</cite> <cite>numpy.ndarray[uint8]</cite>: a single frame (treated as <cite>N = 1</cite>)</p></li>
 <li><p><cite>(frames, capture_start_ms_utc)</cite> 2-tuple: frames as above + an explicit
-capture-start timestamp (int milliseconds since UNIX epoch, UTC). Use
-this when you have hardware/OS-level timestamps for each chunk
-(camera trigger time, OS monotonic-to-utc conversion, etc.).</p></li>
+capture-start timestamp (int milliseconds since UNIX epoch, on this computer’s
+clock). Use this when you have hardware/OS-level timestamps for each chunk
+(camera trigger time, OS monotonic-to-wall-clock conversion, etc.).</p></li>
 </ul>
 <p>For each yielded item, the method stamps it, encodes its shard and writes it to the disk
 spool, then asks the iterator for the next one. It never waits on uploads, which run in
@@ -387,8 +390,9 @@ spool to drain (up to 10 minutes). After <cite>run(…)</cite> returns, call <ci
 mark the stream complete on the server.</p>
 <section id="id1">
 <h2>Timestamps<a class="headerlink" href="#id1" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#id1'"><span>#</span></a></h2>
-<p>Every chunk is stamped with when its first frame was <strong>captured</strong>, so the stream
-aligns with other lab wall-clock data. The chunk’s <cite>end_unix_ms_utc</cite> is
+<p>Every chunk is stamped with when its first frame was <strong>captured</strong>, on this computer’s
+clock; AtomCloud converts the stamps by this computer’s measured clock, so the stream
+aligns with other lab data. The chunk’s <cite>end_unix_ms_utc</cite> is
 <cite>start + (n / fps) * 1000</cite>. Yield <cite>(frames, capture_start_ms_utc)</cite> whenever you have a
 real capture clock (camera trigger, OS monotonic-to-utc conversion). When you yield
 bare frames, each chunk is taken to have just finished capturing: <cite>Utc::now()</cite> is
@@ -480,7 +484,9 @@ and uploads them asynchronously for storage and analysis.</p>
 <span class="sig-name descname"><span class="pre">clock_status</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span></dt>
 <dd><p>This computer’s clock measured against AtomCloud’s reference clock, or <cite>None</cite> when
 correction is off (<cite>ATOMSCALE_SKIP_CLOCK_SYNC</cite>) or no measurement has succeeded yet.
-Pushed timestamps are read as this computer’s clock and sent as reference UTC:
+Pushed timestamps are read as this computer’s clock and sent as they are, with this
+measurement; AtomCloud converts the stream’s timestamps by the first one it receives
+and records that offset with the stream.
 <cite>offset_ms</cite> (reference minus host) is the correction in effect.</p>
 </dd></dl>
 <dl class="py method">
@@ -544,7 +550,7 @@ time) and <cite>lost</cite>, a list of <cite>(chunk_index, reason)</cite> for th
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stream_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">synth_source_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span></dt>
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stream_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tool_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">...</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span></dt>
 <dd><p>Initialize a new time series stream on the server.</p>
 <p>Creates data_catalogue and processed_tool_state_catalogue entries.
 Returns data_id to use for subsequent push() calls.</p>
@@ -552,8 +558,8 @@ Returns data_id to use for subsequent push() calls.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>stream_name</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Human-readable name for the stream.</p></li>
-<li><p><strong>synth_source_id</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Growth instrument ID (a UUID) to link. Must belong to
-your organization. Use list_growth_instruments() to see available instruments. The
+<li><p><strong>tool_id</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – ID (a UUID) of the tool (instrument) to link. Must belong to
+your organization. Use list_growth_instruments() to see available tools. The
 integer id an instrument had before instruments took UUIDs is still accepted.</p></li>
 <li><p><strong>physical_sample</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Name or UUID of a physical sample to associate with the
 data item. If a UUID is provided, it must match an existing sample. If a name is
@@ -566,6 +572,7 @@ for growth monitoring.</p></li>
 <li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>str</em><em>]</em><em>]</em>) – List of tag names or UUIDs to attach to the data item. Names
 are matched case-insensitively against existing org tags; unknown names are created.
 UUIDs must reference existing tags.</p></li>
+<li><p><strong>synth_source_id</strong> (<em>Optional</em><em>[</em><em>str</em><em>]</em>) – Deprecated name for <cite>tool_id</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>

@@ -188,10 +188,10 @@ defaulting to ‘<a class="reference external" href="https://api.atomscale.ai/">
 <td><p>Asynchronously poll similarity trajectory data without blocking the loop.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_growth_instrument</span></code>(label, name, ...[, ...])</p></td>
-<td><p>Create a new growth instrument.</p></td>
+<td><p>Create a new tool (instrument).</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">delete_growth_instrument</span></code>(synth_source_id)</p></td>
-<td><p>Delete a growth instrument.</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">delete_growth_instrument</span></code>([tool_id, ...])</p></td>
+<td><p>Delete a tool (instrument).</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">download</span></code>(data_ids[, dest_dir, data_type])</p></td>
 <td><p>Download raw or processed files for any data type to disk.</p></td>
@@ -248,7 +248,7 @@ defaulting to ‘<a class="reference external" href="https://api.atomscale.ai/">
 <td><p>Synchronously poll similarity trajectory data, yielding DataFrames.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_growth_instruments</span></code>()</p></td>
-<td><p>List all growth instruments accessible by the user.</p></td>
+<td><p>List the tools (instruments) in the user's organization.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">list_physical_samples</span></code>()</p></td>
 <td><p>List physical samples available to the user.</p></td>
@@ -311,7 +311,11 @@ updated datetime. Defaults to (None, None).</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Pandas DataFrame containing matched entries in the data catalogue.</p>
+<dd class="field-even"><p><dl class="simple">
+<dt>Pandas DataFrame containing matched entries in the data catalogue.</dt><dd><p>If no entries match, the frame has zero rows and retains the standard columns.</p>
+</dd>
+</dl>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>(DataFrame)</p>
@@ -721,6 +725,10 @@ See that function for the full set of keyword arguments
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">list_physical_samples</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.list_physical_samples"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
 <dd><p>List physical samples available to the user.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Growth</span> <span class="pre">Instrument</span></code> column holds each sample’s tool as a dict with the
+keys <code class="xref py py-meth docutils literal notranslate"><span class="pre">list_growth_instruments()</span></code> returns, or <code class="docutils literal notranslate"><span class="pre">None</span></code>. AtomCloud derives
+it from the sample’s data items; it cannot be set on the sample. <code class="docutils literal notranslate"><span class="pre">Owner</span></code>
+is <code class="docutils literal notranslate"><span class="pre">None</span></code> once the creator’s account is deleted.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrame</span></code></span></p>
@@ -972,22 +980,33 @@ Defaults to the current working directory.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py">
 <span class="sig-name descname"><span class="pre">list_growth_instruments</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.list_growth_instruments"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>List all growth instruments accessible by the user.</p>
-<p>Returns instruments within the user’s organization.</p>
+<dd><p>List the tools (instruments) in the user’s organization.</p>
+<p>Instruments are called tools in AtomCloud. They include process tools
+(MBE, CVD, …) and measurement instruments (RHEED, XPS, SEM, …).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p><dl class="simple">
-<dt>List of instruments with keys including:</dt><dd><ul class="simple">
-<li><p>synth_source_id (str): Unique instrument ID (a UUID)</p></li>
+<dt>One dict per tool, with keys including:</dt><dd><ul class="simple">
+<li><p>id (str): Unique tool ID (a UUID)</p></li>
 <li><p>legacy_id (int | None): The integer id the instrument had before
 instruments took UUIDs; None for instruments created since</p></li>
-<li><p>source_name (str): Display name</p></li>
-<li><p>synth_source_type (str): Instrument type (mbe, cvd, etc.)</p></li>
-<li><p>source_manufacturer (str | None): Manufacturer name</p></li>
-<li><p>source_model (str | None): Model name</p></li>
+<li><p>name (str): Display name</p></li>
+<li><p>tool_type (str): Tool type (mbe, cvd, rheed, xps, …)</p></li>
+<li><p>manufacturer (str): Manufacturer name</p></li>
+<li><p>model (str): Model name</p></li>
+<li><p>make_id (int): ID of the tool’s make</p></li>
+<li><p>tool_metadata (dict): Label, serial number and other metadata</p></li>
+<li><p>host_tool_id (str | None): The process tool a measurement
+instrument is mounted on, such as the chamber of a RHEED system</p></li>
+<li><p>user_id, user_name (str | None): The creator; None once the
+creator’s account is deleted</p></li>
 </ul>
 </dd>
 </dl>
+<p>The keys from before the rename (<code class="docutils literal notranslate"><span class="pre">synth_source_id</span></code>, <code class="docutils literal notranslate"><span class="pre">source_name</span></code>,
+<code class="docutils literal notranslate"><span class="pre">synth_source_type</span></code>, <code class="docutils literal notranslate"><span class="pre">source_makes_id</span></code>, <code class="docutils literal notranslate"><span class="pre">source_metadata</span></code>,
+<code class="docutils literal notranslate"><span class="pre">source_model</span></code>, <code class="docutils literal notranslate"><span class="pre">source_manufacturer</span></code>) still read, with a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DeprecationWarning</span></code>.</p>
 </p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -997,25 +1016,28 @@ instruments took UUIDs; None for instruments created since</p></li>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">instruments</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">list_growth_instruments</span><span class="p">()</span>
 </span><span id="line-2"><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">inst</span> <span class="ow">in</span> <span class="n">instruments</span><span class="p">:</span>
-</span><span id="line-3"><span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">inst</span><span class="p">[</span><span class="s1">'synth_source_id'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">inst</span><span class="p">[</span><span class="s1">'source_name'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-3"><span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">inst</span><span class="p">[</span><span class="s1">'id'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">inst</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">create_growth_instrument</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instrument_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'mbe'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'cvd'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'pvd'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'sputter'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ald'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'pld'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serial_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.create_growth_instrument"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Create a new growth instrument.</p>
+<span class="sig-name descname"><span class="pre">create_growth_instrument</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">instrument_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Literal</span><span class="p"><span class="pre">[</span></span><span class="s"><span class="pre">'mbe'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'pvd'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'sputter'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'cvd'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ald'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'pld'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'etch'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'anneal'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'lithography'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'rheed'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'arpes'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'xps'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'sem'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'optical'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'raman'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'photoluminescence'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'ellipsometry'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'sims'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'oes'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'xrd'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'xrr'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'afm'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'uv_vis'</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'other'</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serial_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">host_tool_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.create_growth_instrument"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Create a new tool (instrument).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>label</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Display name for the instrument (e.g., “Main MBE”).</p></li>
+<li><p><strong>label</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Display name for the tool (e.g., “Main MBE”).</p></li>
 <li><p><strong>name</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – Manufacturer and model (e.g., “Veeco GEN10”).</p></li>
-<li><p><strong>instrument_type</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'mbe'</span></code>, <code class="docutils literal notranslate"><span class="pre">'cvd'</span></code>, <code class="docutils literal notranslate"><span class="pre">'pvd'</span></code>, <code class="docutils literal notranslate"><span class="pre">'sputter'</span></code>, <code class="docutils literal notranslate"><span class="pre">'ald'</span></code>, <code class="docutils literal notranslate"><span class="pre">'pld'</span></code>]</span>) – Type of instrument.</p></li>
+<li><p><strong>instrument_type</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-data docutils literal notranslate"><span class="pre">Literal</span></code>[<code class="docutils literal notranslate"><span class="pre">'mbe'</span></code>, <code class="docutils literal notranslate"><span class="pre">'pvd'</span></code>, <code class="docutils literal notranslate"><span class="pre">'sputter'</span></code>, <code class="docutils literal notranslate"><span class="pre">'cvd'</span></code>, <code class="docutils literal notranslate"><span class="pre">'ald'</span></code>, <code class="docutils literal notranslate"><span class="pre">'pld'</span></code>, <code class="docutils literal notranslate"><span class="pre">'etch'</span></code>, <code class="docutils literal notranslate"><span class="pre">'anneal'</span></code>, <code class="docutils literal notranslate"><span class="pre">'lithography'</span></code>, <code class="docutils literal notranslate"><span class="pre">'rheed'</span></code>, <code class="docutils literal notranslate"><span class="pre">'arpes'</span></code>, <code class="docutils literal notranslate"><span class="pre">'xps'</span></code>, <code class="docutils literal notranslate"><span class="pre">'sem'</span></code>, <code class="docutils literal notranslate"><span class="pre">'optical'</span></code>, <code class="docutils literal notranslate"><span class="pre">'raman'</span></code>, <code class="docutils literal notranslate"><span class="pre">'photoluminescence'</span></code>, <code class="docutils literal notranslate"><span class="pre">'ellipsometry'</span></code>, <code class="docutils literal notranslate"><span class="pre">'sims'</span></code>, <code class="docutils literal notranslate"><span class="pre">'oes'</span></code>, <code class="docutils literal notranslate"><span class="pre">'xrd'</span></code>, <code class="docutils literal notranslate"><span class="pre">'xrr'</span></code>, <code class="docutils literal notranslate"><span class="pre">'afm'</span></code>, <code class="docutils literal notranslate"><span class="pre">'uv_vis'</span></code>, <code class="docutils literal notranslate"><span class="pre">'other'</span></code>]</span>) – Type of tool: a process tool (<code class="docutils literal notranslate"><span class="pre">"mbe"</span></code>, <code class="docutils literal notranslate"><span class="pre">"cvd"</span></code>,
+…) or a measurement instrument (<code class="docutils literal notranslate"><span class="pre">"rheed"</span></code>, <code class="docutils literal notranslate"><span class="pre">"xps"</span></code>, …).</p></li>
 <li><p><strong>serial_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Optional serial number or identifier.</p></li>
+<li><p><strong>host_tool_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – ID (a UUID) of the process tool a measurement instrument
+is mounted on, such as the chamber of a RHEED system.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The synth_source_id (a UUID) of the created instrument.</p>
+<dd class="field-even"><p>The ID (a UUID) of the created tool.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>str</p>
@@ -1033,21 +1055,24 @@ instruments took UUIDs; None for instruments created since</p></li>
 </dd></dl>
 <dl class="py method">
 <dt class="sig sig-object py">
-<span class="sig-name descname"><span class="pre">delete_growth_instrument</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">synth_source_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.delete_growth_instrument"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
-<dd><p>Delete a growth instrument.</p>
+<span class="sig-name descname"><span class="pre">delete_growth_instrument</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tool_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">synth_source_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">→</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/atomscale/client.html#Client.delete_growth_instrument"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Delete a tool (instrument).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>synth_source_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></span>) – ID (a UUID) of the instrument to delete.</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tool_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – ID (a UUID) of the tool to delete.</p></li>
+<li><p><strong>synth_source_id</strong> (<span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code> | <code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span>) – Deprecated name for <code class="docutils literal notranslate"><span class="pre">tool_id</span></code>.</p></li>
+</ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ClientError</strong> – If the instrument is not found or not accessible.</p>
+<dd class="field-even"><p><strong>ClientError</strong> – If the tool is not found or not accessible.</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">None</span></code></span></p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">delete_growth_instrument</span><span class="p">(</span><span class="n">synth_source_id</span><span class="o">=</span><span class="n">instrument_id</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="gp">&gt;&gt;&gt; </span><span class="n">client</span><span class="o">.</span><span class="n">delete_growth_instrument</span><span class="p">(</span><span class="n">tool_id</span><span class="o">=</span><span class="n">instrument_id</span><span class="p">)</span>
 </span></code></pre></div>
 </div>
 </dd></dl>

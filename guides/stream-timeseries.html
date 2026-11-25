@@ -195,9 +195,9 @@ configuration is automatically updated to link the sample for growth monitoring:
 </span></code></pre></div>
 </div>
 </section>
-<section id="link-to-a-growth-instrument-optional">
-<h2>Link to a Growth Instrument (Optional)<a class="headerlink" href="#link-to-a-growth-instrument-optional" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#link-to-a-growth-instrument-optional'"><span>#</span></a></h2>
-<p>If you’ve configured growth instruments in Atomscale, you can link streams to
+<section id="link-to-a-tool-optional">
+<h2>Link to a Tool (Optional)<a class="headerlink" href="#link-to-a-tool-optional" title="Link to this heading" x-intersect.margin.0%.0%.-70%.0%="activeSection = '#link-to-a-tool-optional'"><span>#</span></a></h2>
+<p>If you’ve configured tools (instruments) in Atomscale, you can link streams to
 them:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><code><span id="line-1"><span class="kn">from</span><span class="w"> </span><span class="nn">atomscale</span><span class="w"> </span><span class="kn">import</span> <span class="n">Client</span>
 </span><span id="line-2">
@@ -206,12 +206,12 @@ them:</p>
 </span><span id="line-5"><span class="c1"># List your instruments</span>
 </span><span id="line-6"><span class="n">instruments</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">list_growth_instruments</span><span class="p">()</span>
 </span><span id="line-7"><span class="k">for</span> <span class="n">inst</span> <span class="ow">in</span> <span class="n">instruments</span><span class="p">:</span>
-</span><span id="line-8">    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">inst</span><span class="p">[</span><span class="s1">'synth_source_id'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">inst</span><span class="p">[</span><span class="s1">'source_name'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</span><span id="line-8">    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">inst</span><span class="p">[</span><span class="s1">'id'</span><span class="p">]</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">inst</span><span class="p">[</span><span class="s1">'name'</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </span><span id="line-9">
 </span><span id="line-10"><span class="c1"># Initialize with instrument link</span>
 </span><span id="line-11"><span class="n">data_id</span> <span class="o">=</span> <span class="n">streamer</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span>
 </span><span id="line-12">    <span class="n">stream_name</span><span class="o">=</span><span class="s2">"Growth Run 001"</span><span class="p">,</span>
-</span><span id="line-13">    <span class="n">synth_source_id</span><span class="o">=</span><span class="n">instruments</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"synth_source_id"</span><span class="p">],</span>
+</span><span id="line-13">    <span class="n">tool_id</span><span class="o">=</span><span class="n">instruments</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">"id"</span><span class="p">],</span>
 </span><span id="line-14"><span class="p">)</span>
 </span></code></pre></div>
 </div>
@@ -363,7 +363,7 @@ after that:</p>
 <li><a :data-current="activeSection === '#create-a-streamer'" class="reference internal" href="#create-a-streamer">Create a Streamer</a></li>
 <li><a :data-current="activeSection === '#initialize-a-stream'" class="reference internal" href="#initialize-a-stream">Initialize a Stream</a></li>
 <li><a :data-current="activeSection === '#link-to-a-physical-sample-optional'" class="reference internal" href="#link-to-a-physical-sample-optional">Link to a Physical Sample (Optional)</a></li>
-<li><a :data-current="activeSection === '#link-to-a-growth-instrument-optional'" class="reference internal" href="#link-to-a-growth-instrument-optional">Link to a Growth Instrument (Optional)</a></li>
+<li><a :data-current="activeSection === '#link-to-a-tool-optional'" class="reference internal" href="#link-to-a-tool-optional">Link to a Tool (Optional)</a></li>
 <li><a :data-current="activeSection === '#push-single-channel'" class="reference internal" href="#push-single-channel">Push Single Channel</a></li>
 <li><a :data-current="activeSection === '#push-multiple-channels'" class="reference internal" href="#push-multiple-channels">Push Multiple Channels</a></li>
 <li><a :data-current="activeSection === '#run-mode-iterator'" class="reference internal" href="#run-mode-iterator">Run Mode (Iterator)</a></li>

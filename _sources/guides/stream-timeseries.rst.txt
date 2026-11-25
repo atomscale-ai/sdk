@@ -61,10 +61,10 @@ configuration is automatically updated to link the sample for growth monitoring:
        project_id="your-project-uuid",
    )
 
-Link to a Growth Instrument (Optional)
---------------------------------------
+Link to a Tool (Optional)
+-------------------------
 
-If you've configured growth instruments in Atomscale, you can link streams to
+If you've configured tools (instruments) in Atomscale, you can link streams to
 them:
 
 .. code-block:: python
@@ -76,12 +76,12 @@ them:
    # List your instruments
    instruments = client.list_growth_instruments()
    for inst in instruments:
-       print(f"{inst['synth_source_id']}: {inst['source_name']}")
+       print(f"{inst['id']}: {inst['name']}")
 
    # Initialize with instrument link
    data_id = streamer.initialize(
        stream_name="Growth Run 001",
-       synth_source_id=instruments[0]["synth_source_id"],
+       tool_id=instruments[0]["id"],
    )
 
 Push Single Channel
